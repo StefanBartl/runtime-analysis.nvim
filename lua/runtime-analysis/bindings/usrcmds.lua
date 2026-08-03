@@ -1,14 +1,15 @@
 ---@module 'runtime-analysis.bindings.usrcmds'
---- Registers `:RA <subcommand>` (via `lib.nvim.usercmd.composer`, the same
---- verb-first shape `:DocMap`, `:MDView` and `:Replace` already use) plus two
---- flat convenience aliases, `:RARequest` and `:RASend`, for this plugin's
---- two most-used actions. Split out of `init.lua` into its own `bindings/`
---- module to match the `bindings/{keymaps,usrcmds,autocmds}.lua` shape every
---- sibling plugin uses. `:RATelemetry` is not registered here: it stays a
---- second, separate compound command on its own terms (see
---- `telemetry/command.lua`'s doc comment) — the same split documentation.nvim
---- draws between `:DocMap` (writes/verifies) and `:DocBrowse` (only reads),
---- here drawn between "runs a request" and "reports on what already ran".
+--- Registers `:RA <subcommand>` (`request`/`send`/`yank`, via
+--- `lib.nvim.usercmd.composer`, the same verb-first shape `:DocMap`,
+--- `:MDView` and `:Replace` already use) plus two flat convenience aliases,
+--- `:RARequest` and `:RASend`, for this plugin's two most-used actions.
+--- Split out of `init.lua` into its own `bindings/` module to match the
+--- `bindings/{keymaps,usrcmds,autocmds}.lua` shape every sibling plugin
+--- uses. `:RATelemetry` is not registered here: it stays a second, separate
+--- compound command on its own terms (see `telemetry/command.lua`'s doc
+--- comment) — the same split documentation.nvim draws between `:DocMap`
+--- (writes/verifies) and `:DocBrowse` (only reads), here drawn between
+--- "runs a request" and "reports on what already ran".
 ---
 --- **Why both `:RA request`/`:RA send` and `:RARequest`/`:RASend` exist.**
 --- `NEW_PROJECT.md`'s own checklist prefers one compound verb per plugin, and
@@ -19,7 +20,8 @@
 --- the *names* staying flat, but a user's own keymap to either flat command
 --- would break silently on a bare rename. Keeping both costs four lines and
 --- breaks nothing; dropping the flat pair would be a breaking change for a
---- purely cosmetic gain.
+--- purely cosmetic gain. `:RA yank` gets no flat alias: it is new, has no
+--- external references and no keymap could already exist for it.
 ---
 --- No `keymaps.lua` or `autocmds.lua` sit beside this file: this plugin sets
 --- zero default keymaps and zero autocmds, by design — every entry point is a
@@ -43,13 +45,17 @@ local function send_current_buffer(ra)
     return
   end
 
-  local resp_lines, run_err = require("runtime-analysis.runner").run(request)
+  local resp_lines, run_err, meta = require("runtime-analysis.runner").run(request)
   if not resp_lines then
     vim.notify("runtime-analysis: " .. run_err, vim.log.levels.ERROR)
     return
   end
 
-  require("runtime-analysis.view").show(resp_lines, { split = ra.opts.split })
+  require("runtime-analysis.view").show(resp_lines, {
+    split = ra.opts.split,
+    body_start = meta and meta.body_start,
+    is_json = meta and meta.is_json,
+  })
 end
 
 ---@param ra RA The plugin's own module table — read for `ra.opts` and called
@@ -71,6 +77,13 @@ function M.setup(ra)
         desc = "Send the current buffer as an HTTP request",
         run = function()
           send_current_buffer(ra)
+        end,
+      },
+      {
+        path = { "yank" },
+        desc = "Yank just the last response's body to the unnamed register",
+        run = function()
+          require("runtime-analysis.view").yank_body()
         end,
       },
     },

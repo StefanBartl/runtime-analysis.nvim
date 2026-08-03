@@ -74,4 +74,56 @@ return function(H)
     eq(req, nil, "parse: a lowercase method does not match — only %u is accepted")
     ok(err ~= nil, "parse: ... and reports why")
   end
+
+  -- The `Auth:` shorthand (docs/ROADMAP.md §2.4).
+  do
+    local req = parse.parse({ "GET https://x", "Auth: Bearer abc123" })
+    eq(
+      req.headers["Authorization"],
+      "Bearer abc123",
+      "parse: Auth: Bearer passes through verbatim as Authorization"
+    )
+    eq(req.headers["Auth"], nil, "parse: ... and Auth itself is not left as a header")
+  end
+
+  do
+    local req = parse.parse({ "GET https://x", "Auth: Basic alice:s3cret" })
+    eq(
+      req.headers["Authorization"],
+      "Basic " .. require("lib.lua.strings.encoding").base64_encode("alice:s3cret"),
+      "parse: Auth: Basic user:pass is base64-encoded into Authorization"
+    )
+  end
+
+  do
+    -- No colon in the value: assumed already base64-encoded, passed through.
+    local req = parse.parse({ "GET https://x", "Auth: Basic YWxpY2U6czNjcmV0" })
+    eq(
+      req.headers["Authorization"],
+      "Basic YWxpY2U6czNjcmV0",
+      "parse: Auth: Basic with no colon passes through unencoded"
+    )
+  end
+
+  do
+    -- An unrecognized scheme: passed through as the Authorization value,
+    -- not rejected — a generic fallback, not an error.
+    local req = parse.parse({ "GET https://x", "Auth: Digest username=alice" })
+    eq(
+      req.headers["Authorization"],
+      "Digest username=alice",
+      "parse: an unrecognized Auth scheme still passes through, unmodified"
+    )
+  end
+
+  do
+    -- A literal Authorization header still works exactly as before —
+    -- the shorthand only intercepts the Auth: name, not Authorization:.
+    local req = parse.parse({ "GET https://x", "Authorization: Bearer already-full" })
+    eq(
+      req.headers["Authorization"],
+      "Bearer already-full",
+      "parse: a literal Authorization header is untouched by the shorthand"
+    )
+  end
 end
