@@ -51,6 +51,18 @@ require("runtime-analysis").setup({
 })
 ```
 
+### Telemetry (step 7)
+
+`runtime-analysis.telemetry` — opt-in call counting and usage statistics
+for any Lua/Neovim plugin, moved here from lib.nvim. `:RATelemetry` is
+registered by the same `setup()` call above; see
+[`lua/runtime-analysis/telemetry/README.md`](lua/runtime-analysis/telemetry/README.md)
+for the full API (`wrap`/`wrap_loaded`, persistence, Markdown/browser
+reports, the `:RATelemetry` subcommands). lib.nvim itself keeps a thin
+caller, `lib.strategies.telemetry_wrap`, for instrumenting its own
+`require("lib")` aggregate specifically — everything else in this module is
+generic.
+
 ### Integration with documentation.nvim (step 6)
 
 `M.open_request(lines)` is this plugin's one public integration surface —
@@ -76,15 +88,16 @@ the method and path are pre-filled and the reader completes the base URL
 - **Request history.** Nothing is saved between sends yet.
 - **Multiple requests per buffer** (`###`-separated, the way both sibling
   tools support). One request per buffer for now.
-- **The static × runtime join** — telemetry, and `:DocBrowse`'s planned
-  Mode 7 (a *different*, later mode than the Endpoints mode step 6 already
-  added) — is a later step in `ECOSYSTEM.md`'s own sequencing, not this
-  one.
+- **The static × runtime join** — `:DocBrowse`'s planned Mode 7 (a
+  *different*, later mode than the Endpoints mode step 6 already added),
+  joining documentation.nvim's static analysis against telemetry's counts —
+  is a later step in `ECOSYSTEM.md`'s own sequencing, not this one.
 
 ## Dependencies
 
 - Neovim 0.10+ (`vim.system`)
-- [lib.nvim](https://github.com/StefanBartl/lib.nvim) — specifically
-  `lib.nvim.net.curl`'s `fetch_raw`/`fetch_raw_blocking`, which this plugin
-  is the reason those exist: the HTTP status code and response headers
-  were not previously exposed by that module at all.
+- [lib.nvim](https://github.com/StefanBartl/lib.nvim) — `lib.nvim.net.curl`'s
+  `fetch_raw`/`fetch_raw_blocking` for the request runner (this plugin is
+  the reason those exist: the HTTP status code and response headers were
+  not previously exposed by that module at all), plus `cache.disk`, `git`,
+  `ui.kit`, `usercmd`, `notify`, `autocmd` and `progress` for telemetry.
