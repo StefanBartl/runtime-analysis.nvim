@@ -1,22 +1,39 @@
 # runtime-analysis.nvim — Commands, Autocommands & Keymaps
 
-Hand-maintained, not generated — three commands and no keymaps or
-autocommands is small enough that a generator (the way
+Hand-maintained, not generated — this small a surface (one compound verb,
+two flat aliases, one second compound command, no keymaps or autocommands)
+is small enough that a generator (the way
 [documentation.nvim's own `docs/BINDINGS.md`](https://github.com/StefanBartl/documentation.nvim/blob/main/docs/BINDINGS.md)
 is built from its live keymap table) would cost more than it saves. Update
 this file by hand whenever a command's shape changes.
 
 ## User commands
 
-All three are registered unconditionally by `require("runtime-analysis").setup()`
+All four are registered unconditionally by `require("runtime-analysis").setup()`
 — none is independently opt-in the way telemetry's own auto-instrumentation
 (`opts.telemetry`) is.
 
 | Command | Args | Description |
 | --- | --- | --- |
-| `:RARequest` | none | Opens a new scratch buffer, `filetype = opts.request_filetype` (default `http`), pre-filled with a `GET https://` template. One request per buffer. |
-| `:RASend` | none | Run from inside a request buffer. Parses it (`runtime-analysis.parse`), sends it via `lib.nvim.net.curl.fetch_raw_blocking` (`runtime-analysis.runner`), and shows status/headers/body in a persistent split (`runtime-analysis.view`) that never steals focus from the request buffer. Blocking — the editor waits for the response. |
+| `:RA request` | none | Opens a new scratch buffer, `filetype = opts.request_filetype` (default `http`), pre-filled with a `GET https://` template. One request per buffer. |
+| `:RA send` | none | Run from inside a request buffer. Parses it (`runtime-analysis.parse`), sends it via `lib.nvim.net.curl.fetch_raw_blocking` (`runtime-analysis.runner`), and shows status/headers/body in a persistent split (`runtime-analysis.view`) that never steals focus from the request buffer. Blocking — the editor waits for the response. |
+| `:RARequest` | none | Flat alias for `:RA request` — see below for why both exist. |
+| `:RASend` | none | Flat alias for `:RA send`. |
 | `:RATelemetry [args]` | see below | Opt-in call counting and usage statistics for any plugin. Full reference: [`lua/runtime-analysis/telemetry/README.md`](../lua/runtime-analysis/telemetry/README.md). |
+
+Built via [`lib.nvim.usercmd.composer`](https://github.com/StefanBartl/lib.nvim/blob/main/lua/lib/nvim/usercmd/composer/README.md)
+— the same verb-first shape `:DocMap`, `:MDView` and `:Replace` already use
+(`<Tab>` after `:RA ` completes `request`/`send`). `:RATelemetry` stays a
+second, separate compound command rather than folding under `:RA telemetry
+...`, the same split documentation.nvim draws between `:DocMap`
+(writes/verifies) and `:DocBrowse` (only reads) — here between "runs a
+request" and "reports on what already ran".
+
+**Why the flat `:RARequest`/`:RASend` still exist alongside `:RA request`/
+`:RA send`.** They are this plugin's oldest, most-referenced public surface;
+keeping them costs four lines and means nobody's own keymap to either name
+breaks on a rename. See [`lua/runtime-analysis/bindings/usrcmds.lua`](../lua/runtime-analysis/bindings/usrcmds.lua)'s
+own doc-comment for the full reasoning.
 
 ### `:RATelemetry` subcommands
 
@@ -60,5 +77,5 @@ modules, live telemetry instances, cache directory, optional mdview.nvim).
 ## Global-surface collision check
 
 Checked against the personal config's `docs/NOTES/PersonelPlugins/BINDINGS/Usercmds/*.md`
-collection (2026-08-03): `RARequest`, `RASend` and `RATelemetry` are unique —
-no other personal plugin registers any of the three.
+collection (2026-08-03): `RA`, `RARequest`, `RASend` and `RATelemetry` are
+unique — no other personal plugin registers any of the four.

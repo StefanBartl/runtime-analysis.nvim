@@ -51,6 +51,7 @@ same kind of overlay `docs/IDEAS.md` §6 uses for its own five-item shortlist.
 | Vimdoc (`doc/runtime-analysis.txt`) | **Done (2026-08-03)** — see Housekeeping below |
 | `docs/COMMANDS.md` + `docs/BINDINGS.md` | **Done (2026-08-03)** — see Housekeeping below |
 | `config/init.lua` + `config/DEFAULTS.lua` + `bindings/usrcmds.lua` + a top-level `@types/init.lua` | **Done (2026-08-03)** — see Housekeeping below |
+| Compound `:RA [subcommand]` usercommand | **Done (2026-08-03)** — see Housekeeping below |
 
 ### Medium
 
@@ -92,11 +93,6 @@ same kind of overlay `docs/IDEAS.md` §6 uses for its own five-item shortlist.
 the end of this document are not on any timeline at all. A documented
 rejection is not a phase with an infinite delay attached to it; it is a
 closed question, kept here so it does not get re-opened from a blank slate.
-
-Add to that list: **a compound `:RA [subcommand]` usercommand** replacing
-`:RARequest`/`:RASend`. `NEW_PROJECT.md`'s own checklist prefers this shape;
-this is the documented exception it explicitly allows for — see Housekeeping
-below.
 
 ---
 
@@ -422,8 +418,10 @@ Neovim's LSP client internals across releases. Low priority.
 Not features, but the gap between "works on this machine" and "a plugin
 someone else can install". Prompted by going through
 [`NEW_PROJECT.md`](https://github.com/StefanBartl/Notes/blob/master/MyNotes/Checklists/Lua/NEW_PROJECT.md)'s
-own checklist against this repository (2026-08-03) — the four items below
-are exactly what that pass found missing.
+own checklist against this repository (2026-08-03) — the items below are
+exactly what that pass found missing, revisited a second time the same day
+once the compound-usercommand item's original verdict turned out to be
+wrong (see that item's own note below).
 
 - ~~**`:checkhealth runtime-analysis`** — is `curl` present, is `lib.nvim`
   the version this expects, is the telemetry cache directory writable, is
@@ -454,16 +452,20 @@ are exactly what that pass found missing.
   artifact, a new gate to keep green), not a documentation update, and
   deliberately not attempted alongside the smaller items above. Belongs in
   the Medium phase, not Quick wins.
-- **A compound `:RA [subcommand]` usercommand**, per `NEW_PROJECT.md` §5's
-  own preferred shape (`lib.nvim.usercmd.composer`, the pattern
-  `:RATelemetry` roughly already follows without actually using that
-  module). **Deliberately not done.** `:RARequest`/`:RASend` are this
-  plugin's oldest, most-referenced public surface — documentation.nvim's
-  `:DocBrowse` Endpoints mode already calls `open_request` by name, and any
-  user with their own keymap to either command would break silently on a
-  rename. `NEW_PROJECT.md` itself allows a documented exception for exactly
-  this reason (`replacer.nvim`'s `:Surround` is its own precedent); this is
-  that exception, recorded rather than forced through.
+- ~~**A compound `:RA [subcommand]` usercommand**, per `NEW_PROJECT.md` §5's
+  own preferred shape.~~ **Done (2026-08-03)** —
+  [`lua/runtime-analysis/bindings/usrcmds.lua`](../lua/runtime-analysis/bindings/usrcmds.lua),
+  built on `lib.nvim.usercmd.composer` (the same module `:DocMap`/`:MDView`
+  use), `:RA request` / `:RA send`, `<Tab>`-completed. Revised from this
+  section's own earlier "deliberately not done" verdict: the original
+  worry — that renaming `:RARequest`/`:RASend` would break a user's own
+  keymap to either name — turned out not to force a choice at all.
+  `:RARequest`/`:RASend` stay registered verbatim as flat aliases calling
+  the exact same handlers `:RA`'s routes do; nothing was renamed, only
+  added to. `:RATelemetry` stays a separate second compound command rather
+  than folding under `:RA telemetry ...` — see `docs/COMMANDS.md`'s own
+  section on why, the same split documentation.nvim draws between `:DocMap`
+  and `:DocBrowse`.
 - **`config/init.lua` + `config/DEFAULTS.lua`, a `bindings/` folder, and a
   top-level `@types/init.lua`.** **Done (2026-08-03)** — the single
   `config.lua` became a folder (`require("runtime-analysis.config")` still

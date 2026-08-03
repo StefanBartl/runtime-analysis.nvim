@@ -30,6 +30,7 @@ local DEPS = {
   "lib.nvim.cache.disk",
   "lib.nvim.git",
   "lib.nvim.usercmd",
+  "lib.nvim.usercmd.composer",
   "lib.nvim.notify",
   "lib.nvim.autocmd",
 }
@@ -153,12 +154,12 @@ function M.check()
   end
 
   h_start("runtime-analysis.nvim: commands")
-  -- All three are registered unconditionally by `require("runtime-analysis")
+  -- All four are registered unconditionally by `require("runtime-analysis")
   -- .setup()` — nothing here is independently opt-in the way `telemetry`'s
   -- own auto-instrumentation is (that is the `opts.telemetry` check above).
   local cmds = vim.api.nvim_get_commands({})
-  if cmds.RARequest and cmds.RASend and cmds.RATelemetry then
-    h_ok(":RARequest, :RASend, :RATelemetry are registered")
+  if cmds.RA and cmds.RARequest and cmds.RASend and cmds.RATelemetry then
+    h_ok(":RA, :RARequest, :RASend, :RATelemetry are registered")
   else
     h_info("setup() has not run yet in this session — no commands registered")
   end

@@ -35,8 +35,8 @@ Two features today:
   - Neovim 0.10 or later (`vim.system`)
   - lib.nvim (https://github.com/StefanBartl/lib.nvim) — hard dependency:
     `net.curl`'s `fetch_raw`/`fetch_raw_blocking` for the request runner,
-    plus `cache.disk`, `git`, `ui.kit`, `usercmd`, `notify`, `autocmd` and
-    `progress` for telemetry.
+    `usercmd.composer` for |:RA|, plus `cache.disk`, `git`, `ui.kit`,
+    `usercmd`, `notify`, `autocmd` and `progress` for telemetry.
   - `curl` on PATH — every |:RASend| shells out to it via lib.nvim.
 
 Optional:
@@ -104,9 +104,20 @@ opts.telemetry ~
 ==============================================================================
 5. COMMANDS                                        *runtime-analysis-commands*
 
+`:RA` is a compound verb built via lib.nvim.usercmd.composer — the same
+verb-first shape |:DocMap| and |:MDView| already use, `<Tab>`-completed.
+`:RARequest`/`:RASend` are flat aliases for `:RA request`/`:RA send`, kept
+because they predate `:RA` and are this plugin's most-referenced surface —
+see docs/BINDINGS.md in the repository for the full reasoning.
+
+                                                                    *:RA*
+:RA {subcommand}                Dispatch to one of the subcommands below.
+                                `<Tab>` after `:RA ` completes them.
+
+                                                            *:RA-request*
                                                               *:RARequest*
-:RARequest                     Open a new request buffer. One request per
-                                buffer, in the shape VS Code's REST Client /
+:RA request                     Open a new request buffer. One request per
+:RARequest                     buffer, in the shape VS Code's REST Client /
                                 IntelliJ's HTTP Client already use:
 >
   METHOD url
@@ -114,9 +125,10 @@ opts.telemetry ~
 
   {"optional": "body", "after": "one blank line"}
 <
+                                                               *:RA-send*
                                                               *:RASend*
-:RASend                         Run from inside a request buffer: parses it,
-                                sends it via lib.nvim.net.curl, and shows the
+:RA send                        Run from inside a request buffer: parses it,
+:RASend                         sends it via lib.nvim.net.curl, and shows the
                                 response (status, headers, body) in a
                                 persistent split beside it. Blocking: the
                                 editor waits for the response. The response
@@ -124,11 +136,15 @@ opts.telemetry ~
                                 focus from the request buffer.
 
                                                               *:RATelemetry*
-:RATelemetry [args]             See |runtime-analysis-telemetry| below —
-                                registered by the same `setup()` call above,
-                                opt-in in the sense that requiring the
-                                telemetry module alone registers nothing;
-                                `setup()` always wires the command up.
+:RATelemetry [args]             See |runtime-analysis-telemetry| below — a
+                                second, separate compound command rather
+                                than `:RA telemetry ...` (the same split
+                                documentation.nvim draws between |:DocMap|
+                                and |:DocBrowse|). Registered by the same
+                                `setup()` call above, opt-in in the sense
+                                that requiring the telemetry module alone
+                                registers nothing; `setup()` always wires
+                                the command up.
 
 ==============================================================================
 6. TELEMETRY                                      *runtime-analysis-telemetry*

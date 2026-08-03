@@ -39,7 +39,7 @@ problems exist for a request Neovim itself sends via `curl`. Full reference:
 (there are no keymaps or autocmds): [`docs/BINDINGS.md`](docs/BINDINGS.md).
 
 ```vim
-:RARequest
+:RA request
 ```
 
 Opens a new buffer, one request per buffer, in the same shape VS Code's
@@ -57,7 +57,7 @@ Authorization: Bearer abc123
 line, then an optional body — everything after the blank line, verbatim.
 
 ```vim
-:RASend
+:RA send
 ```
 
 Run from inside that buffer: parses it, sends it, and shows the response
@@ -65,6 +65,12 @@ Run from inside that buffer: parses it, sends it, and shows the response
 is reused across sends rather than opening a new split every time, and
 sending a request never steals focus away from the buffer you're editing —
 the whole point is edit, send, glance at the response, edit again.
+
+Built via [`lib.nvim.usercmd.composer`](https://github.com/StefanBartl/lib.nvim) —
+`:RA` is one compound verb, `<Tab>`-completed, the same shape `:DocMap` and
+`:MDView` already use. `:RARequest`/`:RASend` also still work, unchanged, as
+flat aliases for the two commands above — this plugin's oldest, most-used
+surface, kept alongside `:RA` rather than replaced by it.
 
 ## Setup
 
@@ -140,8 +146,9 @@ this short list.
 - [lib.nvim](https://github.com/StefanBartl/lib.nvim) — `lib.nvim.net.curl`'s
   `fetch_raw`/`fetch_raw_blocking` for the request runner (this plugin is
   the reason those exist: the HTTP status code and response headers were
-  not previously exposed by that module at all), plus `cache.disk`, `git`,
-  `ui.kit`, `usercmd`, `notify`, `autocmd` and `progress` for telemetry.
+  not previously exposed by that module at all), `usercmd.composer` for
+  `:RA`, plus `cache.disk`, `git`, `ui.kit`, `usercmd`, `notify`, `autocmd`
+  and `progress` for telemetry.
 - `curl` on PATH.
 - [mdview.nvim](https://github.com/StefanBartl/mdview.nvim) — optional,
   soft dependency: renders a telemetry report as a live browser tab.
