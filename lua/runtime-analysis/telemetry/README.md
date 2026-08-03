@@ -158,6 +158,10 @@ local inst = telemetry.auto({
   deep = true,                -- wrap_loaded(main) instead of just its façade
   profile_args = true,
   timing = false,
+  -- persist / dir forward straight to new() -- real callers rarely need
+  -- either (persist defaults to true), but a test suite calling auto()
+  -- repeatedly against the real stdpath("cache") does: pass persist = false
+  -- or an isolated dir, the same as any other instance.
 })
 -- inst is nil if nothing of `main` is loaded yet -- no empty namespace left
 -- behind, and safe to call on every load event without your own dedup guard

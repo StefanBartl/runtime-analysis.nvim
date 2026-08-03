@@ -1270,7 +1270,8 @@ return function(H)
 
   do
     package.loaded["fakeauto"] = { facade = function() end }
-    local inst = telemetry.auto({ namespace = ns("auto_shallow"), main = "fakeauto" })
+    local inst =
+      telemetry.auto({ namespace = ns("auto_shallow"), main = "fakeauto", persist = false })
     H.ok(inst ~= nil, "façade loaded -> an instance is returned")
     H.eq(inst.is_running(), true, "start() ran -- auto() leaves nothing half-wired")
     H.ok(vim.tbl_contains(inst.wrapped_keys(), "facade"), "shallow: only the façade's own keys")
@@ -1283,7 +1284,12 @@ return function(H)
     package.loaded["fakeauto"] = { facade = function() end }
     package.loaded["fakeauto.core"] = { a = function() end }
     package.loaded["fakeauto.@types"] = { noise = function() end }
-    local inst = telemetry.auto({ namespace = ns("auto_deep"), main = "fakeauto", deep = true })
+    local inst = telemetry.auto({
+      namespace = ns("auto_deep"),
+      main = "fakeauto",
+      deep = true,
+      persist = false,
+    })
     local keys = inst.wrapped_keys()
     H.ok(vim.tbl_contains(keys, "facade"), "deep: façade included")
     H.ok(vim.tbl_contains(keys, "core.a"), "deep: whole loaded subtree, not just the façade")
@@ -1304,7 +1310,8 @@ return function(H)
     -- gating the shallow path on the bare name alone would silently skip a
     -- plugin that happened to load via the ".init" form.
     package.loaded["fakeauto_init.init"] = { go = function() end }
-    local inst = telemetry.auto({ namespace = ns("auto_dotinit"), main = "fakeauto_init" })
+    local inst =
+      telemetry.auto({ namespace = ns("auto_dotinit"), main = "fakeauto_init", persist = false })
     H.ok(inst ~= nil, "package.loaded[main .. '.init'] resolves when [main] itself does not")
     H.ok(vim.tbl_contains(inst.wrapped_keys(), "go"), "its function got wrapped")
     inst.stop()
@@ -1319,6 +1326,7 @@ return function(H)
       main = "fakeauto_opts",
       profile_args = true,
       timing = true,
+      persist = false,
     })
     package.loaded["fakeauto_opts"].f("x")
     H.eq(inst.report().modes.timing, true, "timing=true reached start()")

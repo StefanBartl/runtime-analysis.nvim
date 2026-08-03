@@ -877,7 +877,7 @@ function M.auto(opts)
     return nil
   end
 
-  local t = M.new({ namespace = opts.namespace })
+  local t = M.new({ namespace = opts.namespace, persist = opts.persist, dir = opts.dir })
   if opts.deep then
     t.wrap_loaded(main, { module_filter = opts.module_filter or default_module_filter })
   else
