@@ -15,8 +15,8 @@ All four are registered unconditionally by `require("runtime-analysis").setup()`
 
 | Command | Args | Description |
 | --- | --- | --- |
-| `:RA request` | none | Opens a new scratch buffer, `filetype = opts.request_filetype` (default `http`), pre-filled with a `GET https://` template. One request per buffer. |
-| `:RA send` | none | Run from inside a request buffer. Parses it (`runtime-analysis.parse`), sends it via `lib.nvim.net.curl.fetch_raw_blocking` (`runtime-analysis.runner`), and shows status/headers/body in a persistent split (`runtime-analysis.view`) that never steals focus from the request buffer. Blocking — the editor waits for the response. A JSON body is pretty-printed with real `json` filetype/folding. |
+| `:RA request` | none | Opens a new scratch buffer, `filetype = opts.request_filetype` (default `http`), pre-filled with a `GET https://` template. Always one fresh, unnamed buffer per call — for a real, committed file with several requests, open it directly with `:e` instead (see `###` below). |
+| `:RA send` | none | Parses and sends the `###`-block the cursor is in (or nearest above it) — see `###` below; a single-block buffer (no `###` at all) behaves exactly as before that existed. Sends via `lib.nvim.net.curl.fetch_raw_blocking` (`runtime-analysis.runner`) and shows status/headers/body in a persistent split (`runtime-analysis.view`) that never steals focus. Blocking — the editor waits for the response. A JSON body is pretty-printed with real `json` filetype/folding. |
 | `:RA yank` | none | Yank just the last response's body (not status/headers) to the unnamed register. Warns, does not error, when there is no response yet. |
 | `:RARequest` | none | Flat alias for `:RA request` — see below for why both exist. |
 | `:RASend` | none | Flat alias for `:RA send`. |
@@ -35,6 +35,17 @@ request" and "reports on what already ran".
 keeping them costs four lines and means nobody's own keymap to either name
 breaks on a rename. See [`lua/runtime-analysis/bindings/usrcmds.lua`](../lua/runtime-analysis/bindings/usrcmds.lua)'s
 own doc-comment for the full reasoning.
+
+### `###`: multiple requests per buffer, and real files
+
+`runtime-analysis.parse.split` cuts a buffer into `###`-separated blocks
+(the marker line itself excluded from both sides); `parse.block_at`
+resolves which block a cursor line belongs to. `:RA send`/`:RASend` always
+run this — a single-block buffer (no `###` at all) is one block covering
+everything, so nothing behaves differently than before `###` support
+existed. A real, committed `.http`/`.rest` file works identically once
+opened with `:e` — `*.http` resolves to filetype `http` natively in
+Neovim, `*.rest` via this plugin's own [`ftdetect/runtime-analysis.lua`](../ftdetect/runtime-analysis.lua).
 
 ### `:RATelemetry` subcommands
 

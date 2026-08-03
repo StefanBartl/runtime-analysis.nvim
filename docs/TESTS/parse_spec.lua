@@ -126,4 +126,87 @@ return function(H)
       "parse: a literal Authorization header is untouched by the shorthand"
     )
   end
+
+  -- `###`-separated multi-request buffers (docs/ROADMAP.md §1.2).
+  do
+    -- No `###` at all: one block, the whole buffer — unchanged behavior
+    -- from before this existed.
+    local lines = { "GET https://a", "", "body a" }
+    local blocks = parse.split(lines)
+    eq(#blocks, 1, "split: no ### at all is one block")
+    eq(blocks[1].first, 1, "split: ... covering line 1")
+    eq(blocks[1].last, 3, "split: ... through the last line")
+    eq(
+      table.concat(blocks[1].lines, "|"),
+      table.concat(lines, "|"),
+      "split: ... the whole buffer verbatim"
+    )
+  end
+
+  do
+    -- Two requests, ### between them.
+    local lines =
+      { "GET https://a", "", "### ", "POST https://b", "Content-Type: text/plain", "", "body b" }
+    local blocks = parse.split(lines)
+    eq(#blocks, 2, "split: two ###-separated blocks")
+    eq(blocks[1].first, 1, "split: block 1 starts at line 1")
+    eq(blocks[1].last, 2, "split: block 1 ends right before the ### line")
+    eq(table.concat(blocks[1].lines, "|"), "GET https://a|", "split: block 1's own lines")
+    eq(blocks[2].first, 4, "split: block 2 starts right after the ### line")
+    eq(blocks[2].last, 7, "split: block 2 runs to the end")
+
+    local req1 = parse.parse(blocks[1].lines)
+    eq(req1.method, "GET", "split: block 1 parses as its own request")
+    local req2 = parse.parse(blocks[2].lines)
+    eq(req2.method, "POST", "split: block 2 parses as a separate request")
+    eq(req2.body, "body b", "split: block 2's body is its own, not block 1's")
+  end
+
+  do
+    -- A leading ### before the very first request: still excluded from
+    -- the block that follows it, the same rule every separator gets.
+    local lines = { "###", "GET https://a" }
+    local blocks = parse.split(lines)
+    eq(#blocks, 1, "split: a leading ### produces one block, not an empty one plus a real one")
+    eq(blocks[1].lines[1], "GET https://a", "split: ... and the ### itself is excluded from it")
+  end
+
+  do
+    -- block_at: cursor inside each block resolves to that block.
+    local lines = { "GET https://a", "", "###", "POST https://b", "", "body" }
+    local blocks = parse.split(lines)
+    eq(parse.block_at(blocks, 1).first, 1, "block_at: cursor on block 1's first line")
+    eq(parse.block_at(blocks, 2).first, 1, "block_at: cursor anywhere else inside block 1")
+    eq(parse.block_at(blocks, 4).first, 4, "block_at: cursor inside block 2")
+    eq(parse.block_at(blocks, 6).first, 4, "block_at: cursor on block 2's last line")
+  end
+
+  do
+    -- block_at: cursor exactly on a ### separator resolves to the block
+    -- above it, not the one below — "still the request you were editing".
+    local lines = { "GET https://a", "###", "POST https://b" }
+    local blocks = parse.split(lines)
+    eq(
+      parse.block_at(blocks, 2).first,
+      1,
+      "block_at: cursor on the ### line itself favors the block above it"
+    )
+  end
+
+  -- `.rest` ftdetect (docs/ROADMAP.md §1.4). `*.http` already resolves to
+  -- filetype `http` in stock Neovim with no plugin at all — verified
+  -- separately, not re-asserted here, since nothing in this repo could
+  -- meaningfully break that. `ftdetect/runtime-analysis.lua` is a plain
+  -- script, not a `require`-able module (Neovim's own convention for the
+  -- whole `ftdetect/` directory), so it is `dofile`d directly rather than
+  -- `require`d.
+  do
+    local dir = debug.getinfo(1, "S").source:sub(2):match("(.*[/\\])") or "./"
+    dofile(dir .. "../../ftdetect/runtime-analysis.lua")
+    eq(
+      vim.filetype.match({ filename = "requests.rest" }),
+      "http",
+      "ftdetect: *.rest resolves to filetype http"
+    )
+  end
 end

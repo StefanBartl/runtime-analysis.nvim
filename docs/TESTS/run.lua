@@ -52,6 +52,7 @@ local specs = {
   "runner_spec.lua",
   "view_spec.lua",
   "init_spec.lua",
+  "usrcmds_spec.lua",
   "telemetry_spec.lua",
   "lazy_spec.lua",
 }

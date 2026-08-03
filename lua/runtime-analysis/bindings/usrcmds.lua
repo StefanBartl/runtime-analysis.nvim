@@ -36,10 +36,26 @@ local M = {}
 
 ---Parse the current buffer as a request and send it, showing the response
 ---in the split `view.lua` manages.
+---
+---`###`-aware (docs/ROADMAP.md §1.2): the buffer is always split into
+---blocks first, and the block the cursor is in (or nearest above it) is
+---the one parsed and sent — never the whole buffer verbatim, never a
+---picker. A buffer with no `###` line at all splits into exactly one
+---block covering everything, so this behaves exactly as it did before
+---`###` support existed.
 ---@param ra RA
 local function send_current_buffer(ra)
+  local parse = require("runtime-analysis.parse")
   local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-  local request, err = require("runtime-analysis.parse").parse(lines)
+  local blocks = parse.split(lines)
+  local block_lines = lines
+  if #blocks > 0 then
+    local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
+    local block = parse.block_at(blocks, cursor_line)
+    block_lines = block and block.lines or lines
+  end
+
+  local request, err = parse.parse(block_lines)
   if not request then
     vim.notify("runtime-analysis: " .. err, vim.log.levels.ERROR)
     return

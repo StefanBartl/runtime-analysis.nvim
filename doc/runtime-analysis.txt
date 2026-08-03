@@ -116,15 +116,19 @@ see docs/BINDINGS.md in the repository for the full reasoning.
 
                                                             *:RA-request*
                                                               *:RARequest*
-:RA request                     Open a new request buffer. One request per
-:RARequest                     buffer, in the shape VS Code's REST Client /
-                                IntelliJ's HTTP Client already use:
+:RA request                     Open a new request buffer, in the shape VS
+:RARequest                     Code's REST Client / IntelliJ's HTTP Client
+                                already use:
 >
   METHOD url
   Header-Name: value
 
   {"optional": "body", "after": "one blank line"}
 <
+  Always a fresh, unnamed scratch buffer — for a committed file with
+  several requests, open it directly with `:e` instead, see
+  |runtime-analysis-multi-request| below.
+
   One header name is a shorthand: `Auth: Bearer <token>` or
   `Auth: Basic <user>:<pass>` resolve into a real `Authorization` header,
   base64-encoding Basic credentials for you. See
@@ -132,9 +136,11 @@ see docs/BINDINGS.md in the repository for the full reasoning.
 
                                                                *:RA-send*
                                                               *:RASend*
-:RA send                        Run from inside a request buffer: parses it,
-:RASend                         sends it via lib.nvim.net.curl, and shows the
-                                response (status, headers, body) in a
+:RA send                        Parses and sends whichever `###` block the
+:RASend                         cursor is in (or nearest above it — see
+                                |runtime-analysis-multi-request| below),
+                                sends it via lib.nvim.net.curl, and shows
+                                the response (status, headers, body) in a
                                 persistent split beside it. Blocking: the
                                 editor waits for the response. The response
                                 pane is reused across sends and never steals
@@ -143,6 +149,35 @@ see docs/BINDINGS.md in the repository for the full reasoning.
                                 pretty-printed with real `json`
                                 filetype/folding, reset to plain on the next
                                 call if that response is not JSON.
+
+                                                *runtime-analysis-multi-request*
+Multiple requests, and real files ~
+  A buffer (or a real, committed `.http`/`.rest` file) may hold more than
+  one request, `###`-separated — the same delimiter both VS Code's REST
+  Client and IntelliJ's HTTP Client use: >
+
+  GET https://api.example.com/users
+
+  ###
+
+  POST https://api.example.com/users
+  Content-Type: application/json
+
+  {"name": "Bob"}
+<
+  `runtime-analysis.parse.split` cuts the buffer on every `###` line
+  (excluded from both sides — a pure separator); `parse.block_at` then
+  resolves which block a cursor line belongs to. |:RA-send|/|:RASend|
+  always run this, even on a single-block buffer (no `###` at all is one
+  block covering everything) — one code path, not a special case for the
+  common single-request buffer. Always the block under the cursor, never
+  the whole buffer, never a picker.
+
+  `*.http` resolves to filetype `http` natively in Neovim; `*.rest`
+  (IntelliJ HTTP Client's own extension for the identical shape) via this
+  plugin's own `ftdetect/runtime-analysis.lua`. Either way, a real file
+  opened directly with `:e` works exactly like a scratch buffer from
+  |:RA-request| — `:RA send` reads "the current buffer", origin-agnostic.
 
                                                                *:RA-yank*
 :RA yank                        Yank just the response body (not the status
@@ -261,8 +296,9 @@ commands yet in this session.
 
 This plugin's own backlog, organized into phases (quick wins, medium,
 longer-term), plus documented rejections: docs/ROADMAP.md in the
-repository. Ideas that only exist *between* this plugin and its siblings
-(documentation.nvim, mdview.nvim, lib.nvim): docs/IDEAS.md.
+repository. What has shipped out of it, and why: docs/FINISHED.md. Ideas
+that only exist *between* this plugin and its siblings (documentation.nvim,
+mdview.nvim, lib.nvim): docs/IDEAS.md.
 
 ==============================================================================
 vim:tw=78:ts=8:noet:ft=help:norl:
