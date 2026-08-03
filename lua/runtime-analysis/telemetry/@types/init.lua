@@ -163,4 +163,16 @@
 ---@field is_disabled fun(namespace: string): boolean
 ---@field disabled fun(): string[]
 
+---@class RA.Telemetry.LazyPluginOpts
+---@field namespace string
+---@field deep? boolean
+---@field profile_args? boolean
+---@field timing? boolean
+---@field persist? boolean                              # forwarded to auto()/new() (default true)
+---@field dir? string                                   # forwarded to auto()/new() -- cache directory override
+
+---@class RA.Telemetry.LazyOpts
+---@field plugins table<string, RA.Telemetry.LazyPluginOpts>       # keyed by repo, e.g. "StefanBartl/markdown.nvim"
+---@field lib_nvim? { profile_args?: boolean, timing?: boolean, persist?: boolean, dir?: string }|false
+
 return {}
