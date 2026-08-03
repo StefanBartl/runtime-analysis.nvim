@@ -53,6 +53,7 @@ local specs = {
   "view_spec.lua",
   "init_spec.lua",
   "telemetry_spec.lua",
+  "lazy_spec.lua",
 }
 
 --- Straight to stdout rather than through `print` — the same reason

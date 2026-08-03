@@ -183,6 +183,60 @@ By default, `deep = true`'s `module_filter` excludes `@types` modules —
 pure LuaCATS annotation scaffolding, noise in every report — overridable by
 passing your own `module_filter`.
 
+### `telemetry.lazy` — the lazy.nvim adapter
+
+`auto()` still leaves hooking a load event and resolving a plugin's Lua
+module to you. If lazy.nvim is your plugin manager, this module does both:
+
+```lua
+require("runtime-analysis.telemetry.lazy").setup({
+  plugins = {
+    -- keyed by repo, as declared in the lazy.nvim spec's first element
+    ["StefanBartl/markdown.nvim"] = { namespace = "markdown.nvim", deep = true, profile_args = true },
+    ["StefanBartl/lib.nvim"] = nil, -- see lib_nvim below instead
+  },
+  lib_nvim = { profile_args = false }, -- false/omit to skip entirely
+})
+```
+
+Wire it from `runtime-analysis.nvim`'s own plugin spec, not a separate
+config file or a call before `lazy.setup()`:
+
+```lua
+{
+  "StefanBartl/runtime-analysis.nvim",
+  lazy = false,
+  dependencies = { "StefanBartl/lib.nvim" },
+  opts = { telemetry = { plugins = {...}, lib_nvim = {...} } },
+  config = function(_, opts) require("runtime-analysis").setup(opts) end,
+},
+```
+
+**Catch-up, not just the event.** `User LazyLoad` fires the moment a
+plugin's own `config()` finishes — for a `lazy=false` *dependency* of this
+plugin (`lib.nvim`, typically), that happens **during** `lazy.setup()`,
+quite possibly before this plugin's own `config()` (the only place `setup()`
+above could realistically run from) ever executes. Registering only the
+autocmd would silently miss it. `setup()` instead scans everything already
+loaded the moment it runs, wraps what's already there, then registers the
+autocmd for everything after — no "must run before `lazy.setup()`" ordering
+requirement, unlike hooking `User LazyLoad` directly yourself.
+
+**`lib_nvim` is separate from `plugins`** because instrumenting
+`require("lib")`'s own aggregate goes through lib.nvim's own
+`lib.strategies.telemetry_wrap` (metatable-hidden keys; `wrap_loaded("lib")`
+would also reach every internal helper in a large library, when the
+interesting question is which of its *public* keys get used), not
+`auto()`. Soft dependency either way: if lazy.nvim is not your plugin
+manager, or lib.nvim's `telemetry_wrap` is not reachable, `setup()` and the
+`lib_nvim` option are simply no-ops, not errors.
+
+**No other plugin manager is supported.** packer.nvim has no per-plugin
+load event to hook (and is no longer actively maintained); vim-plug has no
+lazy-loading concept at all. Detecting which manager is active is easy;
+writing and maintaining an adapter for ones nobody here uses is not worth
+the surface. Use `auto()` directly if you need this on something else.
+
 ### Lifecycle
 
 ```lua

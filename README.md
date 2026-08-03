@@ -57,11 +57,13 @@ require("runtime-analysis").setup({
 for any Lua/Neovim plugin, moved here from lib.nvim. `:RATelemetry` is
 registered by the same `setup()` call above; see
 [`lua/runtime-analysis/telemetry/README.md`](lua/runtime-analysis/telemetry/README.md)
-for the full API (`wrap`/`wrap_loaded`, persistence, Markdown/browser
-reports, the `:RATelemetry` subcommands). lib.nvim itself keeps a thin
-caller, `lib.strategies.telemetry_wrap`, for instrumenting its own
-`require("lib")` aggregate specifically — everything else in this module is
-generic.
+for the full API (`wrap`/`wrap_loaded`, `auto()`, persistence, Markdown/
+browser reports, the `:RATelemetry` subcommands). Pass `telemetry = {...}`
+in `setup(opts)` to auto-instrument every plugin as it loads — the one
+plugin-manager adapter shipped is lazy.nvim's (see that README section for
+why no others are). lib.nvim itself keeps a thin caller,
+`lib.strategies.telemetry_wrap`, for instrumenting its own `require("lib")`
+aggregate specifically — everything else in this module is generic.
 
 ### Integration with documentation.nvim (step 6)
 

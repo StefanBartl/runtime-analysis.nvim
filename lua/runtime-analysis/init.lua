@@ -78,7 +78,7 @@ local function send_current_buffer()
 end
 
 ---Plugin entry point.
----@param opts? { split?: string, request_filetype?: string }
+---@param opts? { split?: string, request_filetype?: string, telemetry?: RA.Telemetry.LazyOpts }
 function M.setup(opts)
   M.opts = vim.tbl_deep_extend("force", vim.deepcopy(DEFAULTS), opts or {})
 
@@ -92,6 +92,14 @@ function M.setup(opts)
   })
 
   require("runtime-analysis.telemetry.command").setup()
+
+  -- Opt-in: no `telemetry` key means no auto-instrumentation, same as never
+  -- calling `telemetry.auto()`/`.new()` at all. A no-op if lazy.nvim is not
+  -- the caller's plugin manager (see that module's own doc-comment for why
+  -- only lazy.nvim gets an adapter here).
+  if opts and opts.telemetry then
+    require("runtime-analysis.telemetry.lazy").setup(opts.telemetry)
+  end
 end
 
 return M
