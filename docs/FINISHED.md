@@ -24,6 +24,63 @@ Newest first, by date; original document order within a date.
 
 ---
 
+## 2026-08-04
+
+### §1.1 Async sending
+
+`:RASend` blocked until the response arrived — fine for a request bounded
+in milliseconds, genuinely bad for a slow endpoint, since the editor froze
+with no way to cancel. `lib.nvim.net.curl` already had a non-blocking
+`fetch_raw` alongside the `fetch_raw_blocking` the blocking path used; the
+work turned out to be exactly where the original roadmap entry said it
+would be — the view, not the transport.
+
+`runner.lua` gained `M.run_async(request, cb)`, sharing its response
+formatting with `M.run` via a single `format_response(resp)` local rather
+than duplicating it. One real finding while building it: `fetch_raw`'s own
+completion callback fires in a **fast event context** — verified directly
+(a bare `nvim_create_buf` call inside it raises `E5560`) rather than
+assumed — so `run_async` wraps its own callback in `vim.schedule` itself,
+once, rather than documenting that requirement and hoping every future
+caller remembers it.
+
+`:RA send`/`:RASend` now show a `→ sending METHOD url ...` placeholder in
+the response pane immediately, and a `lib.nvim.progress` indicator
+(soft dependency, `pcall`-guarded — sending still works with no visible
+spinner if it is ever unavailable). Pending-request tracking lives in
+`bindings/usrcmds.lua` as a monotonic token: firing a new `:RA send`
+before an earlier one has replied bumps the token, and a response only
+ever renders if its token is still current when it arrives — a *logical*
+supersession, not a queue and not an "already in flight" refusal.
+
+**New: `:RA cancel`.** Discards the in-flight request's eventual result the
+same way a superseding send does (bumps the token via the progress
+handle's own `on_cancel`/`request_cancel` wiring, so an interactive
+progress style's own cancel gesture would go through the identical path,
+even though none is configured by default) and shows `✗ cancelled`
+immediately. **A logical cancel, not a process kill** — `fetch_raw` does
+not hand back the `vim.SystemObj` a hard kill would need, so the
+underlying `curl` process keeps running to completion in the background;
+only this plugin's interest in its result is withdrawn. Extending
+`lib.nvim.net.curl` to expose that handle is real, separate work in a
+different repository — the same kind of extension this plugin already
+motivated once (`fetch_raw`/`fetch_raw_blocking` themselves) — not
+attempted here.
+
+Verified end-to-end, not only at the unit level: a hermetic local server
+whose replies are deliberately delayed, so tests could assert on the
+*non-blocking* return, on supersession (two sends racing, only the second
+ever rendering), and on cancellation (a late reply from an
+already-cancelled request never overwriting the cancelled message) without
+relying on timing luck. One real environment finding surfaced by this pass:
+a closed local port takes ~2 seconds to report "connection refused" on
+this environment (Windows' TCP stack retries before giving up, unlike
+Linux's near-instant RST) — the async failure-path test's own timeout was
+sized to that, not to the sub-second timing every other test in this
+plugin gets away with.
+
+---
+
 ## 2026-08-03
 
 ### §1.2 Multiple requests per buffer (`###`)

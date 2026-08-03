@@ -41,6 +41,48 @@ return function(H)
     return port, server, requests
   end
 
+  ---A server that waits `delay_ms` after receiving a request before
+  ---replying, so a test can deterministically fire a second send or a
+  ---`:RA cancel` while the first is still genuinely in flight, without a
+  ---race. The reply body echoes the request path (`reply-for-/a`) so a
+  ---test can tell which of several in-flight requests' response actually
+  ---rendered.
+  ---@param delay_ms integer
+  ---@return integer port
+  ---@return uv_tcp_t server
+  ---@return string[] requests
+  local function start_delayed_server(delay_ms)
+    local requests = {}
+    local server = uv.new_tcp()
+    assert(server:bind("127.0.0.1", 0))
+    local port = server:getsockname().port
+    server:listen(128, function(listen_err)
+      assert(not listen_err, listen_err)
+      local client = uv.new_tcp()
+      server:accept(client)
+      client:read_start(function(_, chunk)
+        if not chunk then
+          return
+        end
+        local method, path = chunk:match("^(%a+)%s+(%S+)")
+        requests[#requests + 1] = ("%s %s"):format(method, path)
+        vim.defer_fn(function()
+          local body = "reply-for-" .. path
+          client:write(table.concat({
+            "HTTP/1.1 200 OK",
+            "Content-Length: " .. #body,
+            "",
+            body,
+          }, "\r\n"))
+          client:shutdown(function()
+            client:close()
+          end)
+        end, delay_ms)
+      end)
+    end)
+    return port, server, requests
+  end
+
   local port, server, requests = start_server()
 
   local bufnr = vim.api.nvim_create_buf(false, true)
@@ -90,6 +132,149 @@ return function(H)
   )
 
   server:close()
+
+  -- Declared here, not inside their own `do` blocks below: each is deleted
+  -- only once at the very end (see the note by the first `close()` below
+  -- for why), which needs them to still be in scope down there.
+  local slow_buf, race_buf, cancel_buf
+
+  -- Non-blocking (docs/ROADMAP.md §1.1): :RA send must return control
+  -- before the response arrives, showing a pending placeholder in the
+  -- meantime rather than leaving the pane looking untouched.
+  do
+    local slow_port, slow_server, slow_requests = start_delayed_server(150)
+    slow_buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_lines(slow_buf, 0, -1, false, {
+      ("GET http://127.0.0.1:%d/slow"):format(slow_port),
+      "",
+    })
+    vim.api.nvim_win_set_buf(winid, slow_buf)
+    vim.api.nvim_win_set_cursor(winid, { 1, 0 })
+
+    vim.cmd("RA send")
+
+    local resp_bufnr = vim.fn.bufnr("runtime-analysis://response")
+    local placeholder = vim.api.nvim_buf_get_lines(resp_bufnr, 0, 1, false)[1]
+    ok(
+      placeholder:match("^→ sending") ~= nil,
+      "usrcmds: :RA send shows a pending placeholder immediately, before the response arrives"
+    )
+
+    vim.wait(1000, function()
+      return #slow_requests == 1
+    end, 10)
+    vim.wait(1000, function()
+      return vim.api.nvim_buf_get_lines(resp_bufnr, 0, 1, false)[1] == "200 OK"
+    end, 20)
+    eq(
+      vim.api.nvim_buf_get_lines(resp_bufnr, 0, 1, false)[1],
+      "200 OK",
+      "usrcmds: the real response eventually replaces the placeholder"
+    )
+
+    -- Not buf_delete'd here: `winid` still shows `slow_buf`, and deleting
+    -- the buffer a window is currently displaying closes that window
+    -- (verified — surprising, but real) when a second window exists, which
+    -- the response split always does by this point. Deleted at the very
+    -- end instead, once `winid` has moved on to something else.
+    slow_server:close()
+  end
+
+  -- Supersession: a second :RA send fired before the first's response has
+  -- arrived must discard the first's result — never a queue, never both
+  -- rendering, and never a "request already in flight" refusal.
+  do
+    local race_port, race_server, race_requests = start_delayed_server(150)
+    race_buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_lines(race_buf, 0, -1, false, {
+      ("GET http://127.0.0.1:%d/a"):format(race_port),
+      "",
+      "###",
+      ("GET http://127.0.0.1:%d/b"):format(race_port),
+      "",
+    })
+    vim.api.nvim_win_set_buf(winid, race_buf)
+
+    vim.api.nvim_win_set_cursor(winid, { 1, 0 })
+    vim.cmd("RA send")
+    vim.api.nvim_win_set_cursor(winid, { 4, 0 })
+    vim.cmd("RA send")
+
+    vim.wait(1000, function()
+      return #race_requests == 2
+    end, 10)
+    ok(race_requests[1]:match("/a$") ~= nil, "usrcmds: the first request still actually went out")
+    ok(race_requests[2]:match("/b$") ~= nil, "usrcmds: ... and so did the second")
+
+    local resp_bufnr = vim.fn.bufnr("runtime-analysis://response")
+    vim.wait(1000, function()
+      local last = vim.api.nvim_buf_get_lines(resp_bufnr, -2, -1, false)[1]
+      return last == "reply-for-/b"
+    end, 20)
+    eq(
+      vim.api.nvim_buf_get_lines(resp_bufnr, -2, -1, false)[1],
+      "reply-for-/b",
+      "usrcmds: only the second send's response ever renders — the first's is discarded"
+    )
+
+    race_server:close()
+  end
+
+  -- :RA cancel: discards the in-flight request's eventual result, shows a
+  -- cancelled message immediately, and a late, already-cancelled response
+  -- must never overwrite that message when it finally arrives.
+  do
+    local cancel_port, cancel_server, cancel_requests = start_delayed_server(200)
+    cancel_buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_lines(cancel_buf, 0, -1, false, {
+      ("GET http://127.0.0.1:%d/cancel-me"):format(cancel_port),
+      "",
+    })
+    vim.api.nvim_win_set_buf(winid, cancel_buf)
+    vim.api.nvim_win_set_cursor(winid, { 1, 0 })
+
+    vim.cmd("RA send")
+    vim.cmd("RA cancel")
+
+    local resp_bufnr = vim.fn.bufnr("runtime-analysis://response")
+    eq(
+      vim.api.nvim_buf_get_lines(resp_bufnr, 0, 1, false)[1],
+      "✗ cancelled",
+      "usrcmds: :RA cancel shows a cancelled message immediately"
+    )
+
+    -- Cancelling again with nothing in flight warns rather than erroring.
+    local warned
+    local orig_notify = vim.notify
+    vim.notify = function(msg, level)
+      warned = { msg = msg, level = level }
+    end
+    vim.cmd("RA cancel")
+    vim.notify = orig_notify
+    ok(warned ~= nil, "usrcmds: :RA cancel with nothing in flight warns instead of erroring")
+    eq(warned.level, vim.log.levels.WARN, "usrcmds: ... at WARN level")
+
+    -- The original request's late reply still arrives at the server-facing
+    -- side (curl was never actually killed — see runner.run_async's own
+    -- doc-comment on why) but must not reach the response pane.
+    vim.wait(1000, function()
+      return #cancel_requests == 1
+    end, 10)
+    vim.wait(500, function()
+      return false
+    end, 20) -- let the delayed reply actually land before checking
+    eq(
+      vim.api.nvim_buf_get_lines(resp_bufnr, 0, 1, false)[1],
+      "✗ cancelled",
+      "usrcmds: the cancelled request's late response never overwrites the cancelled state"
+    )
+
+    cancel_server:close()
+  end
+
   vim.api.nvim_win_set_buf(winid, prev_buf)
   vim.api.nvim_buf_delete(bufnr, { force = true })
+  vim.api.nvim_buf_delete(slow_buf, { force = true })
+  vim.api.nvim_buf_delete(race_buf, { force = true })
+  vim.api.nvim_buf_delete(cancel_buf, { force = true })
 end

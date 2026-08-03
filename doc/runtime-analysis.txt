@@ -35,8 +35,9 @@ Two features today:
   - Neovim 0.10 or later (`vim.system`)
   - lib.nvim (https://github.com/StefanBartl/lib.nvim) — hard dependency:
     `net.curl`'s `fetch_raw`/`fetch_raw_blocking` for the request runner,
-    `usercmd.composer` for |:RA|, plus `cache.disk`, `git`, `ui.kit`,
-    `usercmd`, `notify`, `autocmd` and `progress` for telemetry.
+    `usercmd.composer` for |:RA|, `progress` for the sending/cancel
+    indicator and telemetry's own reports, plus `cache.disk`, `git`,
+    `ui.kit`, `usercmd`, `notify` and `autocmd`.
   - `curl` on PATH — every |:RASend| shells out to it via lib.nvim.
 
 Optional:
@@ -141,14 +142,21 @@ see docs/BINDINGS.md in the repository for the full reasoning.
                                 |runtime-analysis-multi-request| below),
                                 sends it via lib.nvim.net.curl, and shows
                                 the response (status, headers, body) in a
-                                persistent split beside it. Blocking: the
-                                editor waits for the response. The response
-                                pane is reused across sends and never steals
-                                focus from the request buffer. A
-                                `Content-Type: application/json` body is
-                                pretty-printed with real `json`
-                                filetype/folding, reset to plain on the next
-                                call if that response is not JSON.
+                                persistent split beside it.
+
+  Non-blocking: the editor stays responsive while curl runs. A
+  "-> sending METHOD url ..." placeholder appears immediately, replaced by
+  the real response, an error, or a cancelled message once one of those
+  happens. A visible sending/cancel indicator via lib.nvim.progress if
+  available (soft dependency — sending still works with no spinner if it
+  is not). Firing a second |:RA-send| before the first replies supersedes
+  it — a monotonic token, not a queue, not an "already in flight" refusal;
+  see |:RA-cancel| below, which does the same thing on request.
+
+  The response pane is reused across sends and never steals focus from
+  the request buffer. A `Content-Type: application/json` body is
+  pretty-printed with real `json` filetype/folding, reset to plain on the
+  next call if that response is not JSON.
 
                                                 *runtime-analysis-multi-request*
 Multiple requests, and real files ~
@@ -184,6 +192,21 @@ Multiple requests, and real files ~
                                 line or headers) to the unnamed register.
                                 Warns rather than erroring when there is no
                                 response yet, or the last one had no body.
+
+                                                             *:RA-cancel*
+:RA cancel                      Cancel the in-flight request, if any: shows
+                                "x cancelled" in the response pane
+                                immediately and marks its eventual result
+                                as stale, so a late reply never overwrites
+                                that message. Warns rather than erroring
+                                when nothing is in flight.
+
+  A *logical* cancel, not a process kill: lib.nvim.net.curl.fetch_raw does
+  not hand back the vim.SystemObj a hard kill would need, so the
+  underlying curl process keeps running to completion in the background —
+  only this plugin's own interest in its result is withdrawn. Extending
+  lib.nvim.net.curl for a real kill is separate work in a different
+  repository, not attempted here.
 
                                                     *runtime-analysis-auth-shorthand*
 Auth: shorthand ~
@@ -288,8 +311,8 @@ the method and path are pre-filled and the reader completes the base URL
 Reports: Neovim version, `curl` on PATH, every required lib.nvim module
 loading, live telemetry instances and persistently disabled namespaces in
 this session, the telemetry cache directory and whether it is writable,
-whether mdview.nvim is available, and whether `setup()` has registered its
-commands yet in this session.
+whether mdview.nvim and lib.nvim.progress are available, and whether
+`setup()` has registered its commands yet in this session.
 
 ==============================================================================
 9. ROADMAP                                           *runtime-analysis-roadmap*

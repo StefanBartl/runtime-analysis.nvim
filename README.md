@@ -64,12 +64,19 @@ base64-encoding Basic credentials for you.
 ```
 
 Run from inside that buffer: parses it, sends it, and shows the response
-(status, headers, body) in a persistent split beside it. The response pane
-is reused across sends rather than opening a new split every time, and
-sending a request never steals focus away from the buffer you're editing —
-the whole point is edit, send, glance at the response, edit again. A JSON
-response is pretty-printed and gets real `json` syntax/folding; `:RA yank`
-copies just the body, headers and status left out.
+(status, headers, body) in a persistent split beside it. **Non-blocking** —
+the editor stays responsive while curl runs, a pending "→ sending ..."
+placeholder shows immediately, and `:RA cancel` discards whatever comes
+back (curl itself keeps running to completion in the background; only its
+result is discarded — see `docs/COMMANDS.md` for why a real process kill
+is not attempted here). Firing a second `:RA send` before the first
+replies supersedes it the same way — no queue, no "already in flight"
+refusal. The response pane is reused across sends rather than opening a
+new split every time, and sending a request never steals focus away from
+the buffer you're editing — the whole point is edit, send, glance at the
+response, edit again. A JSON response is pretty-printed and gets real
+`json` syntax/folding; `:RA yank` copies just the body, headers and status
+left out.
 
 Built via [`lib.nvim.usercmd.composer`](https://github.com/StefanBartl/lib.nvim) —
 `:RA` is one compound verb, `<Tab>`-completed, the same shape `:DocMap` and
@@ -146,9 +153,6 @@ the method and path are pre-filled and the reader completes the base URL
 
 ## What's not here yet
 
-- **Async sending.** `:RASend` blocks until the response arrives — real,
-  and fine for a request bounded in seconds, but a genuine limitation for
-  a slow endpoint.
 - **Request history.** Nothing is saved between sends yet.
 - **The static × runtime join** — a planned `:DocBrowse` mode joining
   documentation.nvim's static analysis against telemetry's counts, a
@@ -179,8 +183,9 @@ this short list.
   `fetch_raw`/`fetch_raw_blocking` for the request runner (this plugin is
   the reason those exist: the HTTP status code and response headers were
   not previously exposed by that module at all), `usercmd.composer` for
-  `:RA`, plus `cache.disk`, `git`, `ui.kit`, `usercmd`, `notify`, `autocmd`
-  and `progress` for telemetry.
+  `:RA`, `progress` for the sending/cancel indicator and telemetry's own
+  reports, plus `cache.disk`, `git`, `ui.kit`, `usercmd`, `notify` and
+  `autocmd`.
 - `curl` on PATH.
 - [mdview.nvim](https://github.com/StefanBartl/mdview.nvim) — optional,
   soft dependency: renders a telemetry report as a live browser tab.

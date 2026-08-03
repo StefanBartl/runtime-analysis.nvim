@@ -153,6 +153,16 @@ function M.check()
     h_info("lib.nvim.ui.kit not available — :RATelemetry's report float falls back to :messages")
   end
 
+  local ok_progress = pcall(require, "lib.nvim.progress")
+  if ok_progress then
+    h_ok("lib.nvim.progress — :RA send shows a sending/cancel indicator")
+  else
+    h_info("lib.nvim.progress not available", {
+      ":RA send still works asynchronously without it, just with no visible",
+      "indicator; :RA cancel still discards the result directly.",
+    })
+  end
+
   h_start("runtime-analysis.nvim: commands")
   -- All four are registered unconditionally by `require("runtime-analysis")
   -- .setup()` — nothing here is independently opt-in the way `telemetry`'s

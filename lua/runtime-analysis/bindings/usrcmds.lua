@@ -1,5 +1,5 @@
 ---@module 'runtime-analysis.bindings.usrcmds'
---- Registers `:RA <subcommand>` (`request`/`send`/`yank`, via
+--- Registers `:RA <subcommand>` (`request`/`send`/`yank`/`cancel`, via
 --- `lib.nvim.usercmd.composer`, the same verb-first shape `:DocMap`,
 --- `:MDView` and `:Replace` already use) plus two flat convenience aliases,
 --- `:RARequest` and `:RASend`, for this plugin's two most-used actions.
@@ -20,8 +20,18 @@
 --- the *names* staying flat, but a user's own keymap to either flat command
 --- would break silently on a bare rename. Keeping both costs four lines and
 --- breaks nothing; dropping the flat pair would be a breaking change for a
---- purely cosmetic gain. `:RA yank` gets no flat alias: it is new, has no
---- external references and no keymap could already exist for it.
+--- purely cosmetic gain. `:RA yank`/`:RA cancel` get no flat alias: both are
+--- new, have no external references, and no keymap could already exist for
+--- either.
+---
+--- **`:RA send`/`:RASend` are non-blocking** (docs/ROADMAP.md §1.1) — see
+--- `runner.run_async`'s own doc-comment for why every callback through it is
+--- guaranteed to run outside Neovim's fast-event context, and see the
+--- pending-request tracking below for what "cancel" actually means here: a
+--- *logical* discard of whatever `curl` eventually returns, not a process
+--- kill — `lib.nvim.net.curl.fetch_raw` does not hand back a `vim.SystemObj`
+--- to kill, and extending it to do so is real, separate work in a different
+--- repository, not attempted here.
 ---
 --- No `keymaps.lua` or `autocmds.lua` sit beside this file: this plugin sets
 --- zero default keymaps and zero autocmds, by design — every entry point is a
@@ -34,8 +44,44 @@ local composer = require("lib.nvim.usercmd.composer")
 
 local M = {}
 
----Parse the current buffer as a request and send it, showing the response
----in the split `view.lua` manages.
+-- Pending-request tracking (docs/ROADMAP.md §1.1). One token per send;
+-- firing a new `:RA send` bumps it, which makes an earlier in-flight
+-- request's own callback a silent no-op when it eventually arrives — a
+-- *logical* supersession, not a queue and not a "one at a time" refusal.
+-- `:RA cancel` works the same way: see `runner.run_async`'s own doc-comment
+-- for why this can only ever discard the eventual result, not stop the
+-- `curl` process actually producing it.
+local pending_token = 0
+local in_flight = false
+---@type Lib.Progress.Handle?
+local pending_handle = nil
+
+---@param my_token integer
+---@return boolean
+local function is_current(my_token)
+  return in_flight and my_token == pending_token
+end
+
+---@param ra RA
+local function cancel_pending(ra)
+  if not in_flight then
+    vim.notify("runtime-analysis: no request in flight", vim.log.levels.WARN)
+    return
+  end
+  if pending_handle then
+    -- Runs the `on_cancel` callback registered below (which flips
+    -- `in_flight` to false) before rendering the handle's own "cancelled"
+    -- state — the single path both this command and any future
+    -- interactive progress style's own cancel gesture would go through.
+    pending_handle:request_cancel()
+  else
+    in_flight = false
+  end
+  require("runtime-analysis.view").show({ "✗ cancelled" }, { split = ra.opts.split })
+end
+
+---Parse the current buffer as a request and send it asynchronously,
+---showing the response in the split `view.lua` manages once it arrives.
 ---
 ---`###`-aware (docs/ROADMAP.md §1.2): the buffer is always split into
 ---blocks first, and the block the cursor is in (or nearest above it) is
@@ -43,6 +89,11 @@ local M = {}
 ---picker. A buffer with no `###` line at all splits into exactly one
 ---block covering everything, so this behaves exactly as it did before
 ---`###` support existed.
+---
+---Non-blocking (docs/ROADMAP.md §1.1): the editor stays responsive while
+---curl runs. The response pane shows a "sending" placeholder immediately,
+---then either the real response or an error/cancelled message — never
+---silence while nothing visibly happens.
 ---@param ra RA
 local function send_current_buffer(ra)
   local parse = require("runtime-analysis.parse")
@@ -61,17 +112,62 @@ local function send_current_buffer(ra)
     return
   end
 
-  local resp_lines, run_err, meta = require("runtime-analysis.runner").run(request)
-  if not resp_lines then
-    vim.notify("runtime-analysis: " .. run_err, vim.log.levels.ERROR)
-    return
-  end
+  pending_token = pending_token + 1
+  local my_token = pending_token
+  in_flight = true
 
-  require("runtime-analysis.view").show(resp_lines, {
-    split = ra.opts.split,
-    body_start = meta and meta.body_start,
-    is_json = meta and meta.is_json,
-  })
+  local view = require("runtime-analysis.view")
+  local summary = ("%s %s"):format(request.method, request.url)
+  view.show({ ("→ sending %s ..."):format(summary) }, { split = ra.opts.split })
+
+  -- Soft dependency, `pcall`-guarded like every other optional lib.nvim
+  -- piece this plugin touches: async sending still works with no visible
+  -- spinner if `lib.nvim.progress` is ever unavailable, it just loses the
+  -- "sending..." notification and the ability to cancel *through the
+  -- handle* — `cancel_pending`'s `else` branch still lets `:RA cancel`
+  -- discard the result directly in that case.
+  local ok_progress, progress = pcall(require, "lib.nvim.progress")
+  local handle
+  if ok_progress then
+    handle = progress.create({ title = "[runtime-analysis]" })
+    handle:update({ text = "sending " .. summary })
+    handle:on_cancel(function()
+      if my_token == pending_token then
+        in_flight = false
+      end
+    end)
+  end
+  pending_handle = handle
+
+  require("runtime-analysis.runner").run_async(request, function(resp_lines, run_err, meta)
+    if not is_current(my_token) then
+      -- Superseded by a later send, or cancelled — the result arrived,
+      -- but nothing here still cares about it.
+      return
+    end
+    in_flight = false
+    if pending_handle == handle then
+      pending_handle = nil
+    end
+
+    if not resp_lines then
+      if handle then
+        handle:cancel("failed")
+      end
+      vim.notify("runtime-analysis: " .. run_err, vim.log.levels.ERROR)
+      view.show({ ("✗ %s"):format(run_err) }, { split = ra.opts.split })
+      return
+    end
+
+    if handle then
+      handle:finish("done")
+    end
+    view.show(resp_lines, {
+      split = ra.opts.split,
+      body_start = meta and meta.body_start,
+      is_json = meta and meta.is_json,
+    })
+  end)
 end
 
 ---@param ra RA The plugin's own module table — read for `ra.opts` and called
@@ -100,6 +196,13 @@ function M.setup(ra)
         desc = "Yank just the last response's body to the unnamed register",
         run = function()
           require("runtime-analysis.view").yank_body()
+        end,
+      },
+      {
+        path = { "cancel" },
+        desc = "Cancel the in-flight request, if any",
+        run = function()
+          cancel_pending(ra)
         end,
       },
     },
