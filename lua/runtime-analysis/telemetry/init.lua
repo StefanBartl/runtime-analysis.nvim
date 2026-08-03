@@ -832,6 +832,68 @@ end
 -- Module-level
 -- ---------------------------------------------------------------------------
 
+---Is any of `main` itself or `main.*` present in `package.loaded` yet?
+---Checked before `M.auto()` creates an instance, so a plugin that has not
+---loaded anything wrappable yet does not leave an empty namespace behind.
+---@param main string
+---@return boolean
+local function module_tree_loaded(main)
+  if type(package.loaded[main]) == "table" then
+    return true
+  end
+  local dot = main .. "."
+  for name, value in pairs(package.loaded) do
+    if type(name) == "string" and type(value) == "table" and name:sub(1, #dot) == dot then
+      return true
+    end
+  end
+  return false
+end
+
+---`@types` modules are pure LuaCATS annotation scaffolding -- anything
+---callable in them is a stub, so counting it is noise in every report this
+---helper produces. Not `wrap_loaded()`'s own default (that stays
+---unopinionated); `M.auto()` is specifically the "instrument a whole plugin
+---generically" convenience, where this default earns its keep.
+---@param name string
+---@return boolean
+local function default_module_filter(name)
+  return not name:find("@types", 1, true)
+end
+
+---Convenience wrapper around `new()` + `wrap()`/`wrap_loaded()` + `start()`
+---for the shape every "auto-instrument on load" caller needs, regardless of
+---which plugin manager drives it: given a namespace and a plugin's root Lua
+---module, wrap it (its whole loaded subtree if `deep`, else just its façade)
+---and start counting. What stays out on purpose: hooking a load event
+---(`User LazyLoad` or equivalent) and resolving `main` from a plugin spec are
+---plugin-manager-specific, and deciding *which* plugins get *which* settings
+---is the caller's own policy -- neither belongs in a generic library.
+---@param opts RA.Telemetry.AutoOpts
+---@return RA.Telemetry.Instance|nil instance  # nil when nothing of `main` is loaded yet
+function M.auto(opts)
+  local main = opts.main
+  if type(main) ~= "string" or main == "" or not module_tree_loaded(main) then
+    return nil
+  end
+
+  local t = M.new({ namespace = opts.namespace })
+  if opts.deep then
+    t.wrap_loaded(main, { module_filter = opts.module_filter or default_module_filter })
+  else
+    -- `lua/<main>/init.lua` is reachable as both "<main>" and "<main>.init",
+    -- and which key lands in package.loaded depends on how the plugin's own
+    -- config required it -- gating on the bare name alone would silently
+    -- skip a plugin that happened to load via the ".init" form.
+    t.wrap(package.loaded[main] or package.loaded[main .. ".init"])
+  end
+  t.start({
+    profile_args = opts.profile_args or nil,
+    time = opts.timing or nil,
+  })
+  return t
+end
+
 ---Every live instance, so one command can report across all of them without
 ---each plugin having to register itself somewhere.
 ---@return RA.Telemetry.Instance[]
