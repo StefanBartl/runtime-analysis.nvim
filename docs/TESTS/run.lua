@@ -51,6 +51,7 @@ local specs = {
   "parse_spec.lua",
   "runner_spec.lua",
   "view_spec.lua",
+  "init_spec.lua",
 }
 
 --- Straight to stdout rather than through `print` — the same reason
