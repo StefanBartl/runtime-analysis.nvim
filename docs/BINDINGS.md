@@ -16,7 +16,8 @@ All four are registered unconditionally by `require("runtime-analysis").setup()`
 | Command | Args | Description |
 | --- | --- | --- |
 | `:RA request` | none | Opens a new scratch buffer, `filetype = opts.request_filetype` (default `http`), pre-filled with a `GET https://` template. One request per buffer. |
-| `:RA send` | none | Run from inside a request buffer. Parses it (`runtime-analysis.parse`), sends it via `lib.nvim.net.curl.fetch_raw_blocking` (`runtime-analysis.runner`), and shows status/headers/body in a persistent split (`runtime-analysis.view`) that never steals focus from the request buffer. Blocking — the editor waits for the response. |
+| `:RA send` | none | Run from inside a request buffer. Parses it (`runtime-analysis.parse`), sends it via `lib.nvim.net.curl.fetch_raw_blocking` (`runtime-analysis.runner`), and shows status/headers/body in a persistent split (`runtime-analysis.view`) that never steals focus from the request buffer. Blocking — the editor waits for the response. A JSON body is pretty-printed with real `json` filetype/folding. |
+| `:RA yank` | none | Yank just the last response's body (not status/headers) to the unnamed register. Warns, does not error, when there is no response yet. |
 | `:RARequest` | none | Flat alias for `:RA request` — see below for why both exist. |
 | `:RASend` | none | Flat alias for `:RA send`. |
 | `:RATelemetry [args]` | see below | Opt-in call counting and usage statistics for any plugin. Full reference: [`lua/runtime-analysis/telemetry/README.md`](../lua/runtime-analysis/telemetry/README.md). |

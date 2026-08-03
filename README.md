@@ -55,6 +55,9 @@ Authorization: Bearer abc123
 
 `METHOD url` on the first non-blank line, `Name: value` headers, a blank
 line, then an optional body — everything after the blank line, verbatim.
+One header name is a shorthand: `Auth: Bearer <token>` or
+`Auth: Basic <user>:<pass>` resolve into a real `Authorization` header,
+base64-encoding Basic credentials for you.
 
 ```vim
 :RA send
@@ -64,7 +67,9 @@ Run from inside that buffer: parses it, sends it, and shows the response
 (status, headers, body) in a persistent split beside it. The response pane
 is reused across sends rather than opening a new split every time, and
 sending a request never steals focus away from the buffer you're editing —
-the whole point is edit, send, glance at the response, edit again.
+the whole point is edit, send, glance at the response, edit again. A JSON
+response is pretty-printed and gets real `json` syntax/folding; `:RA yank`
+copies just the body, headers and status left out.
 
 Built via [`lib.nvim.usercmd.composer`](https://github.com/StefanBartl/lib.nvim) —
 `:RA` is one compound verb, `<Tab>`-completed, the same shape `:DocMap` and
@@ -94,6 +99,12 @@ plugin-manager adapter shipped is lazy.nvim's (see that README section for
 why no others are). lib.nvim itself keeps a thin caller,
 `lib.strategies.telemetry_wrap`, for instrumenting its own `require("lib")`
 aggregate specifically — everything else in this module is generic.
+
+Reading a namespace does not need an editor session: `nvim --headless -l
+scripts/telemetry.lua report <namespace>` (or `export <namespace> <path>`,
+`.md` for Markdown, anything else for JSON) reads straight off disk via
+`telemetry.load()`, no live instance required — useful for CI, a cron job,
+or "what did last week look like" without opening Neovim at all.
 
 ## Integration with documentation.nvim
 

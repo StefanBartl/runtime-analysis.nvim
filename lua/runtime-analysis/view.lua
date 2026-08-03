@@ -49,13 +49,30 @@ end
 ---`opts.split`) if it is not already visible. The caller's own window stays
 ---focused — sending a request should not steal the cursor away from the
 ---request buffer being edited.
+---
+---`opts.body_start`/`opts.is_json` come from `runner.lua`'s own return —
+---stored buffer-local (`body_start`, for `M.yank_body`) or applied directly
+---(`is_json`, for filetype/folding) rather than re-parsed from `lines` here,
+---so this module never has to know the status/headers/body layout
+---`runner.lua` actually produces.
 ---@param lines string[]
----@param opts { split: string }
+---@param opts { split: string, body_start?: integer, is_json?: boolean }
 function M.show(lines, opts)
   local bufnr = ensure_buffer()
   vim.bo[bufnr].modifiable = true
   vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
   vim.bo[bufnr].modifiable = false
+  vim.b[bufnr].runtime_analysis_body_start = opts.body_start
+
+  -- `json` when the body is JSON (real highlighting + bracket-matching for
+  -- the part of the buffer that is actually structured data), the plain
+  -- custom filetype otherwise. Applies to the *whole* buffer, including the
+  -- status/header preamble above the body — those lines simply do not match
+  -- anything under `json` and render unhighlighted, a real but honest
+  -- trade-off against splitting the preamble into a second buffer/window,
+  -- which is real, separate work this plugin's simple "one persistent
+  -- split" design does not currently pay for.
+  vim.bo[bufnr].filetype = opts.is_json and "json" or "runtime-analysis-response"
 
   local origin = vim.api.nvim_get_current_win()
   local winid = find_window(bufnr)
@@ -64,7 +81,46 @@ function M.show(lines, opts)
     winid = vim.api.nvim_get_current_win()
     vim.api.nvim_win_set_buf(winid, bufnr)
   end
+
+  -- Window-local, and reset on every call (not only when `is_json`): the
+  -- window is reused across sends, so a later plain-text response must not
+  -- inherit an earlier JSON response's folds. Indent-based folding is safe
+  -- to apply across the whole buffer even though the preamble is not JSON —
+  -- it folds purely on leading whitespace, and the unindented status/header
+  -- lines simply never fold (fold level 0), so nothing there is affected.
+  if opts.is_json then
+    vim.wo[winid].foldmethod = "indent"
+    vim.wo[winid].foldenable = true
+  else
+    vim.wo[winid].foldmethod = "manual"
+    vim.wo[winid].foldenable = false
+  end
+
   vim.api.nvim_set_current_win(origin)
+end
+
+---Yank the response body — the part of the buffer at or after
+---`opts.body_start` from the most recent `M.show` — to the unnamed
+---register, leaving headers and status out. A no-op with a clear message
+---rather than an error when there is nothing to yank yet (no `:RA send`
+---this session) or the last response had no body at all.
+function M.yank_body()
+  local bufnr = vim.fn.bufnr(BUFNAME)
+  local body_start = bufnr ~= -1 and vim.b[bufnr].runtime_analysis_body_start or nil
+  if not body_start then
+    vim.notify("runtime-analysis: no response yet — run :RA send first", vim.log.levels.WARN)
+    return
+  end
+
+  local total = vim.api.nvim_buf_line_count(bufnr)
+  if body_start > total then
+    vim.notify("runtime-analysis: the last response had no body", vim.log.levels.WARN)
+    return
+  end
+
+  local body = vim.api.nvim_buf_get_lines(bufnr, body_start - 1, -1, false)
+  vim.fn.setreg('"', table.concat(body, "\n"))
+  vim.notify(("runtime-analysis: yanked %d line(s) of the response body"):format(#body))
 end
 
 return M

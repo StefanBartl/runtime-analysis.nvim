@@ -13,8 +13,43 @@
 --- Deliberately one request per buffer for this first version — chaining
 --- multiple `###`-separated requests in one file (both tools above support
 --- it) is real and not attempted yet; see the plugin's own README for why.
+---
+--- One shorthand header exists, `Auth:` — see `resolve_auth_shorthand` below.
+
+local base64 = require("lib.lua.strings.encoding")
 
 local M = {}
+
+---Resolve the `Auth:` header shorthand into a real `Authorization` value.
+---
+---`Auth: Bearer <token>` passes through verbatim — already the exact wire
+---format; the shorthand exists so `Bearer`/`Basic` read as a matched pair
+---next to each other, not because Bearer needed shortening.
+---
+---`Auth: Basic <user>:<pass>` base64-encodes the credentials — the actual
+---value-add. RFC 7617 requires the base64 form, and computing it by hand
+---(and remembering it is `user:pass`, colon-joined, before encoding) is the
+---annoyance this removes.
+---
+---`Auth: Basic <already-base64>` (no `:` in the value) passes through
+---unencoded, on the assumption that base64's own alphabet never contains
+---`:`, so a colon reliably signals raw, unencoded credentials and its
+---absence reliably signals an already-encoded value pasted in from
+---somewhere else.
+---
+---Anything else after `Auth:` (an unrecognized scheme, or no scheme word at
+---all) passes through unchanged as the `Authorization` value — a generic
+---fallback rather than an error, so a scheme this function does not know
+---about specifically still works, just without the encoding help.
+---@param value string
+---@return string
+local function resolve_auth_shorthand(value)
+  local scheme, rest = value:match("^(%a+)%s+(.+)$")
+  if scheme and scheme:lower() == "basic" and rest:find(":", 1, true) then
+    return "Basic " .. base64.base64_encode(rest)
+  end
+  return value
+end
 
 ---Parse one buffer's lines into a request. The first non-blank line must be
 ---`METHOD URL`; every line after it up to the first blank line is a header
@@ -54,7 +89,11 @@ function M.parse(lines)
     if not name then
       return nil, ("malformed header line %d: %q"):format(i, line)
     end
-    headers[name] = value
+    if name:lower() == "auth" then
+      headers["Authorization"] = resolve_auth_shorthand(value)
+    else
+      headers[name] = value
+    end
   end
 
   local body

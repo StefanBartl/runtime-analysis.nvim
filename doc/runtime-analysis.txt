@@ -125,6 +125,11 @@ see docs/BINDINGS.md in the repository for the full reasoning.
 
   {"optional": "body", "after": "one blank line"}
 <
+  One header name is a shorthand: `Auth: Bearer <token>` or
+  `Auth: Basic <user>:<pass>` resolve into a real `Authorization` header,
+  base64-encoding Basic credentials for you. See
+  |runtime-analysis-auth-shorthand| below.
+
                                                                *:RA-send*
                                                               *:RASend*
 :RA send                        Run from inside a request buffer: parses it,
@@ -133,7 +138,33 @@ see docs/BINDINGS.md in the repository for the full reasoning.
                                 persistent split beside it. Blocking: the
                                 editor waits for the response. The response
                                 pane is reused across sends and never steals
-                                focus from the request buffer.
+                                focus from the request buffer. A
+                                `Content-Type: application/json` body is
+                                pretty-printed with real `json`
+                                filetype/folding, reset to plain on the next
+                                call if that response is not JSON.
+
+                                                               *:RA-yank*
+:RA yank                        Yank just the response body (not the status
+                                line or headers) to the unnamed register.
+                                Warns rather than erroring when there is no
+                                response yet, or the last one had no body.
+
+                                                    *runtime-analysis-auth-shorthand*
+Auth: shorthand ~
+  `Auth: Bearer <token>` passes through verbatim as `Authorization: Bearer
+  <token>` — the shorthand's value is that `Bearer`/`Basic` read as a
+  matched pair, not that Bearer itself got shorter.
+
+  `Auth: Basic <user>:<pass>` base64-encodes the credentials into
+  `Authorization: Basic <...>` — the actual value-add: RFC 7617 requires
+  the base64 form, and computing it by hand is the annoyance this removes.
+  `Auth: Basic <already-base64>` (no `:` in the value) passes through
+  unencoded, since base64's own alphabet never contains one.
+
+  Any other scheme after `Auth:` passes through as the `Authorization`
+  value unmodified — a generic fallback, not an error. A literal
+  `Authorization:` header, written directly, is untouched by any of this.
 
                                                               *:RATelemetry*
 :RATelemetry [args]             See |runtime-analysis-telemetry| below — a
@@ -171,6 +202,20 @@ the rest of this plugin. Command surface: >
   :RATelemetry export [path]   JSON, or Markdown if path ends .md
   :RATelemetry open [ns]       render + open externally
 <
+Reading a namespace does not need an editor session at all —
+scripts/telemetry.lua in the repository is a headless CLI counterpart,
+built on the same `telemetry.load()` a live instance never had to exist
+for: >
+
+  nvim --headless -l scripts/telemetry.lua report <namespace>
+  nvim --headless -l scripts/telemetry.lua export <namespace> <path>
+<
+`export`'s format is inferred from `<path>`'s own extension, the same rule
+|:RATelemetry| `export` uses. No `coverage` subcommand here: "which
+registered functions were never called" needs a live instance's own
+`wrap()` calls to know the registered set, which a cold `telemetry.load()`
+read cannot answer.
+
 ==============================================================================
 7. INTEGRATION WITH documentation.nvim          *runtime-analysis-integration*
 

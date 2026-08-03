@@ -34,6 +34,36 @@ argument) is also this plugin's public integration surface — see
 documentation.nvim's `:DocBrowse` Endpoints mode calls it with a pre-filled
 `METHOD path` instead of the default template.
 
+### The `Auth:` header shorthand
+
+One header name is special-cased by `runtime-analysis.parse`:
+
+```http
+GET https://api.example.com/users
+Auth: Bearer abc123
+```
+
+resolves to `Authorization: Bearer abc123` — passed through verbatim; the
+shorthand's value here is purely that `Bearer`/`Basic` read as a matched
+pair, not that `Bearer` itself got any shorter.
+
+```http
+GET https://api.example.com/users
+Auth: Basic alice:s3cret
+```
+
+resolves to `Authorization: Basic <base64("alice:s3cret")>` — the actual
+value-add, since RFC 7617 requires the base64 form and computing it by hand
+is the annoyance this removes. `Auth: Basic <already-base64>` (no `:` in
+the value — base64's own alphabet never contains one) passes through
+unencoded, so a value copied from elsewhere still works unmodified. Any
+other scheme after `Auth:` passes through as the `Authorization` value as
+written — a generic fallback, not an error, for a scheme this shorthand
+does not know about specifically.
+
+A literal `Authorization:` header, written directly, is completely
+untouched by any of this — the shorthand only intercepts the `Auth:` name.
+
 ## `:RA send` (alias: `:RASend`)
 
 Run from inside a request buffer. Parses the buffer's lines
@@ -53,6 +83,23 @@ held in a module variable, so a stale reference after `:bwipeout` or a
 `:source` during development cannot happen) and never steals focus from the
 request buffer — the workflow is edit, send, glance, edit again, not
 "switch to the response and back."
+
+**A `Content-Type: application/json` body is pretty-printed** via
+`lib.lua.json.encode.pretty` and the buffer's filetype becomes `json`
+(real syntax highlighting and indent-based folding), reset to the plain
+`runtime-analysis-response` filetype on the next call if that response is
+not JSON — the window is reused, so nothing from an earlier response
+lingers. A `Content-Type` header naming JSON is a claim, not a guarantee:
+if the body does not actually decode, it renders raw and verbatim rather
+than erroring or dropping content.
+
+## `:RA yank`
+
+Yanks just the response **body** — not the status line or headers above it
+— to the unnamed register (`"`), using the same `body_start` line number
+`:RA send` computed when it rendered the response. Warns rather than
+erroring when there is no response yet this session, or when the last
+response had no body at all.
 
 ### Why `:RARequest`/`:RASend` exist as separate flat commands, not only `:RA request`/`:RA send`
 
@@ -88,6 +135,15 @@ default — the same rule documentation.nvim's `:DocMap` follows for the
 identical reason: a typo silently doing the wrong thing (rewriting a report,
 resetting data) is worse than a typo doing nothing.
 
+**Reading a namespace does not need `:RATelemetry`, or Neovim's UI, at
+all** — [`scripts/telemetry.lua`](../scripts/telemetry.lua) is a headless
+CLI counterpart: `nvim --headless -l scripts/telemetry.lua report
+<namespace>` / `export <namespace> <path>`, built on the same
+`telemetry.load()` a live instance never had to exist for. Not a
+usercommand (see "What is not a command" below) — a separate entry point,
+for CI, a cron job, or "what did last week look like" without opening the
+editor.
+
 ---
 
 ## Why `:RATelemetry` is not `:RA telemetry ...`
@@ -113,3 +169,6 @@ not `:DocMap browse ...`, split along the same "does something" vs.
   [`lua/runtime-analysis/init.lua`](../lua/runtime-analysis/init.lua)'s own
   module doc-comment and in `docs/IDEAS.md` §1 as the integration surface
   another plugin calls into directly.
+- **`scripts/telemetry.lua` is a headless CLI script, not a usercommand.**
+  It runs *instead of* a Neovim session with this plugin's `setup()`
+  loaded, not alongside one — see the note under `:RATelemetry` above.
