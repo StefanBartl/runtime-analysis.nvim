@@ -65,29 +65,15 @@ local function try_pretty_json(body)
   return body_lines(pretty)
 end
 
----Run `request` and return response lines ready for `view.lua`, or an error
----string when curl itself failed (unreachable host, timeout) — a different
----failure shape from a real-but-unwelcome HTTP status, which is not an
----error at all: a 404 is a real answer, and is rendered as one.
----@param request { method: string, url: string, headers: table<string, string>, body: string? }
----@return string[]? lines
----@return string? err
----@return { body_start: integer, is_json: boolean }? meta `body_start` is the
+---Turn a raw `Lib.Net.Curl.RawResponse` into lines ready for `view.lua`,
+---shared by the blocking and async paths below so neither can drift from
+---the other's formatting.
+---@param resp Lib.Net.Curl.RawResponse
+---@return string[] lines
+---@return { body_start: integer, is_json: boolean } meta `body_start` is the
 ---1-based line where the body begins (past the end when there is none);
 ---`view.lua` uses both for folding/syntax and for "yank just the body".
-function M.run(request)
-  local ok, resp = curl.fetch_raw_blocking(request.url, {
-    method = request.method,
-    headers = request.headers,
-    body = request.body,
-  })
-
-  if not ok then
-    -- `resp` is the error string in this branch — `fetch_raw_blocking`'s
-    -- own contract, the same one `fetch_json_blocking` already has.
-    return nil, resp
-  end
-
+local function format_response(resp)
   local lines = { ("%d %s"):format(resp.status, resp.status_text) }
   local header_names = vim.tbl_keys(resp.headers)
   table.sort(header_names)
@@ -108,7 +94,69 @@ function M.run(request)
     vim.list_extend(lines, pretty_lines or body_lines(resp.body))
   end
 
-  return lines, nil, { body_start = body_start, is_json = is_json }
+  return lines, { body_start = body_start, is_json = is_json }
+end
+
+---Run `request` and return response lines ready for `view.lua`, or an error
+---string when curl itself failed (unreachable host, timeout) — a different
+---failure shape from a real-but-unwelcome HTTP status, which is not an
+---error at all: a 404 is a real answer, and is rendered as one.
+---@param request { method: string, url: string, headers: table<string, string>, body: string? }
+---@return string[]? lines
+---@return string? err
+---@return { body_start: integer, is_json: boolean }? meta
+function M.run(request)
+  local ok, resp = curl.fetch_raw_blocking(request.url, {
+    method = request.method,
+    headers = request.headers,
+    body = request.body,
+  })
+
+  if not ok then
+    -- `resp` is the error string in this branch — `fetch_raw_blocking`'s
+    -- own contract, the same one `fetch_json_blocking` already has.
+    return nil, resp
+  end
+
+  local lines, meta = format_response(resp)
+  return lines, nil, meta
+end
+
+---The non-blocking twin of `M.run`, docs/ROADMAP.md §1.1. `cb` always runs
+---through `vim.schedule` — `lib.nvim.net.curl.fetch_raw`'s own completion
+---callback fires in a **fast event context** (verified: a bare
+---`nvim_create_buf` call inside it raises `E5560`), so every caller of this
+---function would otherwise have to remember to schedule its own callback
+---before touching any buffer/window/`vim.notify` API. Guaranteeing that
+---here, once, is cheaper than documenting it as a caller's own
+---responsibility and hoping nobody forgets.
+---
+---No cancellation lives here — see `bindings/usrcmds.lua`'s own pending-
+---request tracking for what `:RA cancel` actually does and why it is a
+---*logical* cancel (the in-flight `curl` process keeps running to
+---completion; only its eventual result is discarded) rather than a real
+---process kill: `fetch_raw` does not hand back the `vim.SystemObj` a hard
+---kill would need, and extending `lib.nvim.net.curl` for that is real,
+---separate work in a different repository, not attempted here.
+---@param request { method: string, url: string, headers: table<string, string>, body: string? }
+---@param cb fun(lines: string[]?, err: string?, meta: { body_start: integer, is_json: boolean }?)
+function M.run_async(request, cb)
+  curl.fetch_raw(request.url, {
+    method = request.method,
+    headers = request.headers,
+    body = request.body,
+  }, function(ok, resp)
+    vim.schedule(function()
+      if not ok then
+        -- `resp` is the error string in this branch too, same contract
+        -- `fetch_raw_blocking` documents.
+        cb(nil, resp)
+        return
+      end
+      local lines, meta = format_response(resp)
+      cb(lines, nil, meta)
+    end)
+  end)
 end
 
 return M

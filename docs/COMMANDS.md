@@ -68,15 +68,33 @@ untouched by any of this — the shorthand only intercepts the `Auth:` name.
 
 Run from inside a request buffer. Parses the buffer's lines
 (`runtime-analysis.parse`) into `{ method, url, headers, body }`, sends it
-via `lib.nvim.net.curl.fetch_raw_blocking` (`runtime-analysis.runner`), and
+via `lib.nvim.net.curl.fetch_raw` (`runtime-analysis.runner.run_async`), and
 renders `STATUS status_text`, sorted headers, a blank line, then the body
 into a persistent split (`runtime-analysis.view`).
 
-**Blocking.** The editor waits for the response — see `docs/ROADMAP.md` §1.1
-for the planned async version. A parse error or a transport failure (bad
-host, timeout) reports via `vim.notify` and nothing is sent; an HTTP error
-status (404, 500, …) is not an error at all and renders as a normal
-response.
+**Non-blocking.** The editor stays responsive while curl runs — a
+`→ sending METHOD url ...` placeholder appears in the response pane
+immediately, replaced by the real response, an error, or a cancelled
+message once one of those actually happens. A parse error is still
+synchronous (nothing was sent yet, so there is nothing to wait for); a
+transport failure (bad host, timeout) arrives through the same async path
+as a real response and reports via `vim.notify` plus an `✗ error` line in
+the pane. An HTTP error status (404, 500, …) is not an error at all and
+renders as a normal response, exactly as before.
+
+**A visible indicator, via `lib.nvim.progress`** — soft dependency,
+`pcall`-guarded: sending still works with no visible spinner if it is ever
+unavailable, just without the notification and without cancelling
+*through the handle* specifically (`:RA cancel` still discards the result
+directly in that case). The indicator is delay-guarded (invisible until
+~150ms, the library's own default), so a fast response never flashes UI.
+
+**Firing a second `:RA send` before the first replies supersedes it** —
+a monotonic token bumped on every send; a response only ever renders if
+its token is still the current one when it arrives. Never a queue, never
+both responses rendering, never an "already in flight" refusal. This is
+also exactly what `:RA cancel` does (see below), just triggered
+differently.
 
 The response split is reused across sends (looked up by buffer name, not
 held in a module variable, so a stale reference after `:bwipeout` or a
@@ -137,6 +155,22 @@ Yanks just the response **body** — not the status line or headers above it
 `:RA send` computed when it rendered the response. Warns rather than
 erroring when there is no response yet this session, or when the last
 response had no body at all.
+
+## `:RA cancel`
+
+Cancels the in-flight request, if any: shows `✗ cancelled` in the response
+pane immediately and marks its eventual result as stale, so whatever
+`curl` returns afterward never overwrites that message. Warns (does not
+error) when nothing is in flight.
+
+**A *logical* cancel, not a process kill.** `lib.nvim.net.curl.fetch_raw`
+does not hand back the `vim.SystemObj` a hard kill would need — the
+underlying `curl` process keeps running to completion in the background;
+only the plugin's own interest in its result is withdrawn. Extending
+`lib.nvim.net.curl` to expose that handle is real, separate work in a
+different repository (the same precedent `fetch_raw`/`fetch_raw_blocking`
+already set once — this plugin was the reason those exist too), not
+attempted here.
 
 ### Why `:RARequest`/`:RASend` exist as separate flat commands, not only `:RA request`/`:RA send`
 

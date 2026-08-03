@@ -42,7 +42,7 @@ same kind of overlay `docs/IDEAS.md` §6 uses for its own five-item shortlist.
 | **Medium** | Multi-day. Either a real decision has to be made first (a schema, a security trade-off, an open question the section names explicitly), or it touches several files or a small state machine — but the shape and the cost are both known. |
 | **Long-term** | Blocked on something this document itself already says is unmeasured or unresolved: an unmeasured `debug.getinfo` cost, several open design questions, another repository's half of the work, or a section the document itself calls speculative. |
 
-Nine items have shipped out of this section since it was first written —
+Eleven items have shipped out of this section since it was first written —
 see [`docs/FINISHED.md`](FINISHED.md) for the full record of each. What
 remains open:
 
@@ -56,7 +56,6 @@ remains open:
 
 | Item | Note |
 | --- | --- |
-| §1.1 Async sending | "Do this one first" among the request-runner gaps; view + pending state + cancel path — primitives (`fetch_raw`, `lib.nvim.progress`) already exist |
 | §1.3 Request history | `cache.disk`-backed; one open question to settle first — request-only vs. response bodies too — before writing any of it |
 | §2.1 Variables and environments | The feature that makes a request collection shareable; the security trap (tokens ending up in an env file) has to be designed in from the start, not added after |
 | §2.3 curl import / export | Import is both the more valuable half and the harder one — real argument parsing, not templating |
@@ -96,21 +95,9 @@ closed question, kept here so it does not get re-opened from a blank slate.
 
 ## 1. HTTP request runner — the stated gaps
 
-The README already names four. They are listed first because they are the
-cheapest real work in this document and the most likely to be missed while
-using it.
-
-### 1.1 Async sending
-
-`:RASend` blocks until the response arrives. Fine for a request bounded in
-milliseconds, genuinely bad for a slow endpoint — the editor is frozen with
-no way to cancel. `lib.nvim.net.curl` already has a non-blocking
-`fetch_raw` alongside the `fetch_raw_blocking` this uses; the work is in the
-*view*, not the transport: a pending state, a spinner
-(`lib.nvim.progress` already exists), and a cancel path.
-
-**Do this one first.** It is the only entry in this whole document that
-fixes something actively unpleasant rather than adding something missing.
+The README originally named four (async sending, `###` multi-request
+support, request history, `.http`/`.rest` file support) — three have
+shipped, see [`docs/FINISHED.md`](FINISHED.md). One remains:
 
 ### 1.3 Request history
 

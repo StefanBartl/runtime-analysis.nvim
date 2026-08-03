@@ -126,4 +126,88 @@ return function(H)
     eq(lines, nil, "runner.run: no lines when curl itself failed")
     ok(type(err) == "string", "runner.run: ... a real error string instead")
   end
+
+  -- runner.run_async (docs/ROADMAP.md §1.1) — same formatting as runner.run,
+  -- reached non-blockingly, with a callback guaranteed to run outside the
+  -- fast-event context `lib.nvim.net.curl.fetch_raw`'s own callback fires
+  -- in (verified once, in `bindings/usrcmds.lua`'s own doc-comment; checked
+  -- again here directly rather than trusted).
+  do
+    local port, server = start_server(table.concat({
+      "HTTP/1.1 201 Created",
+      "Content-Type: application/json",
+      "",
+      '{"id":1}',
+    }, "\r\n"))
+
+    local called = false
+    local got_lines, got_err, got_meta
+    runner.run_async({
+      method = "POST",
+      url = ("http://127.0.0.1:%d/"):format(port),
+      headers = {},
+      body = '{"id":1}',
+    }, function(lines, err, meta)
+      -- The one thing every caller of run_async needs to be able to rely
+      -- on without remembering it themselves: this runs somewhere a real
+      -- buffer/window API call is legal.
+      local ok_buf = pcall(vim.api.nvim_create_buf, false, true)
+      ok(ok_buf, "runner.run_async: callback runs outside the fast-event context")
+      called = true
+      got_lines, got_err, got_meta = lines, err, meta
+    end)
+
+    -- Genuinely non-blocking: the call above must have returned before the
+    -- callback fired — otherwise this is `runner.run` with extra steps.
+    eq(called, false, "runner.run_async: does not call back synchronously")
+
+    vim.wait(1000, function()
+      return called
+    end, 10)
+
+    ok(called, "runner.run_async: the callback eventually fires")
+    eq(got_err, nil, "runner.run_async: no error on a real 201")
+    eq(got_lines[1], "201 Created", "runner.run_async: same formatting as runner.run")
+    eq(
+      table.concat(got_lines, "|", 4, #got_lines),
+      '{|  "id": 1|}',
+      "runner.run_async: json body pretty-printed, same as the blocking path"
+    )
+    eq(got_meta.is_json, true, "runner.run_async: meta reported the same way too")
+
+    server:close()
+  end
+
+  -- runner.run_async on a curl failure: the callback still fires, still
+  -- scheduled, with `lines == nil` and a real error string — the async
+  -- twin of the "unreachable target" case above.
+  do
+    local port, server = start_server("")
+    server:close()
+    vim.wait(50, function()
+      return false
+    end, 10)
+
+    local called = false
+    local got_lines, got_err
+    runner.run_async({
+      method = "GET",
+      url = ("http://127.0.0.1:%d/"):format(port),
+    }, function(lines, err)
+      called = true
+      got_lines, got_err = lines, err
+    end)
+
+    -- A closed local port still takes real time to report "connection
+    -- refused" — measured up to ~2s on this environment (Windows' TCP
+    -- stack retries before giving up, unlike Linux's near-instant RST) —
+    -- so this waits longer than the success-path tests above need to.
+    vim.wait(5000, function()
+      return called
+    end, 20)
+
+    ok(called, "runner.run_async: callback fires on failure too")
+    eq(got_lines, nil, "runner.run_async: no lines when curl itself failed")
+    ok(type(got_err) == "string", "runner.run_async: ... a real error string instead")
+  end
 end
