@@ -22,6 +22,84 @@ otherwise-attractive ideas are turned down below on exactly that ground.
 
 ---
 
+## Phases
+
+Every item below already lives in the themed sections that follow this one;
+this is a second cut across the same material, sorted by how much real work
+sits between here and shipping. **Not a schedule** — nothing here has a date
+attached — a triage the themed sections do not attempt on their own, the
+same kind of overlay `docs/IDEAS.md` §6 uses for its own five-item shortlist.
+
+**How an item lands in a bucket:**
+
+| Phase | Criterion |
+| --- | --- |
+| **Quick win** | Hours, not days. Every primitive it needs already exists in this repo or lib.nvim; no open design question; no dependency on another repository's own work. |
+| **Medium** | Multi-day. Either a real decision has to be made first (a schema, a security trade-off, an open question the section names explicitly), or it touches several files or a small state machine — but the shape and the cost are both known. |
+| **Long-term** | Blocked on something this document itself already says is unmeasured or unresolved: an unmeasured `debug.getinfo` cost, several open design questions, another repository's half of the work, or a section the document itself calls speculative. |
+
+### Quick wins
+
+| Item | Note |
+| --- | --- |
+| §1.4 `.http`/`.rest` file support | "Mostly free" per its own text, but sequenced after §1.2 — needs `###` splitting to exist first |
+| §2.2 A response pane worth reading | JSON pretty-printing + a filetype, no new renderer |
+| §2.4 Auth helpers | Bearer/Basic as one line; OAuth *flows* explicitly excluded |
+| §4.1 A CLI / headless entry point | "A script and an argument parser, not new analysis" — `telemetry.load()` already does the reading half |
+| §6.1 Mode 8 — telemetry in `:DocBrowse` | Both halves this repo owns (`telemetry.load()`, `Data.modules`, `resolved_modules()`) already ship; what remains is documentation.nvim's entry builder, not work here |
+| `:checkhealth runtime-analysis` | **Done (2026-08-03)** — see Housekeeping below |
+| Vimdoc (`doc/runtime-analysis.txt`) | **Done (2026-08-03)** — see Housekeeping below |
+| `docs/COMMANDS.md` + `docs/BINDINGS.md` | **Done (2026-08-03)** — see Housekeeping below |
+| `config/init.lua` + `config/DEFAULTS.lua` + `bindings/usrcmds.lua` + a top-level `@types/init.lua` | **Done (2026-08-03)** — see Housekeeping below |
+
+### Medium
+
+| Item | Note |
+| --- | --- |
+| §1.1 Async sending | "Do this one first" among the request-runner gaps; view + pending state + cancel path — primitives (`fetch_raw`, `lib.nvim.progress`) already exist |
+| §1.2 Multiple requests per buffer (`###`) | Splitter + "which request is under the cursor" + a picker-or-not decision |
+| §1.3 Request history | `cache.disk`-backed; one open question to settle first — request-only vs. response bodies too — before writing any of it |
+| §2.1 Variables and environments | The feature that makes a request collection shareable; the security trap (tokens ending up in an env file) has to be designed in from the start, not added after |
+| §2.3 curl import / export | Import is both the more valuable half and the harder one — real argument parsing, not templating |
+| §2.5 Response assertions | Keep it to "is this endpoint still 200", not a general assertion language |
+| §3.2 Sampling | Mechanically straightforward; the honest-limits wording ("a sampled count is an estimate") has to ship in the same commit |
+| §3.3 Startup attribution | The lazy adapter already knows exactly when each plugin loads — half the mechanism exists |
+| §3.4 Error and failure fingerprinting | Reuses the existing argument-fingerprint machinery, pointed at errors instead of arguments |
+| §4.2 Comparison across time windows | Day buckets are already stored; this is a report mode, not a collection change |
+| §5.2 Wrapper provenance | The narrow, high-value slice of §5.1 worth shipping first; the telemetry registry already knows its own wrappers |
+| §6.2 Endpoint coverage | Needs §1.3 (request history) first, plus a join key |
+| §6.3 Documentation priority by real usage | Needs §6.1's mechanism to exist first |
+| §7.1 Keymap and command usage | Mechanically the existing wrap machinery pointed at `vim.keymap.set` plus a `CmdlineLeave` hook; stays local and opt-in, never grows a "share this" feature |
+| §7.2 Plugin cost-versus-use | Combines §3.3 with call counts already collected |
+| Test coverage for the request runner's real transport | `runner.lua` is only exercised against a real transport at the lib.nvim end today |
+| `scripts/gen_map.lua` + documentation.nvim as a dev dependency | A real CI gate (checkout, generate, byte-compare), not a documentation update — see Housekeeping below for why it was not attempted alongside the smaller items in this pass |
+
+### Long-term / speculative
+
+| Item | Note |
+| --- | --- |
+| §2.6 GraphQL / multipart / file upload | "Neither is a priority without a concrete need" |
+| §3.1 Call trees | The single biggest capability gap in the whole document, but explicitly gated on measuring `debug.getinfo`'s real cost first — do not build before that number exists |
+| §4.3 Standard trace formats | Meaningless before §3.1 (call trees) exists — nothing to export yet |
+| §4.4 A real dashboard rather than a report | Gated on the browser-tier decision `docs/IDEAS.md` §3.1 says to make *before* building anything, so a third pipeline does not get built by accident |
+| §5.1 `:RAInspect <module>` | Three open design questions, inherited unanswered from lib.nvim's own rejection of this exact idea |
+| §5.3 Diff loaded-vs-declared | The sharpest join in this document, and it needs both plugins' cooperation, not only this repository's own work |
+| §7.3 LSP request latency | Explicitly low priority; territory other tools already cover well |
+
+### Rejected outright — not phased
+
+§3.5 (a general profiler) and everything in "Deliberately not building" at
+the end of this document are not on any timeline at all. A documented
+rejection is not a phase with an infinite delay attached to it; it is a
+closed question, kept here so it does not get re-opened from a blank slate.
+
+Add to that list: **a compound `:RA [subcommand]` usercommand** replacing
+`:RARequest`/`:RASend`. `NEW_PROJECT.md`'s own checklist prefers this shape;
+this is the documented exception it explicitly allows for — see Housekeeping
+below.
+
+---
+
 ## 1. HTTP request runner — the stated gaps
 
 The README already names four. They are listed first because they are the
@@ -342,21 +420,57 @@ Neovim's LSP client internals across releases. Low priority.
 ## 8. Housekeeping
 
 Not features, but the gap between "works on this machine" and "a plugin
-someone else can install".
+someone else can install". Prompted by going through
+[`NEW_PROJECT.md`](https://github.com/StefanBartl/Notes/blob/master/MyNotes/Checklists/Lua/NEW_PROJECT.md)'s
+own checklist against this repository (2026-08-03) — the four items below
+are exactly what that pass found missing.
 
-- **`:checkhealth runtime-analysis`** — is `curl` present, is `lib.nvim`
+- ~~**`:checkhealth runtime-analysis`** — is `curl` present, is `lib.nvim`
   the version this expects, is the telemetry cache directory writable, is
-  mdview available for `report_style = "auto"`. documentation.nvim's own
-  health check earns its place by reporting *resolved configuration*, and
-  the same trick applies here: which namespaces are live, which are
-  persistently disabled, where the cache actually is.
-- **Vimdoc** (`doc/runtime-analysis.txt`). Both sibling plugins have one;
-  this has a README and nothing `:help` can find.
+  mdview available for `report_style = "auto"`.~~ **Done (2026-08-03)** —
+  [`lua/runtime-analysis/health.lua`](../lua/runtime-analysis/health.lua),
+  modeled on documentation.nvim's own `editor/health.lua`: reports resolved
+  configuration (live telemetry instances, persistently disabled namespaces,
+  the cache directory and whether it is writable) rather than only
+  presence/absence.
+- ~~**Vimdoc** (`doc/runtime-analysis.txt`). Both sibling plugins have one;
+  this has a README and nothing `:help` can find.~~ **Done (2026-08-03)** —
+  [`doc/runtime-analysis.txt`](../doc/runtime-analysis.txt), `doc/tags`
+  gitignored (generated by `:helptags`, not committed — the same convention
+  documentation.nvim and mdview.nvim both already use).
 - **Test coverage for the request runner's real transport.** `runner.lua`
   is currently exercised against `lib.nvim.net.curl`'s own hermetic
-  `vim.uv` TCP server test at the lib.nvim end, not here.
-- **A `docs/COMMANDS.md`**, once there are more than three commands.
-  documentation.nvim's is the model.
+  `vim.uv` TCP server test at the lib.nvim end, not here. **Still open** —
+  see the Medium phase above.
+- ~~**A `docs/COMMANDS.md`**, once there are more than three commands.
+  documentation.nvim's is the model.~~ **Done (2026-08-03)** —
+  [`docs/COMMANDS.md`](COMMANDS.md); [`docs/BINDINGS.md`](BINDINGS.md) also
+  added in the same pass (required by `NEW_PROJECT.md`'s own checklist, and
+  had not existed at all before this).
+- **`scripts/gen_map.lua` + documentation.nvim as a dev dependency.**
+  `NEW_PROJECT.md` §4 requires this (a byte-comparison `--check` gate in CI,
+  the same one documentation.nvim and mdview.nvim both already run). **Not
+  done** — a real, separate piece of work (a new CI job, a committed
+  artifact, a new gate to keep green), not a documentation update, and
+  deliberately not attempted alongside the smaller items above. Belongs in
+  the Medium phase, not Quick wins.
+- **A compound `:RA [subcommand]` usercommand**, per `NEW_PROJECT.md` §5's
+  own preferred shape (`lib.nvim.usercmd.composer`, the pattern
+  `:RATelemetry` roughly already follows without actually using that
+  module). **Deliberately not done.** `:RARequest`/`:RASend` are this
+  plugin's oldest, most-referenced public surface — documentation.nvim's
+  `:DocBrowse` Endpoints mode already calls `open_request` by name, and any
+  user with their own keymap to either command would break silently on a
+  rename. `NEW_PROJECT.md` itself allows a documented exception for exactly
+  this reason (`replacer.nvim`'s `:Surround` is its own precedent); this is
+  that exception, recorded rather than forced through.
+- **`config/init.lua` + `config/DEFAULTS.lua`, a `bindings/` folder, and a
+  top-level `@types/init.lua`.** **Done (2026-08-03)** — the single
+  `config.lua` became a folder (`require("runtime-analysis.config")` still
+  resolves to it unchanged, so no call site moved); `:RARequest`/`:RASend`'s
+  registration moved out of `init.lua` into `bindings/usrcmds.lua`. No
+  `keymaps.lua`/`autocmds.lua` were added beside it — this plugin sets
+  neither, by design, so there was nothing to move into either file.
 
 ---
 

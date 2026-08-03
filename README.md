@@ -1,18 +1,42 @@
-# runtime-analysis.nvim
+```
+╔═══════════════════════════════════════════════╗
+║   r u n t i m e - a n a l y s i s . n v i m   ║
+╚═══════════════════════════════════════════════╝
+```
 
-Runtime truth, paired with [documentation.nvim](https://github.com/StefanBartl/documentation.nvim)'s
-static truth — see that plugin's `docs/ECOSYSTEM.md` for the full
-architecture this pairing is part of. documentation.nvim knows what exists
-and is documented; this plugin knows what actually happens when it runs.
+[![CI](https://github.com/StefanBartl/runtime-analysis.nvim/actions/workflows/ci.yml/badge.svg)](https://github.com/StefanBartl/runtime-analysis.nvim/actions/workflows/ci.yml)
+![Neovim 0.10+](https://img.shields.io/badge/Neovim-0.10%2B-57A143?logo=neovim&logoColor=white)
+![Lua](https://img.shields.io/badge/Lua-5.1%2FLuaJIT-2C2D72?logo=lua&logoColor=white)
 
-## What's here today
+> Pairs with [documentation.nvim](https://github.com/StefanBartl/documentation.nvim) —
+> that plugin's `docs/ECOSYSTEM.md` is the architecture this pairing is part
+> of. documentation.nvim knows what exists and is documented; this plugin
+> knows what actually happens when it runs.
 
-The first feature (`ECOSYSTEM.md` step 5): an in-editor HTTP request
-runner. No browser, no server, no CORS, no token — the cheap first version
-that plan calls for specifically, because none of those problems exist for
-a request Neovim itself sends via `curl`.
+## Table of Contents
 
-### Usage
+- [Overview](#overview)
+- [Commands](#commands)
+- [Setup](#setup)
+- [Telemetry](#telemetry)
+- [Integration with documentation.nvim](#integration-with-documentationnvim)
+- [What's not here yet](#whats-not-here-yet)
+- [Where this is going](#where-this-is-going)
+- [Dependencies](#dependencies)
+
+## Overview
+
+Runtime truth, paired with documentation.nvim's static truth. Two features
+today: an in-editor HTTP request runner, and `runtime-analysis.telemetry` —
+opt-in call counting and usage statistics, moved here from lib.nvim.
+
+## Commands
+
+The request runner. No browser, no server, no CORS, no token — the cheap
+first version `ECOSYSTEM.md` calls for specifically, because none of those
+problems exist for a request Neovim itself sends via `curl`. Full reference:
+[`docs/COMMANDS.md`](docs/COMMANDS.md); every keymap, usercmd and autocmd
+(there are no keymaps or autocmds): [`docs/BINDINGS.md`](docs/BINDINGS.md).
 
 ```vim
 :RARequest
@@ -42,7 +66,7 @@ is reused across sends rather than opening a new split every time, and
 sending a request never steals focus away from the buffer you're editing —
 the whole point is edit, send, glance at the response, edit again.
 
-### Setup
+## Setup
 
 ```lua
 require("runtime-analysis").setup({
@@ -51,7 +75,7 @@ require("runtime-analysis").setup({
 })
 ```
 
-### Telemetry (step 7)
+## Telemetry
 
 `runtime-analysis.telemetry` — opt-in call counting and usage statistics
 for any Lua/Neovim plugin, moved here from lib.nvim. `:RATelemetry` is
@@ -65,7 +89,7 @@ why no others are). lib.nvim itself keeps a thin caller,
 `lib.strategies.telemetry_wrap`, for instrumenting its own `require("lib")`
 aggregate specifically — everything else in this module is generic.
 
-### Integration with documentation.nvim (step 6)
+## Integration with documentation.nvim
 
 `M.open_request(lines)` is this plugin's one public integration surface —
 written against a small named interface from the start, per
@@ -92,18 +116,23 @@ the method and path are pre-filled and the reader completes the base URL
   tools support). One request per buffer for now.
 - **The static × runtime join** — a planned `:DocBrowse` mode joining
   documentation.nvim's static analysis against telemetry's counts, a
-  *different*, later mode than the Endpoints mode step 6 already added — is
-  a later step in `ECOSYSTEM.md`'s own sequencing, not this one. Both that
+  *different*, later mode than the Endpoints mode already added — is a
+  later step in `ECOSYSTEM.md`'s own sequencing, not this one. Both that
   document and the design it points at call it "Mode 7"; it will be the
   **eighth** entry in the real `MODES` list, since Endpoints took position
   seven first.
 
+See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full, phased backlog behind
+this short list.
+
 ## Where this is going
 
-- [`docs/ROADMAP.md`](docs/ROADMAP.md) — this plugin's own backlog, including
-  documented rejections.
+- [`docs/ROADMAP.md`](docs/ROADMAP.md) — this plugin's own backlog, phased
+  into quick wins / medium / longer-term work, plus documented rejections.
 - [`docs/IDEAS.md`](docs/IDEAS.md) — ideas that only exist *between* plugins:
   runtime-analysis × documentation.nvim × mdview.nvim × lib.nvim.
+- [`doc/runtime-analysis.txt`](doc/runtime-analysis.txt) — `:help
+  runtime-analysis`.
 
 ## Dependencies
 
@@ -113,3 +142,9 @@ the method and path are pre-filled and the reader completes the base URL
   the reason those exist: the HTTP status code and response headers were
   not previously exposed by that module at all), plus `cache.disk`, `git`,
   `ui.kit`, `usercmd`, `notify`, `autocmd` and `progress` for telemetry.
+- `curl` on PATH.
+- [mdview.nvim](https://github.com/StefanBartl/mdview.nvim) — optional,
+  soft dependency: renders a telemetry report as a live browser tab.
+
+Run `:checkhealth runtime-analysis` to verify all of the above on your
+system.

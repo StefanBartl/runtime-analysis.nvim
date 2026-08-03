@@ -1,4 +1,4 @@
----@module 'runtime-analysis.config'
+---@module 'runtime-analysis.config.DEFAULTS'
 --- Plugin-side defaults, as data — same shape documentation.nvim's own
 --- `config/DEFAULTS.lua` uses, kept this small because there is not much to
 --- configure yet.

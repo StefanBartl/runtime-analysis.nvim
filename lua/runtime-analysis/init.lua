@@ -58,38 +58,12 @@ function M.open_request(lines)
   vim.api.nvim_win_set_cursor(0, { 1, #lines[1] })
 end
 
----Parse the current buffer as a request and send it, showing the response
----in the split `view.lua` manages.
-local function send_current_buffer()
-  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-  local request, err = require("runtime-analysis.parse").parse(lines)
-  if not request then
-    vim.notify("runtime-analysis: " .. err, vim.log.levels.ERROR)
-    return
-  end
-
-  local resp_lines, run_err = require("runtime-analysis.runner").run(request)
-  if not resp_lines then
-    vim.notify("runtime-analysis: " .. run_err, vim.log.levels.ERROR)
-    return
-  end
-
-  require("runtime-analysis.view").show(resp_lines, { split = M.opts.split })
-end
-
 ---Plugin entry point.
 ---@param opts? { split?: string, request_filetype?: string, telemetry?: RA.Telemetry.LazyOpts }
 function M.setup(opts)
   M.opts = vim.tbl_deep_extend("force", vim.deepcopy(DEFAULTS), opts or {})
 
-  vim.api.nvim_create_user_command("RARequest", function()
-    M.open_request()
-  end, {
-    desc = "Open a new HTTP request buffer",
-  })
-  vim.api.nvim_create_user_command("RASend", send_current_buffer, {
-    desc = "Send the current buffer as an HTTP request",
-  })
+  require("runtime-analysis.bindings.usrcmds").setup(M)
 
   require("runtime-analysis.telemetry.command").setup()
 

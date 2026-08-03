@@ -1,0 +1,207 @@
+*runtime-analysis.txt*  Runtime truth for Neovim plugins    *runtime-analysis.nvim*
+
+==============================================================================
+CONTENTS                                          *runtime-analysis-contents*
+
+  1. Introduction ................................... |runtime-analysis-intro|
+  2. Requirements ............................ |runtime-analysis-requirements|
+  3. Installation ............................ |runtime-analysis-installation|
+  4. Configuration .................................. |runtime-analysis-config|
+  5. Commands ...................................... |runtime-analysis-commands|
+  6. Telemetry ................................... |runtime-analysis-telemetry|
+  7. Integration with documentation.nvim ....... |runtime-analysis-integration|
+  8. Health check .................................. |runtime-analysis-health|
+  9. Roadmap ....................................... |runtime-analysis-roadmap|
+
+==============================================================================
+1. INTRODUCTION                                       *runtime-analysis-intro*
+
+runtime-analysis.nvim answers what documentation.nvim
+(https://github.com/StefanBartl/documentation.nvim) cannot: not what a
+codebase *declares*, but what actually happens when it runs. See that
+plugin's docs/ECOSYSTEM.md for the architecture this pairing is part of.
+
+Two features today:
+
+  - An in-editor HTTP request runner (|:RARequest|, |:RASend|) — no browser,
+    no server, no CORS, no token, because none of those problems exist for a
+    request Neovim itself sends via `curl`.
+  - `runtime-analysis.telemetry` (|:RATelemetry|) — opt-in call counting and
+    usage statistics for any Lua/Neovim plugin, moved here from lib.nvim.
+
+==============================================================================
+2. REQUIREMENTS                                *runtime-analysis-requirements*
+
+  - Neovim 0.10 or later (`vim.system`)
+  - lib.nvim (https://github.com/StefanBartl/lib.nvim) — hard dependency:
+    `net.curl`'s `fetch_raw`/`fetch_raw_blocking` for the request runner,
+    plus `cache.disk`, `git`, `ui.kit`, `usercmd`, `notify`, `autocmd` and
+    `progress` for telemetry.
+  - `curl` on PATH — every |:RASend| shells out to it via lib.nvim.
+
+Optional:
+
+  - mdview.nvim (https://github.com/StefanBartl/mdview.nvim) — renders a
+    telemetry report as a live browser tab (`report_style = "mdview"`).
+    Soft dependency throughout, `pcall`-guarded.
+
+Run |:checkhealth-runtime-analysis| to verify all of the above.
+
+==============================================================================
+3. INSTALLATION                                *runtime-analysis-installation*
+
+lazy.nvim: >lua
+
+  {
+    "StefanBartl/runtime-analysis.nvim",
+    dependencies = { "StefanBartl/lib.nvim" },
+    cmd = { "RARequest", "RASend", "RATelemetry" },
+    opts = {
+      -- split = "vsplit",
+      -- request_filetype = "http",
+      -- telemetry = { plugins = {...}, lib_nvim = {...} },  -- lazy.nvim only
+    },
+  }
+<
+
+`opts = {...}` calls `require("runtime-analysis").setup(opts)` for you, the
+same as: >lua
+
+  require("runtime-analysis").setup({...})
+<
+
+==============================================================================
+4. CONFIGURATION                                     *runtime-analysis-config*
+
+>lua
+  require("runtime-analysis").setup({
+    split = "vsplit",           -- default; "split" for a horizontal one
+    request_filetype = "http",  -- default
+    telemetry = nil,            -- see |runtime-analysis-telemetry|
+  })
+<
+
+                                                    *runtime-analysis-opts.split*
+opts.split ~
+  Type: `string`. Default: `"vsplit"`.
+  Where the response pane opens relative to the request buffer: `"vsplit"`
+  or `"split"`.
+
+                                        *runtime-analysis-opts.request_filetype*
+opts.request_filetype ~
+  Type: `string`. Default: `"http"`.
+  Filetype set on a new |:RARequest| buffer. Left at `"http"` rather than a
+  plugin-specific name so VS Code's REST Client / IntelliJ's HTTP Client
+  syntax highlighting, already installed by most readers, applies unchanged.
+
+                                                 *runtime-analysis-opts.telemetry*
+opts.telemetry ~
+  Type: `table|nil`. Default: `nil` (no auto-instrumentation).
+  Forwarded verbatim to `runtime-analysis.telemetry.lazy`'s `setup()` — see
+  |runtime-analysis-telemetry| and that module's own README for the full
+  shape. A no-op if lazy.nvim is not the caller's plugin manager.
+
+==============================================================================
+5. COMMANDS                                        *runtime-analysis-commands*
+
+                                                              *:RARequest*
+:RARequest                     Open a new request buffer. One request per
+                                buffer, in the shape VS Code's REST Client /
+                                IntelliJ's HTTP Client already use:
+>
+  METHOD url
+  Header-Name: value
+
+  {"optional": "body", "after": "one blank line"}
+<
+                                                              *:RASend*
+:RASend                         Run from inside a request buffer: parses it,
+                                sends it via lib.nvim.net.curl, and shows the
+                                response (status, headers, body) in a
+                                persistent split beside it. Blocking: the
+                                editor waits for the response. The response
+                                pane is reused across sends and never steals
+                                focus from the request buffer.
+
+                                                              *:RATelemetry*
+:RATelemetry [args]             See |runtime-analysis-telemetry| below —
+                                registered by the same `setup()` call above,
+                                opt-in in the sense that requiring the
+                                telemetry module alone registers nothing;
+                                `setup()` always wires the command up.
+
+==============================================================================
+6. TELEMETRY                                      *runtime-analysis-telemetry*
+
+`runtime-analysis.telemetry` counts how often functions are called and
+persists the counts across restarts. Full API — instances, wrap/wrap_loaded,
+auto(), the lazy.nvim adapter, argument profiling, report_style, the
+lifecycle reminder — is documented in this repository's own:
+
+  lua/runtime-analysis/telemetry/README.md
+
+rather than duplicated here; that file is long and changes independently of
+the rest of this plugin. Command surface: >
+
+  :RATelemetry                 report across every live instance
+  :RATelemetry lsp.nvim        report for one namespace
+  :RATelemetry start [ns]      every instance, or just one
+  :RATelemetry stop [ns]       every instance, or just one
+  :RATelemetry reset [ns]      every instance, or just one
+  :RATelemetry disable [ns]    stop + persist "off" across restarts
+  :RATelemetry enable [ns]     clear a persisted disable, resume now
+  :RATelemetry disabled        list namespaces currently disabled
+  :RATelemetry coverage        which wrapped functions were never called
+  :RATelemetry export [path]   JSON, or Markdown if path ends .md
+  :RATelemetry open [ns]       render + open externally
+<
+==============================================================================
+7. INTEGRATION WITH documentation.nvim          *runtime-analysis-integration*
+
+`M.open_request(lines)` is this plugin's one public integration surface,
+written against a small named interface rather than another plugin reaching
+into this one's internal files (per documentation.nvim's docs/ECOSYSTEM.md
+§7). documentation.nvim's |:DocBrowse| Endpoints mode is the first consumer:
+pressing `gs` on a route it found by static analysis calls
+`require("runtime-analysis").open_request({"METHOD path", ""})` — a soft
+dependency (`pcall(require, "runtime-analysis")`), absent with a clear
+message when this plugin is not installed.
+
+Deliberately not an immediate send: a route's path (`/users/:id`) is
+relative and may contain unfilled `:param`s — genuinely nothing
+documentation.nvim's static analysis could send correctly on its own — so
+the method and path are pre-filled and the reader completes the base URL
+(and any params) before running |:RASend| themselves.
+
+>lua
+  local M = {}
+
+  ---@field opts { split: string, request_filetype: string }
+  ---@field open_request fun(lines?: string[])
+  ---@field setup fun(opts?: table)
+<
+
+==============================================================================
+8. HEALTH CHECK                                       *runtime-analysis-health*
+                                            *:checkhealth-runtime-analysis*
+
+>vim
+  :checkhealth runtime-analysis
+<
+
+Reports: Neovim version, `curl` on PATH, every required lib.nvim module
+loading, live telemetry instances and persistently disabled namespaces in
+this session, the telemetry cache directory and whether it is writable,
+whether mdview.nvim is available, and whether `setup()` has registered its
+commands yet in this session.
+
+==============================================================================
+9. ROADMAP                                           *runtime-analysis-roadmap*
+
+This plugin's own backlog, organized into phases (quick wins, medium,
+longer-term), plus documented rejections: docs/ROADMAP.md in the
+repository. Ideas that only exist *between* this plugin and its siblings
+(documentation.nvim, mdview.nvim, lib.nvim): docs/IDEAS.md.
+
+==============================================================================
+vim:tw=78:ts=8:noet:ft=help:norl:
