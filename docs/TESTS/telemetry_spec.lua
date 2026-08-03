@@ -1255,5 +1255,78 @@ return function(H)
     t.unwrap()
   end
 
+  -- -------------------------------------------------------------------------
+  -- telemetry.auto(): the "instrument a whole plugin generically" convenience
+  -- every auto-instrument-on-load caller needs, regardless of which plugin
+  -- manager drives it -- new() + wrap()/wrap_loaded() + start() in one call.
+  -- -------------------------------------------------------------------------
+  do
+    H.eq(
+      telemetry.auto({ namespace = ns("auto_unloaded"), main = "totally_unloaded_plugin" }),
+      nil,
+      "nothing of main loaded yet -> nil, no instance created"
+    )
+  end
+
+  do
+    package.loaded["fakeauto"] = { facade = function() end }
+    local inst = telemetry.auto({ namespace = ns("auto_shallow"), main = "fakeauto" })
+    H.ok(inst ~= nil, "façade loaded -> an instance is returned")
+    H.eq(inst.is_running(), true, "start() ran -- auto() leaves nothing half-wired")
+    H.ok(vim.tbl_contains(inst.wrapped_keys(), "facade"), "shallow: only the façade's own keys")
+    inst.stop()
+    inst.unwrap()
+    package.loaded["fakeauto"] = nil
+  end
+
+  do
+    package.loaded["fakeauto"] = { facade = function() end }
+    package.loaded["fakeauto.core"] = { a = function() end }
+    package.loaded["fakeauto.@types"] = { noise = function() end }
+    local inst = telemetry.auto({ namespace = ns("auto_deep"), main = "fakeauto", deep = true })
+    local keys = inst.wrapped_keys()
+    H.ok(vim.tbl_contains(keys, "facade"), "deep: façade included")
+    H.ok(vim.tbl_contains(keys, "core.a"), "deep: whole loaded subtree, not just the façade")
+    H.eq(
+      vim.tbl_contains(keys, "@types.noise"),
+      false,
+      "deep: @types excluded by the default module_filter"
+    )
+    inst.stop()
+    inst.unwrap()
+    for _, name in ipairs({ "fakeauto", "fakeauto.core", "fakeauto.@types" }) do
+      package.loaded[name] = nil
+    end
+  end
+
+  do
+    -- lua/<main>/init.lua reachable as both "<main>" and "<main>.init" --
+    -- gating the shallow path on the bare name alone would silently skip a
+    -- plugin that happened to load via the ".init" form.
+    package.loaded["fakeauto_init.init"] = { go = function() end }
+    local inst = telemetry.auto({ namespace = ns("auto_dotinit"), main = "fakeauto_init" })
+    H.ok(inst ~= nil, "package.loaded[main .. '.init'] resolves when [main] itself does not")
+    H.ok(vim.tbl_contains(inst.wrapped_keys(), "go"), "its function got wrapped")
+    inst.stop()
+    inst.unwrap()
+    package.loaded["fakeauto_init.init"] = nil
+  end
+
+  do
+    package.loaded["fakeauto_opts"] = { f = function() end }
+    local inst = telemetry.auto({
+      namespace = ns("auto_opts"),
+      main = "fakeauto_opts",
+      profile_args = true,
+      timing = true,
+    })
+    package.loaded["fakeauto_opts"].f("x")
+    H.eq(inst.report().modes.timing, true, "timing=true reached start()")
+    H.ok(inst.report().entries[1].args ~= nil, "profile_args=true reached start()")
+    inst.stop()
+    inst.unwrap()
+    package.loaded["fakeauto_opts"] = nil
+  end
+
   vim.fn.delete(tmpdir, "rf")
 end

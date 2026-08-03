@@ -143,6 +143,42 @@ coverage is *"what is loaded at this moment"* — call it after the plugin has
 initialized, and call it again later to pick up modules required since
 (re-registering an existing target is a no-op, so nothing double-counts).
 
+### `telemetry.auto(opts)` — instrument a plugin on load, any plugin manager
+
+`new()` + `wrap()`/`wrap_loaded()` + `start()` in one call — the shape every
+"auto-instrument each plugin as it loads" caller needs, regardless of which
+plugin manager drives it:
+
+```lua
+-- from inside a lazy.nvim `User LazyLoad` callback, packer's `config`, or
+-- anywhere else that knows a plugin just finished loading:
+local inst = telemetry.auto({
+  namespace = "markdown.nvim",
+  main = "markdown",          -- the plugin's root Lua module
+  deep = true,                -- wrap_loaded(main) instead of just its façade
+  profile_args = true,
+  timing = false,
+})
+-- inst is nil if nothing of `main` is loaded yet -- no empty namespace left
+-- behind, and safe to call on every load event without your own dedup guard
+-- around the *creation*, though you still want one around firing this call
+-- itself: calling it twice for an already-instrumented plugin creates a
+-- SECOND live instance for the same namespace (see "Persistence is
+-- namespaced" below) -- exactly the kind of dedup a `User LazyLoad` handler
+-- already needs on its own for other reasons.
+```
+
+What this deliberately does **not** do: hook a load event, or resolve `main`
+from a plugin spec. Both are plugin-manager-specific (lazy.nvim's own
+`lazy.core.loader.get_main`, for one) — a generic library has no business
+assuming which one you use. Deciding *which* of your plugins get *which*
+settings is your own policy too; `auto()` only takes the settings already
+resolved for one plugin, not a list to resolve them from.
+
+By default, `deep = true`'s `module_filter` excludes `@types` modules —
+pure LuaCATS annotation scaffolding, noise in every report — overridable by
+passing your own `module_filter`.
+
 ### Lifecycle
 
 ```lua

@@ -137,8 +137,17 @@
 ---@field flush fun(): boolean
 ---@field wrapped_keys fun(): string[]
 
+---@class RA.Telemetry.AutoOpts
+---@field namespace string
+---@field main string                                   # root Lua module to instrument
+---@field deep? boolean                                 # wrap_loaded(main) instead of just its façade (default false)
+---@field profile_args? boolean
+---@field timing? boolean
+---@field module_filter? fun(name: string): boolean      # default: excludes `@types` modules
+
 ---@class RA.Telemetry
 ---@field new fun(opts: RA.Telemetry.Options): RA.Telemetry.Instance
+---@field auto fun(opts: RA.Telemetry.AutoOpts): RA.Telemetry.Instance|nil
 ---@field instances fun(): RA.Telemetry.Instance[]
 ---@field get fun(namespace: string): RA.Telemetry.Instance|nil
 ---@field load fun(namespace: string, opts?: Lib.Cache.Opts): RA.Telemetry.Data|nil
