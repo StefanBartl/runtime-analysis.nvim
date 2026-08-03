@@ -70,9 +70,11 @@ end
 ---the other's formatting.
 ---@param resp Lib.Net.Curl.RawResponse
 ---@return string[] lines
----@return { body_start: integer, is_json: boolean } meta `body_start` is the
----1-based line where the body begins (past the end when there is none);
----`view.lua` uses both for folding/syntax and for "yank just the body".
+---@return { status: integer, body_start: integer, is_json: boolean } meta
+---`body_start`/`is_json` are `view.lua`'s (folding/syntax, "yank just the
+---body"); `status` is `bindings/usrcmds.lua`'s own, for a request history
+---entry, so a caller never has to re-parse the HTTP status back out of
+---`lines[1]`.
 local function format_response(resp)
   local lines = { ("%d %s"):format(resp.status, resp.status_text) }
   local header_names = vim.tbl_keys(resp.headers)
@@ -94,7 +96,7 @@ local function format_response(resp)
     vim.list_extend(lines, pretty_lines or body_lines(resp.body))
   end
 
-  return lines, { body_start = body_start, is_json = is_json }
+  return lines, { status = resp.status, body_start = body_start, is_json = is_json }
 end
 
 ---Run `request` and return response lines ready for `view.lua`, or an error
@@ -104,7 +106,7 @@ end
 ---@param request { method: string, url: string, headers: table<string, string>, body: string? }
 ---@return string[]? lines
 ---@return string? err
----@return { body_start: integer, is_json: boolean }? meta
+---@return { status: integer, body_start: integer, is_json: boolean }? meta
 function M.run(request)
   local ok, resp = curl.fetch_raw_blocking(request.url, {
     method = request.method,
@@ -139,7 +141,7 @@ end
 ---kill would need, and extending `lib.nvim.net.curl` for that is real,
 ---separate work in a different repository, not attempted here.
 ---@param request { method: string, url: string, headers: table<string, string>, body: string? }
----@param cb fun(lines: string[]?, err: string?, meta: { body_start: integer, is_json: boolean }?)
+---@param cb fun(lines: string[]?, err: string?, meta: { status: integer, body_start: integer, is_json: boolean }?)
 function M.run_async(request, cb)
   curl.fetch_raw(request.url, {
     method = request.method,

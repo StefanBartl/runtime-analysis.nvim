@@ -272,6 +272,46 @@ return function(H)
     cancel_server:close()
   end
 
+  -- :RA send records a history entry; :RA history clear empties it again.
+  -- `history_spec.lua` covers `runtime-analysis.history`'s own behavior in
+  -- detail against an isolated cache dir — this only checks that
+  -- `bindings/usrcmds.lua` actually calls into it, using the real default
+  -- dir the command path always uses (sandboxed-safe in this test
+  -- environment; the same default dir every other real entry point uses).
+  local history_buf
+  do
+    local history = require("runtime-analysis.history")
+    history.clear() -- start from a clean slate for this project's key
+
+    -- `start_server` (defined above) takes no response argument — it
+    -- always answers 200 OK, which is exactly what this test asserts on.
+    local hist_port, hist_server = start_server()
+    history_buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_lines(history_buf, 0, -1, false, {
+      ("GET http://127.0.0.1:%d/history-me"):format(hist_port),
+      "",
+    })
+    vim.api.nvim_win_set_buf(winid, history_buf)
+    vim.api.nvim_win_set_cursor(winid, { 1, 0 })
+
+    vim.cmd("RA send")
+    vim.wait(1000, function()
+      local entries = history.list()
+      return #entries == 1
+    end, 10)
+
+    local entries = history.list()
+    eq(#entries, 1, "usrcmds: :RA send recorded exactly one history entry")
+    eq(entries[1].method, "GET", "usrcmds: ... the method actually sent")
+    ok(entries[1].url:match("/history%-me$") ~= nil, "usrcmds: ... and the url actually sent")
+    eq(entries[1].status, 200, "usrcmds: ... with the real response status")
+
+    vim.cmd("RA history clear")
+    eq(#history.list(), 0, "usrcmds: :RA history clear empties this project's history")
+
+    hist_server:close()
+  end
+
   vim.api.nvim_win_set_buf(winid, prev_buf)
   vim.api.nvim_buf_delete(bufnr, { force = true })
   vim.api.nvim_buf_delete(slow_buf, { force = true })

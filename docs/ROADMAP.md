@@ -42,7 +42,7 @@ same kind of overlay `docs/IDEAS.md` §6 uses for its own five-item shortlist.
 | **Medium** | Multi-day. Either a real decision has to be made first (a schema, a security trade-off, an open question the section names explicitly), or it touches several files or a small state machine — but the shape and the cost are both known. |
 | **Long-term** | Blocked on something this document itself already says is unmeasured or unresolved: an unmeasured `debug.getinfo` cost, several open design questions, another repository's half of the work, or a section the document itself calls speculative. |
 
-Eleven items have shipped out of this section since it was first written —
+Twelve items have shipped out of this section since it was first written —
 see [`docs/FINISHED.md`](FINISHED.md) for the full record of each. What
 remains open:
 
@@ -56,7 +56,6 @@ remains open:
 
 | Item | Note |
 | --- | --- |
-| §1.3 Request history | `cache.disk`-backed; one open question to settle first — request-only vs. response bodies too — before writing any of it |
 | §2.1 Variables and environments | The feature that makes a request collection shareable; the security trap (tokens ending up in an env file) has to be designed in from the start, not added after |
 | §2.3 curl import / export | Import is both the more valuable half and the harder one — real argument parsing, not templating |
 | §2.5 Response assertions | Keep it to "is this endpoint still 200", not a general assertion language |
@@ -65,7 +64,7 @@ remains open:
 | §3.4 Error and failure fingerprinting | Reuses the existing argument-fingerprint machinery, pointed at errors instead of arguments |
 | §4.2 Comparison across time windows | Day buckets are already stored; this is a report mode, not a collection change |
 | §5.2 Wrapper provenance | The narrow, high-value slice of §5.1 worth shipping first; the telemetry registry already knows its own wrappers |
-| §6.2 Endpoint coverage | Needs §1.3 (request history) first, plus a join key |
+| §6.2 Endpoint coverage | Request history (§1.3) now exists and needs no changes; what remains is a real route-pattern-to-URL matching strategy, not just a join key |
 | §6.3 Documentation priority by real usage | Needs §6.1's mechanism to exist first |
 | §7.1 Keymap and command usage | Mechanically the existing wrap machinery pointed at `vim.keymap.set` plus a `CmdlineLeave` hook; stays local and opt-in, never grows a "share this" feature |
 | §7.2 Plugin cost-versus-use | Combines §3.3 with call counts already collected |
@@ -95,21 +94,13 @@ closed question, kept here so it does not get re-opened from a blank slate.
 
 ## 1. HTTP request runner — the stated gaps
 
-The README originally named four (async sending, `###` multi-request
-support, request history, `.http`/`.rest` file support) — three have
-shipped, see [`docs/FINISHED.md`](FINISHED.md). One remains:
-
-### 1.3 Request history
-
-Nothing is saved between sends. The obvious shape is
-`lib.nvim.cache.disk`-backed, per-project (`lib.nvim.fs.project_key`
-already computes that key), listing method/URL/status/timestamp, with
-"reopen this as a buffer" as the one interaction that matters.
-
-**Open question worth deciding before building:** does history store the
-*request* only, or the response too? Responses can be large and can contain
-secrets from a real API. Request-only is the safe default; response bodies
-behind an explicit opt-in, if at all.
+The README originally named four: async sending, `###` multi-request
+support, request history, `.http`/`.rest` file support. **All four have
+shipped** — see [`docs/FINISHED.md`](FINISHED.md) for the full record of
+each. This section is intentionally left empty rather than deleted: the
+number itself (`§1.x`) is still cited elsewhere in this document (§6.2)
+and in `docs/FINISHED.md`, and removing the section would orphan those
+references without actually freeing the number for reuse.
 
 ---
 
@@ -314,8 +305,12 @@ documentation.nvim's side — an entry builder and a branch, per its own
 documentation.nvim knows every route the source declares (`core/endpoints.lua`);
 this plugin's request runner knows which ones were actually sent. "Three of
 your eleven routes have never been exercised" is a real answer neither can
-give alone, and it needs no new collection — only request history (§1.3)
-and a join key.
+give alone. Request history (`runtime-analysis.history`, see
+[`docs/FINISHED.md`](FINISHED.md)) now exists and needs no changes to serve
+this — what remains is entirely the join itself: reading
+documentation.nvim's declared-route list and matching it against this
+plugin's recorded URLs, which still needs a real matching strategy (a route
+like `/users/:id` is not a literal string a recorded URL will ever equal).
 
 ### 6.3 Documentation priority by real usage
 

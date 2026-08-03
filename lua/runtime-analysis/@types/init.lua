@@ -16,3 +16,12 @@
 ---@field first integer 1-based, inclusive — the block's first line in the original buffer
 ---@field last integer 1-based, inclusive
 ---@field lines string[] the block's own lines, ready for `parse.parse`
+
+---One recorded send attempt — `runtime-analysis.history`'s own record,
+---request-only by design (see that module's doc-comment for why).
+---@class RA.History.Entry
+---@field method string
+---@field url string
+---@field status integer? HTTP status, or `nil` when the request errored or was cancelled
+---@field note string? Set only when `status` is `nil` — `"cancelled"`, or the transport error text
+---@field at integer `os.time()` when this was recorded
