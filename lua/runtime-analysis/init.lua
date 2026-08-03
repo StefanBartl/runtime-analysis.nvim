@@ -24,6 +24,12 @@
 --- plugin could send correctly on its own — so the integration hands the
 --- method and path over pre-filled and lets the reader complete the
 --- request before sending it themselves, rather than guessing at either.
+---
+--- `docs/ECOSYSTEM.md` step 7 moved `runtime-analysis.telemetry` here from
+--- lib.nvim: opt-in call counting and usage statistics for any plugin,
+--- registered as `:RATelemetry` below. See that module's own README.md for
+--- its API; lib.nvim keeps a thin caller, `lib.strategies.telemetry_wrap`,
+--- for instrumenting its own `require("lib")` aggregate specifically.
 
 local M = {}
 
@@ -84,6 +90,8 @@ function M.setup(opts)
   vim.api.nvim_create_user_command("RASend", send_current_buffer, {
     desc = "Send the current buffer as an HTTP request",
   })
+
+  require("runtime-analysis.telemetry.command").setup()
 end
 
 return M
