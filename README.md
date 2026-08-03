@@ -90,10 +90,20 @@ the method and path are pre-filled and the reader completes the base URL
 - **Request history.** Nothing is saved between sends yet.
 - **Multiple requests per buffer** (`###`-separated, the way both sibling
   tools support). One request per buffer for now.
-- **The static × runtime join** — `:DocBrowse`'s planned Mode 7 (a
-  *different*, later mode than the Endpoints mode step 6 already added),
-  joining documentation.nvim's static analysis against telemetry's counts —
-  is a later step in `ECOSYSTEM.md`'s own sequencing, not this one.
+- **The static × runtime join** — a planned `:DocBrowse` mode joining
+  documentation.nvim's static analysis against telemetry's counts, a
+  *different*, later mode than the Endpoints mode step 6 already added — is
+  a later step in `ECOSYSTEM.md`'s own sequencing, not this one. Both that
+  document and the design it points at call it "Mode 7"; it will be the
+  **eighth** entry in the real `MODES` list, since Endpoints took position
+  seven first.
+
+## Where this is going
+
+- [`docs/ROADMAP.md`](docs/ROADMAP.md) — this plugin's own backlog, including
+  documented rejections.
+- [`docs/IDEAS.md`](docs/IDEAS.md) — ideas that only exist *between* plugins:
+  runtime-analysis × documentation.nvim × mdview.nvim × lib.nvim.
 
 ## Dependencies
 

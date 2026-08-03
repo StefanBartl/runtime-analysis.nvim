@@ -391,9 +391,12 @@ t.wrap(require("lsp.servers"), "servers", { module_id = "lsp.servers" })
 A key with no entry in `resolved_modules()` / `data.modules` is **unmatched**,
 not "zero calls" — a consumer joining telemetry against a static key set (the
 motivating case: documentation.nvim's `dead-function` check, see
-[`telemetry-documentation-bridge.md`](../../../../docs/ROADMAP/telemetry-documentation-bridge.md))
+[`telemetry-documentation-bridge.md`](https://github.com/StefanBartl/lib.nvim/blob/main/docs/ROADMAP/telemetry-documentation-bridge.md))
 must keep those two claims distinguishable, or the join produces false
-positives it can't tell apart from real ones.
+positives it can't tell apart from real ones. That design document stayed in
+lib.nvim when this module moved out of it — it is about the *consumer* of
+this data, not about the collection this module does, so it was never
+telemetry's own file to take along.
 
 ## `:RATelemetry`
 
