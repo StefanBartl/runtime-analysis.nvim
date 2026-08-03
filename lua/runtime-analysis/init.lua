@@ -13,6 +13,17 @@
 --- No browser, no server, no CORS, no token — the cheap first version
 --- `docs/ECOSYSTEM.md` calls for specifically, because none of those
 --- problems exist for a request Neovim itself sends.
+---
+--- `M.open_request` is this plugin's one public integration surface for
+--- another plugin to build on — `docs/ECOSYSTEM.md` §7 states the rule this
+--- follows explicitly: "the join should be written against a small named
+--- interface from the start", not against this module's internal file
+--- layout. documentation.nvim's Endpoints browser mode (step 6) is the
+--- first consumer: a route found by static analysis has a path but no base
+--- URL and no real values for any `:param` in it — genuinely nothing this
+--- plugin could send correctly on its own — so the integration hands the
+--- method and path over pre-filled and lets the reader complete the
+--- request before sending it themselves, rather than guessing at either.
 
 local M = {}
 
@@ -21,19 +32,24 @@ local DEFAULTS = require("runtime-analysis.config").DEFAULTS
 ---@type { split: string, request_filetype: string }
 M.opts = vim.deepcopy(DEFAULTS)
 
----Open a new request buffer, pre-filled with a template — the shape a
----reader needs to see to know what to fill in, the same reason a fresh
----`.http`/`.rest` file in either sibling tool starts non-empty.
-local function open_request_buffer()
+---Open a new request buffer. With no `lines`, pre-filled with a template —
+---the shape a reader needs to see to know what to fill in, the same reason
+---a fresh `.http`/`.rest` file in either sibling tool starts non-empty. With
+---`lines`, that content is used instead — what `documentation.nvim`'s
+---Endpoints mode hands over (`METHOD path`, blank line), leaving the base
+---URL and any path params for the reader to fill in before `:RASend`.
+---@param lines string[]?
+function M.open_request(lines)
   vim.cmd("enew")
   local bufnr = vim.api.nvim_get_current_buf()
   vim.bo[bufnr].buftype = "acwrite"
   vim.bo[bufnr].filetype = M.opts.request_filetype
-  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {
-    "GET https://",
-    "",
-  })
-  vim.api.nvim_win_set_cursor(0, { 1, 12 })
+  lines = lines or { "GET https://", "" }
+  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+  -- End of the first line, not a hardcoded column: `lines` may not be the
+  -- default template, and a cursor position tuned for "GET https://"
+  -- would land mid-word on anything else.
+  vim.api.nvim_win_set_cursor(0, { 1, #lines[1] })
 end
 
 ---Parse the current buffer as a request and send it, showing the response
@@ -60,7 +76,9 @@ end
 function M.setup(opts)
   M.opts = vim.tbl_deep_extend("force", vim.deepcopy(DEFAULTS), opts or {})
 
-  vim.api.nvim_create_user_command("RARequest", open_request_buffer, {
+  vim.api.nvim_create_user_command("RARequest", function()
+    M.open_request()
+  end, {
     desc = "Open a new HTTP request buffer",
   })
   vim.api.nvim_create_user_command("RASend", send_current_buffer, {

@@ -51,6 +51,23 @@ require("runtime-analysis").setup({
 })
 ```
 
+### Integration with documentation.nvim (step 6)
+
+`M.open_request(lines)` is this plugin's one public integration surface —
+written against a small named interface from the start, per
+`docs/ECOSYSTEM.md` §7's own stated rule, rather than another plugin
+reaching into this one's internal files. documentation.nvim's `:DocBrowse`
+Endpoints mode is the first consumer: pressing `gs` on a route it found by
+static analysis calls `require("runtime-analysis").open_request({"METHOD
+path", ""})` — a soft dependency (`pcall(require, "runtime-analysis")`),
+absent with a clear message when this plugin is not installed.
+
+Deliberately not an immediate send: a route's path (`/users/:id`) is
+relative and may contain unfilled `:param`s — genuinely nothing
+documentation.nvim's static analysis could send correctly on its own — so
+the method and path are pre-filled and the reader completes the base URL
+(and any params) before running `:RASend` themselves.
+
 ## What's not here yet
 
 - **Async sending.** `:RASend` blocks until the response arrives — real,
@@ -60,7 +77,8 @@ require("runtime-analysis").setup({
 - **Multiple requests per buffer** (`###`-separated, the way both sibling
   tools support). One request per buffer for now.
 - **The static × runtime join** — telemetry, and `:DocBrowse`'s planned
-  Mode 7 — is a later step in `ECOSYSTEM.md`'s own sequencing, not this
+  Mode 7 (a *different*, later mode than the Endpoints mode step 6 already
+  added) — is a later step in `ECOSYSTEM.md`'s own sequencing, not this
   one.
 
 ## Dependencies
