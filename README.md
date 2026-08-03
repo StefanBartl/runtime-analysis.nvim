@@ -77,6 +77,27 @@ Built via [`lib.nvim.usercmd.composer`](https://github.com/StefanBartl/lib.nvim)
 flat aliases for the two commands above — this plugin's oldest, most-used
 surface, kept alongside `:RA` rather than replaced by it.
 
+**More than one request per buffer**, `###`-separated, the way both sibling
+tools already work:
+
+```http
+GET https://api.example.com/users
+
+###
+
+POST https://api.example.com/users
+Content-Type: application/json
+
+{"name": "Bob"}
+```
+
+`:RA send` parses and sends whichever block the cursor is in (or nearest
+above it) — never the whole buffer, never a picker. A committed `.http` or
+`.rest` file (both resolve to the `http` filetype — `.rest` via this
+plugin's own `ftdetect/`, `.http` natively in Neovim) works exactly the
+same way opened directly with `:e`, so a project's whole request
+collection can live in one versioned file.
+
 ## Setup
 
 ```lua
@@ -129,8 +150,6 @@ the method and path are pre-filled and the reader completes the base URL
   and fine for a request bounded in seconds, but a genuine limitation for
   a slow endpoint.
 - **Request history.** Nothing is saved between sends yet.
-- **Multiple requests per buffer** (`###`-separated, the way both sibling
-  tools support). One request per buffer for now.
 - **The static × runtime join** — a planned `:DocBrowse` mode joining
   documentation.nvim's static analysis against telemetry's counts, a
   *different*, later mode than the Endpoints mode already added — is a
@@ -146,6 +165,8 @@ this short list.
 
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — this plugin's own backlog, phased
   into quick wins / medium / longer-term work, plus documented rejections.
+- [`docs/FINISHED.md`](docs/FINISHED.md) — the decision record behind
+  everything that has shipped out of `docs/ROADMAP.md` — what, and why.
 - [`docs/IDEAS.md`](docs/IDEAS.md) — ideas that only exist *between* plugins:
   runtime-analysis × documentation.nvim × mdview.nvim × lib.nvim.
 - [`doc/runtime-analysis.txt`](doc/runtime-analysis.txt) — `:help

@@ -8,6 +8,10 @@ re-litigated from a blank slate.
 What is already built is in [the README](../README.md) and, for telemetry
 specifically, in
 [`lua/runtime-analysis/telemetry/README.md`](../lua/runtime-analysis/telemetry/README.md).
+**When an item below ships, it is removed from here and archived in
+[`docs/FINISHED.md`](FINISHED.md)** — the decision record this document
+deliberately is not, kept separate so this backlog stays readable rather
+than growing a struck-through "Done" note for every entry that ever ships.
 The architectural split this plugin exists inside — static truth in
 documentation.nvim, runtime truth here — is
 [`documentation.nvim/docs/ECOSYSTEM.md`](https://github.com/StefanBartl/documentation.nvim/blob/main/docs/ECOSYSTEM.md);
@@ -38,27 +42,21 @@ same kind of overlay `docs/IDEAS.md` §6 uses for its own five-item shortlist.
 | **Medium** | Multi-day. Either a real decision has to be made first (a schema, a security trade-off, an open question the section names explicitly), or it touches several files or a small state machine — but the shape and the cost are both known. |
 | **Long-term** | Blocked on something this document itself already says is unmeasured or unresolved: an unmeasured `debug.getinfo` cost, several open design questions, another repository's half of the work, or a section the document itself calls speculative. |
 
+Nine items have shipped out of this section since it was first written —
+see [`docs/FINISHED.md`](FINISHED.md) for the full record of each. What
+remains open:
+
 ### Quick wins
 
 | Item | Note |
 | --- | --- |
-| §1.4 `.http`/`.rest` file support | "Mostly free" per its own text, but sequenced after §1.2 — needs `###` splitting to exist first. **Still blocked, unlike the rest of this table** — §1.2 has not been built |
-| §2.2 A response pane worth reading | **Done (2026-08-03)** — JSON pretty-printing/folding/filetype and `:RA yank`; per-content-type *syntax highlighting* beyond JSON explicitly cut, see that section |
-| §2.4 Auth helpers | **Done (2026-08-03)** — the `Auth:` header shorthand |
-| §4.1 A CLI / headless entry point | **Done (2026-08-03)** — `scripts/telemetry.lua`; `coverage` deliberately not included, see that section |
 | §6.1 Mode 8 — telemetry in `:DocBrowse` | Both halves this repo owns (`telemetry.load()`, `Data.modules`, `resolved_modules()`) already ship; what remains is documentation.nvim's entry builder, not work here |
-| `:checkhealth runtime-analysis` | **Done (2026-08-03)** — see Housekeeping below |
-| Vimdoc (`doc/runtime-analysis.txt`) | **Done (2026-08-03)** — see Housekeeping below |
-| `docs/COMMANDS.md` + `docs/BINDINGS.md` | **Done (2026-08-03)** — see Housekeeping below |
-| `config/init.lua` + `config/DEFAULTS.lua` + `bindings/usrcmds.lua` + a top-level `@types/init.lua` | **Done (2026-08-03)** — see Housekeeping below |
-| Compound `:RA [subcommand]` usercommand | **Done (2026-08-03)** — see Housekeeping below |
 
 ### Medium
 
 | Item | Note |
 | --- | --- |
 | §1.1 Async sending | "Do this one first" among the request-runner gaps; view + pending state + cancel path — primitives (`fetch_raw`, `lib.nvim.progress`) already exist |
-| §1.2 Multiple requests per buffer (`###`) | Splitter + "which request is under the cursor" + a picker-or-not decision |
 | §1.3 Request history | `cache.disk`-backed; one open question to settle first — request-only vs. response bodies too — before writing any of it |
 | §2.1 Variables and environments | The feature that makes a request collection shareable; the security trap (tokens ending up in an env file) has to be designed in from the start, not added after |
 | §2.3 curl import / export | Import is both the more valuable half and the harder one — real argument parsing, not templating |
@@ -114,17 +112,6 @@ no way to cancel. `lib.nvim.net.curl` already has a non-blocking
 **Do this one first.** It is the only entry in this whole document that
 fixes something actively unpleasant rather than adding something missing.
 
-### 1.2 Multiple requests per buffer (`###`)
-
-Both sibling tools (VS Code REST Client, IntelliJ HTTP Client) separate
-requests in one file with a `###` line, and a real `.http` file collected
-over a project is a *file of requests*, not one. `parse.lua`'s doc-comment
-already flags this as deliberately not attempted.
-
-Needs: a splitter, a "which request is the cursor in" resolution, and a
-decision about whether `:RASend` sends the one under the cursor (yes,
-almost certainly) or offers a picker.
-
 ### 1.3 Request history
 
 Nothing is saved between sends. The obvious shape is
@@ -136,14 +123,6 @@ already computes that key), listing method/URL/status/timestamp, with
 *request* only, or the response too? Responses can be large and can contain
 secrets from a real API. Request-only is the safe default; response bodies
 behind an explicit opt-in, if at all.
-
-### 1.4 `.http` / `.rest` file support
-
-Today a request lives in a scratch buffer. Recognizing a real `.http` file
-on disk — so a project can commit its request collection — is mostly free:
-the filetype already resolves to `http`, and `:RASend` already reads the
-current buffer. What it needs is `###` (1.2) first, since a committed file
-is exactly the case that holds several requests.
 
 ---
 
@@ -166,62 +145,11 @@ response pane or a log. A `{{token}}` that renders as `{{token}}` in
 history and as its real value only in the actual request is the design to
 aim for.
 
-### 2.2 A response pane worth reading
-
-~~Today it is status + headers + body as plain lines. Worth having: JSON
-pretty-printing and folding (`vim.json.decode` + a filetype, not a new
-renderer), syntax highlighting per content-type, and a way to yank just the
-body.~~ **Done (2026-08-03)**, with one deliberate scope cut —
-`runner.lua` pretty-prints a `Content-Type: application/json` body via
-`lib.lua.json.encode.pretty` (the same real, correct, pure-Lua encoder that
-makes this safe now where the module's own earlier doc-comment explains
-`vim.json.encode(value, { indent = N })` was tried and rejected — it does
-not actually indent). Decode/encode failures fall back to the raw body
-verbatim rather than erroring: a `Content-Type` header is a claim a server
-can get wrong, not a guarantee. `view.lua` sets `filetype = "json"` and
-turns on `foldmethod = "indent"` when the body is JSON, reset to plain on
-every call so a later non-JSON response in the same reused window does not
-inherit either. A new subcommand, `:RA yank`, copies just the body, using a
-`body_start` line number `runner.lua` now returns alongside the lines
-rather than a second parse of them.
-
-**Cut from scope, and why:** true per-content-type *syntax highlighting*
-(HTML/XML/CSS bodies, not only JSON) needs the response buffer split into a
-preamble region and a body region with its own embedded syntax — the whole
-buffer cannot simply switch `filetype` per content-type the way it does for
-JSON, because the status/header preamble is not valid content of any of
-those types and setting the whole buffer's filetype degrades everything
-above the body to unhighlighted plain text. JSON's own case ships anyway
-because the folding is genuinely harmless there (indent-based, so
-unindented preamble lines just never fold) and the body is normally the
-larger, more-important part of the buffer — but generalizing this to more
-content types is real, separate work (a `syntax region`/embedded-syntax
-file), not a small extension of what shipped here.
-
 ### 2.3 curl import / export
 
 Paste a `curl` command line, get a request buffer; the reverse for sharing.
 Every API's documentation and every browser's "copy as cURL" produces
 exactly this, so import is the higher-value half by a lot.
-
-### 2.4 Auth helpers
-
-~~Bearer/Basic as one line rather than a hand-written header.~~ **Done
-(2026-08-03)** — a header named `Auth:` (`parse.lua`'s
-`resolve_auth_shorthand`) resolves into a real `Authorization` header.
-`Auth: Bearer <token>` passes through verbatim (the shorthand's value here
-is purely that `Bearer`/`Basic` read as a matched pair, not that Bearer
-itself got shorter). `Auth: Basic <user>:<pass>` base64-encodes the
-credentials via `lib.lua.strings.encoding.base64_encode` — the actual
-value-add, since RFC 7617 requires the base64 form and computing it by hand
-is the annoyance this removes. `Auth: Basic <already-base64>` (no `:` in
-the value — base64's own alphabet never contains one) passes through
-unencoded, so a value copied from somewhere else still works. An
-unrecognized scheme after `Auth:` passes through as the `Authorization`
-value unmodified, a generic fallback rather than an error.
-
-OAuth *flows* (redirect, token refresh) remain out of scope, as originally
-scoped — a different, much larger problem this plugin is not taking on.
 
 ### 2.5 Response assertions
 
@@ -297,30 +225,6 @@ needs a real profiler is to point at the real profiler.
 ---
 
 ## 4. Telemetry — reading it
-
-### 4.1 A CLI / headless entry point
-
-~~`nvim --headless -l scripts/telemetry.lua report lib.nvim` — read a
-namespace off disk with no editor session.~~ **Done (2026-08-03)** —
-[`scripts/telemetry.lua`](../scripts/telemetry.lua): `report <namespace>`
-and `export <namespace> <path>` (`--since`/`--top`/`--sort`/`--dir`),
-built entirely on `telemetry.load()` + `report.build()`, exactly as
-predicted — a script and an argument parser, no new analysis. `export`'s
-`.md`-vs-anything-else format inference mirrors `:RATelemetry export`'s own
-rule, one rule to remember rather than one per entry point.
-
-**`coverage` deliberately not included**, a scope cut found while building
-this rather than assumed up front: "which registered functions were never
-called" needs to know the *registered* set, and only a live instance's own
-`wrap()` calls establish that. A cold `telemetry.load()` read has no way to
-answer it — promising `coverage` here would be a CLI command that lies
-about what it can see.
-
-Bootstraps lib.nvim onto the runtimepath with the same three-candidate
-search (`LIB_NVIM_DIR`, `.deps/lib.nvim`, a sibling checkout)
-`docs/TESTS/run.lua` already uses, duplicated rather than shared between
-the two entry points — small enough that a shared helper module would add
-more indirection than it saves for two call sites.
 
 ### 4.2 Comparison across time windows
 
@@ -470,63 +374,19 @@ Neovim's LSP client internals across releases. Low priority.
 ## 8. Housekeeping
 
 Not features, but the gap between "works on this machine" and "a plugin
-someone else can install". Prompted by going through
-[`NEW_PROJECT.md`](https://github.com/StefanBartl/Notes/blob/master/MyNotes/Checklists/Lua/NEW_PROJECT.md)'s
-own checklist against this repository (2026-08-03) — the items below are
-exactly what that pass found missing, revisited a second time the same day
-once the compound-usercommand item's original verdict turned out to be
-wrong (see that item's own note below).
+someone else can install". Five items shipped from a `NEW_PROJECT.md`
+checklist pass on 2026-08-03 — moved to
+[`docs/FINISHED.md`](FINISHED.md) — leaving two still open:
 
-- ~~**`:checkhealth runtime-analysis`** — is `curl` present, is `lib.nvim`
-  the version this expects, is the telemetry cache directory writable, is
-  mdview available for `report_style = "auto"`.~~ **Done (2026-08-03)** —
-  [`lua/runtime-analysis/health.lua`](../lua/runtime-analysis/health.lua),
-  modeled on documentation.nvim's own `editor/health.lua`: reports resolved
-  configuration (live telemetry instances, persistently disabled namespaces,
-  the cache directory and whether it is writable) rather than only
-  presence/absence.
-- ~~**Vimdoc** (`doc/runtime-analysis.txt`). Both sibling plugins have one;
-  this has a README and nothing `:help` can find.~~ **Done (2026-08-03)** —
-  [`doc/runtime-analysis.txt`](../doc/runtime-analysis.txt), `doc/tags`
-  gitignored (generated by `:helptags`, not committed — the same convention
-  documentation.nvim and mdview.nvim both already use).
 - **Test coverage for the request runner's real transport.** `runner.lua`
   is currently exercised against `lib.nvim.net.curl`'s own hermetic
   `vim.uv` TCP server test at the lib.nvim end, not here. **Still open** —
   see the Medium phase above.
-- ~~**A `docs/COMMANDS.md`**, once there are more than three commands.
-  documentation.nvim's is the model.~~ **Done (2026-08-03)** —
-  [`docs/COMMANDS.md`](COMMANDS.md); [`docs/BINDINGS.md`](BINDINGS.md) also
-  added in the same pass (required by `NEW_PROJECT.md`'s own checklist, and
-  had not existed at all before this).
 - **`scripts/gen_map.lua` + documentation.nvim as a dev dependency.**
   `NEW_PROJECT.md` §4 requires this (a byte-comparison `--check` gate in CI,
   the same one documentation.nvim and mdview.nvim both already run). **Not
   done** — a real, separate piece of work (a new CI job, a committed
-  artifact, a new gate to keep green), not a documentation update, and
-  deliberately not attempted alongside the smaller items above. Belongs in
-  the Medium phase, not Quick wins.
-- ~~**A compound `:RA [subcommand]` usercommand**, per `NEW_PROJECT.md` §5's
-  own preferred shape.~~ **Done (2026-08-03)** —
-  [`lua/runtime-analysis/bindings/usrcmds.lua`](../lua/runtime-analysis/bindings/usrcmds.lua),
-  built on `lib.nvim.usercmd.composer` (the same module `:DocMap`/`:MDView`
-  use), `:RA request` / `:RA send`, `<Tab>`-completed. Revised from this
-  section's own earlier "deliberately not done" verdict: the original
-  worry — that renaming `:RARequest`/`:RASend` would break a user's own
-  keymap to either name — turned out not to force a choice at all.
-  `:RARequest`/`:RASend` stay registered verbatim as flat aliases calling
-  the exact same handlers `:RA`'s routes do; nothing was renamed, only
-  added to. `:RATelemetry` stays a separate second compound command rather
-  than folding under `:RA telemetry ...` — see `docs/COMMANDS.md`'s own
-  section on why, the same split documentation.nvim draws between `:DocMap`
-  and `:DocBrowse`.
-- **`config/init.lua` + `config/DEFAULTS.lua`, a `bindings/` folder, and a
-  top-level `@types/init.lua`.** **Done (2026-08-03)** — the single
-  `config.lua` became a folder (`require("runtime-analysis.config")` still
-  resolves to it unchanged, so no call site moved); `:RARequest`/`:RASend`'s
-  registration moved out of `init.lua` into `bindings/usrcmds.lua`. No
-  `keymaps.lua`/`autocmds.lua` were added beside it — this plugin sets
-  neither, by design, so there was nothing to move into either file.
+  artifact, a new gate to keep green), not a documentation update.
 
 ---
 

@@ -1,8 +1,9 @@
 ---@module 'runtime-analysis.parse'
---- One HTTP request per buffer, in the same plain-text shape VS Code's REST
---- Client and IntelliJ's HTTP Client already use — not invented here, picked
---- because it needs no editor chrome to write (a request is just text) and
---- is already a convention a reader coming from either tool recognizes:
+--- One HTTP request per buffer *slice*, in the same plain-text shape VS
+--- Code's REST Client and IntelliJ's HTTP Client already use — not invented
+--- here, picked because it needs no editor chrome to write (a request is
+--- just text) and is already a convention a reader coming from either tool
+--- recognizes:
 ---
 ---   METHOD https://example.com/path?query=1
 ---   Header-Name: value
@@ -10,9 +11,14 @@
 ---
 ---   {"optional": "body", "after": "one blank line"}
 ---
---- Deliberately one request per buffer for this first version — chaining
---- multiple `###`-separated requests in one file (both tools above support
---- it) is real and not attempted yet; see the plugin's own README for why.
+--- `M.parse` itself has no `###` awareness at all, deliberately: it parses
+--- exactly one request out of whatever `lines` it is handed, the same
+--- contract it has always had. `###`-separated multi-request buffers
+--- (docs/ROADMAP.md §1.2) are `M.split`'s job — it slices a whole buffer
+--- into blocks first, and the caller (`bindings/usrcmds.lua`) hands `M.parse`
+--- one block's own lines, never the whole buffer, once more than one block
+--- exists. A single-block buffer (no `###` line at all) behaves exactly as
+--- it always has: one block, the whole buffer.
 ---
 --- One shorthand header exists, `Auth:` — see `resolve_auth_shorthand` below.
 
@@ -108,6 +114,57 @@ function M.parse(lines)
   end
 
   return { method = method, url = url, headers = headers, body = body }
+end
+
+---Split `lines` (a whole buffer) into `###`-separated request blocks, the
+---same delimiter both VS Code's REST Client and IntelliJ's HTTP Client use.
+---A `###` line is a pure separator — excluded from every block, on either
+---side of it — so this stays a one-rule splitter with no "is this a name
+---comment or a request line" ambiguity to resolve. A buffer with no `###`
+---line at all is one block covering the whole buffer, which is why nothing
+---upstream of this had to change to keep the single-request case working
+---exactly as before.
+---@param lines string[]
+---@return RA.RequestBlock[]
+function M.split(lines)
+  local blocks = {}
+  local start = 1
+  for i, line in ipairs(lines) do
+    if line:match("^%s*###") then
+      if i > start then
+        blocks[#blocks + 1] =
+          { first = start, last = i - 1, lines = vim.list_slice(lines, start, i - 1) }
+      end
+      start = i + 1
+    end
+  end
+  if start <= #lines then
+    blocks[#blocks + 1] =
+      { first = start, last = #lines, lines = vim.list_slice(lines, start, #lines) }
+  end
+  return blocks
+end
+
+---Which block a 1-based `cursor_line` belongs to: the last block whose
+---`first` is at or before the cursor. A cursor sitting exactly on a `###`
+---separator line (excluded from every block's own range) resolves to the
+---block *above* it by this rule — "still working on the request you were
+---just editing, until the cursor actually crosses into the next one's first
+---real line" — rather than requiring the cursor to land precisely inside a
+---block's own lines. Returns `nil` only for an empty `blocks` list (an
+---empty buffer, which `M.parse` on the resulting empty slice would reject
+---with its own "empty buffer" error either way).
+---@param blocks RA.RequestBlock[]
+---@param cursor_line integer 1-based
+---@return RA.RequestBlock?
+function M.block_at(blocks, cursor_line)
+  local best
+  for _, block in ipairs(blocks) do
+    if cursor_line >= block.first then
+      best = block
+    end
+  end
+  return best or blocks[1]
 end
 
 return M

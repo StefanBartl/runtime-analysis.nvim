@@ -22,10 +22,10 @@ opts.request_filetype`, default `http`), pre-filled with:
 GET https://
 ```
 
-Cursor lands at the end of that first line. One request per buffer — see
-[`docs/ROADMAP.md`](ROADMAP.md) §1.2 for why `###`-separated multi-request
-files (both VS Code's REST Client and IntelliJ's HTTP Client support this)
-are not attempted yet.
+Cursor lands at the end of that first line. `:RA request` always creates a
+fresh, unnamed scratch buffer for a new one-off request — see "`###`:
+multiple requests, and real files" below `:RA send` for the complementary
+case, a committed file holding several.
 
 `M.open_request(lines)` (the same function this command calls with no
 argument) is also this plugin's public integration surface — see
@@ -92,6 +92,43 @@ not JSON — the window is reused, so nothing from an earlier response
 lingers. A `Content-Type` header naming JSON is a claim, not a guarantee:
 if the body does not actually decode, it renders raw and verbatim rather
 than erroring or dropping content.
+
+### `###`: multiple requests, and real files
+
+A buffer (or a real, committed file) may hold more than one request,
+`###`-separated — the same delimiter both VS Code's REST Client and
+IntelliJ's HTTP Client use:
+
+```http
+GET https://api.example.com/users
+
+###
+
+POST https://api.example.com/users
+Content-Type: application/json
+
+{"name": "Bob"}
+```
+
+`runtime-analysis.parse.split` cuts the buffer into blocks on every `###`
+line (excluded from both sides — a pure separator, never a request line or
+a name comment); `parse.block_at` then resolves which block a 1-based
+cursor line belongs to — the last block whose first line is at or before
+the cursor, so landing exactly on a `###` line resolves to the block
+*above* it. `:RA send`/`:RASend` always run this resolution first, even on
+a single-block buffer (no `###` at all splits into exactly one block
+covering everything) — there is one code path, not a special case for the
+common single-request buffer. **Always the block under the cursor, never
+the whole buffer, never a picker** — the answer `docs/ROADMAP.md` §1.2
+already settled before this was built.
+
+This is also what makes a **real, committed `.http` or `.rest` file** work
+with no new command at all: open one directly with `:e requests.http` (or
+`.rest` — see `ftdetect/runtime-analysis.lua`, since Neovim only resolves
+`*.http` to the `http` filetype natively, not `*.rest`) and `:RA send`
+already reads "the current buffer", origin-agnostic — a scratch buffer
+from `:RA request` and a real file opened by hand hit the identical code
+path.
 
 ## `:RA yank`
 
