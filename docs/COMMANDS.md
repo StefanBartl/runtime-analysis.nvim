@@ -172,6 +172,60 @@ different repository (the same precedent `fetch_raw`/`fetch_raw_blocking`
 already set once — this plugin was the reason those exist too), not
 attempted here.
 
+## `:RA history`
+
+Opens a `vim.ui.select` picker (whichever picker UI is already configured
+— telescope, fzf-lua, snacks, or Neovim's own default) over every send
+this project has recorded, newest first, formatted as `date  status
+METHOD url`. Picking one calls `M.open_request({"METHOD url", ""})` —
+exactly documentation.nvim's own Endpoints-mode integration, since a
+history entry *is*, by design, exactly that much information and no more.
+Reports (does not error) when there is nothing recorded yet for this
+project.
+
+`vim.ui.select` rather than the quickfix list documentation.nvim's own
+commands favor: this is "pick exactly one thing and act on it", not "here
+are several locations to jump through" — the native pick-one primitive is
+the right one for this shape of question.
+
+### `runtime-analysis.history` — what is recorded, and what is not
+
+Every `:RA send`/`:RASend` records one entry via
+[`lua/runtime-analysis/history.lua`](../lua/runtime-analysis/history.lua):
+**method, url, status, timestamp — nothing else, on either side.** No
+headers, no body. This is the roadmap entry's own stated answer to its own
+open question (request-only vs. also storing responses), extended one step
+further: a request *header* is very often where the real secret actually
+lives (an `Authorization: Bearer ...` value — the whole reason the `Auth:`
+shorthand above exists), so it is left out on the request side too, not
+only the response side the roadmap entry named explicitly.
+
+Persisted via `lib.nvim.cache.disk`, namespaced per project by
+`lib.nvim.fs.project_key()` (the Git root, or the cwd) — a `.http`
+collection in one repository never shows up in another's history. Capped
+at `history.MAX_ENTRIES` (200) total, oldest dropped first, the same
+bounded-cardinality discipline `runtime-analysis.telemetry`'s own argument
+fingerprinting already applies, for the identical reason.
+
+**Every outcome is recorded, exactly once** — a real response, a transport
+failure, an explicit `:RA cancel`, and even a *superseded* send's real
+eventual result once it is known (the request genuinely happened, even
+though nothing rendered it). A cancelled request is recorded at cancel
+time with `note = "cancelled"`; everything else is recorded when the
+outcome is actually known, never both, never twice for the same send.
+
+**Honest limit, not silently worked around:** the url itself is stored
+verbatim. A secret embedded in a query string (`?api_key=...`) is not
+stripped — doing so generically and correctly is a real, separate problem,
+not a small addition to a request-only history.
+
+## `:RA history clear`
+
+Clears the current project's history outright. No confirmation prompt —
+the same posture `:RATelemetry reset` already takes for clearing
+telemetry counts, and for the same reason: this data is disposable and
+locally-scoped, not something a confirmation dialog meaningfully protects.
+
 ### Why `:RARequest`/`:RASend` exist as separate flat commands, not only `:RA request`/`:RA send`
 
 `:RA`, built via `lib.nvim.usercmd.composer`, is the verb-first shape

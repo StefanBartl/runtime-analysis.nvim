@@ -105,6 +105,18 @@ plugin's own `ftdetect/`, `.http` natively in Neovim) works exactly the
 same way opened directly with `:e`, so a project's whole request
 collection can live in one versioned file.
 
+```vim
+:RA history
+```
+
+Every send is recorded — method, url, status, timestamp, per project — and
+`:RA history` opens a `vim.ui.select` picker (whichever picker UI you
+already have configured) to reopen one as a fresh request buffer.
+**Request-only, deliberately**: no headers, no body, on either side — a
+header is very often where the real secret actually lives, and a response
+can be large and contain secrets of its own. `:RA history clear` empties
+the current project's history.
+
 ## Setup
 
 ```lua
@@ -153,7 +165,6 @@ the method and path are pre-filled and the reader completes the base URL
 
 ## What's not here yet
 
-- **Request history.** Nothing is saved between sends yet.
 - **The static × runtime join** — a planned `:DocBrowse` mode joining
   documentation.nvim's static analysis against telemetry's counts, a
   *different*, later mode than the Endpoints mode already added — is a
@@ -184,8 +195,9 @@ this short list.
   the reason those exist: the HTTP status code and response headers were
   not previously exposed by that module at all), `usercmd.composer` for
   `:RA`, `progress` for the sending/cancel indicator and telemetry's own
-  reports, plus `cache.disk`, `git`, `ui.kit`, `usercmd`, `notify` and
-  `autocmd`.
+  reports, `fs.project_key` + `cache.disk` for request history (and
+  telemetry's own persistence), plus `git`, `ui.kit`, `usercmd`, `notify`
+  and `autocmd`.
 - `curl` on PATH.
 - [mdview.nvim](https://github.com/StefanBartl/mdview.nvim) — optional,
   soft dependency: renders a telemetry report as a live browser tab.

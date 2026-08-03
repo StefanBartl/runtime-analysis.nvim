@@ -28,6 +28,7 @@ local MIN_NVIM = { 0, 10, 0 }
 local DEPS = {
   "lib.nvim.net.curl",
   "lib.nvim.cache.disk",
+  "lib.nvim.fs.project_key",
   "lib.nvim.git",
   "lib.nvim.usercmd",
   "lib.nvim.usercmd.composer",
@@ -134,6 +135,20 @@ function M.check()
     end
   else
     h_info("cache directory does not exist yet — created on first flush")
+  end
+
+  h_start("runtime-analysis.nvim: request history")
+
+  local ok_history, history = pcall(require, "runtime-analysis.history")
+  if ok_history then
+    local ok_list, entries = pcall(history.list)
+    if ok_list then
+      h_ok(("%d entr%s for this project"):format(#entries, #entries == 1 and "y" or "ies"))
+    else
+      h_warn("failed to read this project's history", { tostring(entries) })
+    end
+  else
+    h_warn("runtime-analysis.history failed to load", { tostring(history) })
   end
 
   h_start("runtime-analysis.nvim: optional tools")

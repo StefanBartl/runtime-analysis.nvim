@@ -36,7 +36,8 @@ Two features today:
   - lib.nvim (https://github.com/StefanBartl/lib.nvim) — hard dependency:
     `net.curl`'s `fetch_raw`/`fetch_raw_blocking` for the request runner,
     `usercmd.composer` for |:RA|, `progress` for the sending/cancel
-    indicator and telemetry's own reports, plus `cache.disk`, `git`,
+    indicator and telemetry's own reports, `fs.project_key` + `cache.disk`
+    for request history (and telemetry's own persistence), plus `git`,
     `ui.kit`, `usercmd`, `notify` and `autocmd`.
   - `curl` on PATH — every |:RASend| shells out to it via lib.nvim.
 
@@ -208,6 +209,44 @@ Multiple requests, and real files ~
   lib.nvim.net.curl for a real kill is separate work in a different
   repository, not attempted here.
 
+                                                            *:RA-history*
+:RA history                     Open a vim.ui.select picker (whichever
+                                picker UI is already configured) over
+                                every send this project has recorded,
+                                newest first: "date  status  METHOD  url".
+                                Picking one reopens it via open_request —
+                                see |runtime-analysis-history| below for
+                                exactly what is and is not recorded.
+                                Reports (does not error) when nothing has
+                                been recorded yet.
+
+                                                      *:RA-history-clear*
+:RA history clear               Clear this project's recorded history. No
+                                confirmation prompt.
+
+                                                   *runtime-analysis-history*
+Request history ~
+  Every |:RA-send|/|:RASend| records one entry via
+  runtime-analysis.history: **method, url, status, timestamp — nothing
+  else, on either side.** No headers, no body. A header is very often
+  where the real secret actually lives (an `Authorization: Bearer ...`
+  value — the whole reason |runtime-analysis-auth-shorthand| exists), so
+  it is left out on the request side too.
+
+  Persisted via lib.nvim.cache.disk, namespaced per project by
+  lib.nvim.fs.project_key() (the Git root, or the cwd) — a `.http`
+  collection in one repository never shows up in another's history.
+  Capped at `history.MAX_ENTRIES` (200) total, oldest dropped first.
+
+  Every outcome is recorded exactly once: a real response, a transport
+  failure, an explicit |:RA-cancel|, and even a *superseded* send's real
+  eventual result once it is known. Never recorded twice for the same
+  send.
+
+  Honest limit: the url is stored verbatim — a secret embedded in a query
+  string is not stripped, since doing so generically and correctly is a
+  real, separate problem.
+
                                                     *runtime-analysis-auth-shorthand*
 Auth: shorthand ~
   `Auth: Bearer <token>` passes through verbatim as `Authorization: Bearer
@@ -311,8 +350,9 @@ the method and path are pre-filled and the reader completes the base URL
 Reports: Neovim version, `curl` on PATH, every required lib.nvim module
 loading, live telemetry instances and persistently disabled namespaces in
 this session, the telemetry cache directory and whether it is writable,
-whether mdview.nvim and lib.nvim.progress are available, and whether
-`setup()` has registered its commands yet in this session.
+this project's history entry count, whether mdview.nvim and
+lib.nvim.progress are available, and whether `setup()` has registered its
+commands yet in this session.
 
 ==============================================================================
 9. ROADMAP                                           *runtime-analysis-roadmap*

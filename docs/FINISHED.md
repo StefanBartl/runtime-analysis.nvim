@@ -79,6 +79,71 @@ Linux's near-instant RST) — the async failure-path test's own timeout was
 sized to that, not to the sub-second timing every other test in this
 plugin gets away with.
 
+### §1.3 Request history
+
+Nothing was saved between sends. The obvious shape was
+`lib.nvim.cache.disk`-backed, per-project (`lib.nvim.fs.project_key`
+already computed that key), listing method/URL/status/timestamp, with
+"reopen this as a buffer" as the one interaction that matters — and the
+roadmap entry's own open question, decided as part of shipping it rather
+than left for later: **request-only**, response bodies not stored at all
+(not even behind an opt-in — "if at all" turned into "not this time").
+
+New module, [`lua/runtime-analysis/history.lua`](../lua/runtime-analysis/history.lua):
+`record`/`list`/`clear`, namespaced per project the same way the roadmap
+entry specified, capped at `MAX_ENTRIES` (200, exported specifically so a
+test could reference it instead of duplicating the magic number) with the
+oldest dropped first — the identical "cardinality is bounded" discipline
+`runtime-analysis.telemetry`'s own argument fingerprinting already applies,
+applied here for the same reason.
+
+**Extended past the roadmap entry's own literal scope, on reflection while
+building it:** the entry named response bodies as the thing to keep out;
+building this made it obvious that a request *header* is at least as
+likely a place for a real secret to live — the `Auth:` shorthand's entire
+reason for existing is that `Authorization: Bearer <token>` headers are
+completely ordinary in real request buffers. Headers are not recorded
+either, on either side, and this is stated as a deliberate widening of the
+original decision, not a silent scope change.
+
+**New commands: `:RA history`, `:RA history clear`.** The picker is
+`vim.ui.select`, not the quickfix list documentation.nvim's own commands
+favor — "pick exactly one thing and act on it" is a different shape of
+question than "here are locations to jump through," and `vim.ui.select`
+defers to whatever picker UI (telescope, fzf-lua, snacks, or Neovim's own
+default) the reader already has configured rather than this plugin
+inventing its own. Picking an entry reopens it via `open_request` —
+exactly documentation.nvim's own Endpoints-mode integration, since a
+history entry is, by design, precisely that much information.
+
+**Every outcome recorded exactly once**, including cases the roadmap entry
+never anticipated because they did not exist when it was written: a
+*superseded* send (discarded by `:RA send`'s own §1.1 supersession) still
+has its real eventual result recorded once known, since the request
+genuinely happened even though nothing rendered it; a cancelled send is
+recorded at cancel time with `note = "cancelled"` specifically so it is
+never double-recorded when its late, now-irrelevant reply also arrives.
+Distinguishing "superseded" from "cancelled" at the point a response
+arrives needed comparing the token that requested it against the current
+pending token, not just checking whether the request was still current —
+the same token, but read two different ways for two different questions.
+
+**A real bug found by the test suite, not by inspection**: `note =
+status and nil or note` — the classic Lua `a and b or c` trap. Because `b`
+(`nil`) is itself falsy, the `or c` branch always won regardless of `a`,
+so `note` was never actually being dropped when a real status was present.
+Replaced with an explicit `if`. The spec that caught it
+(`history_spec.lua`) is now the reason it cannot regress silently again.
+
+Verified: `history_spec.lua` against an isolated `opts.dir` per case
+(status/note mutual exclusion, newest-first ordering, the `MAX_ENTRIES`
+cap dropping the oldest and keeping the newest, clearing); an
+integration block in `usrcmds_spec.lua` confirming `:RA send` and `:RA
+history clear` actually call into the module through the real command
+path; and a manual end-to-end pass with `vim.ui.select` stubbed,
+confirming a real send records the real status and picking the resulting
+entry reopens exactly `METHOD url`.
+
 ---
 
 ## 2026-08-03

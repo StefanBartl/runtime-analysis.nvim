@@ -1,15 +1,16 @@
 ---@module 'runtime-analysis.bindings.usrcmds'
---- Registers `:RA <subcommand>` (`request`/`send`/`yank`/`cancel`, via
---- `lib.nvim.usercmd.composer`, the same verb-first shape `:DocMap`,
---- `:MDView` and `:Replace` already use) plus two flat convenience aliases,
---- `:RARequest` and `:RASend`, for this plugin's two most-used actions.
---- Split out of `init.lua` into its own `bindings/` module to match the
---- `bindings/{keymaps,usrcmds,autocmds}.lua` shape every sibling plugin
---- uses. `:RATelemetry` is not registered here: it stays a second, separate
---- compound command on its own terms (see `telemetry/command.lua`'s doc
---- comment) — the same split documentation.nvim draws between `:DocMap`
---- (writes/verifies) and `:DocBrowse` (only reads), here drawn between
---- "runs a request" and "reports on what already ran".
+--- Registers `:RA <subcommand>` (`request`/`send`/`yank`/`cancel`/
+--- `history`/`history clear`, via `lib.nvim.usercmd.composer`, the same
+--- verb-first shape `:DocMap`, `:MDView` and `:Replace` already use) plus
+--- two flat convenience aliases, `:RARequest` and `:RASend`, for this
+--- plugin's two most-used actions. Split out of `init.lua` into its own
+--- `bindings/` module to match the `bindings/{keymaps,usrcmds,autocmds}.lua`
+--- shape every sibling plugin uses. `:RATelemetry` is not registered here:
+--- it stays a second, separate compound command on its own terms (see
+--- `telemetry/command.lua`'s doc comment) — the same split
+--- documentation.nvim draws between `:DocMap` (writes/verifies) and
+--- `:DocBrowse` (only reads), here drawn between "runs a request" and
+--- "reports on what already ran".
 ---
 --- **Why both `:RA request`/`:RA send` and `:RARequest`/`:RASend` exist.**
 --- `NEW_PROJECT.md`'s own checklist prefers one compound verb per plugin, and
@@ -20,9 +21,17 @@
 --- the *names* staying flat, but a user's own keymap to either flat command
 --- would break silently on a bare rename. Keeping both costs four lines and
 --- breaks nothing; dropping the flat pair would be a breaking change for a
---- purely cosmetic gain. `:RA yank`/`:RA cancel` get no flat alias: both are
---- new, have no external references, and no keymap could already exist for
---- either.
+--- purely cosmetic gain. `:RA yank`/`:RA cancel`/`:RA history` get no flat
+--- alias: all are new, have no external references, and no keymap could
+--- already exist for any of them.
+---
+--- **`:RA history`** (docs/ROADMAP.md §1.3) reads `runtime-analysis.history`,
+--- a per-project record of method/url/status/timestamp for every send this
+--- module makes — see that module's own doc-comment for exactly what is
+--- and is not recorded, and why. Every outcome records: a real response, a
+--- transport failure, a cancellation, and even a *superseded* send's real
+--- eventual result once it is known — the one thing that is never recorded
+--- twice for the same send.
 ---
 --- **`:RA send`/`:RASend` are non-blocking** (docs/ROADMAP.md §1.1) — see
 --- `runner.run_async`'s own doc-comment for why every callback through it is
@@ -55,6 +64,13 @@ local pending_token = 0
 local in_flight = false
 ---@type Lib.Progress.Handle?
 local pending_handle = nil
+---The method/url of the currently in-flight request — tracked as module
+---state (not just a `send_current_buffer` local) purely so `cancel_pending`
+---can record a history entry for it; `send_current_buffer`'s own success/
+---error path already has `request` in scope via closure and does not read
+---this.
+---@type { method: string, url: string }?
+local pending_request = nil
 
 ---@param my_token integer
 ---@return boolean
@@ -67,6 +83,14 @@ local function cancel_pending(ra)
   if not in_flight then
     vim.notify("runtime-analysis: no request in flight", vim.log.levels.WARN)
     return
+  end
+  if pending_request then
+    require("runtime-analysis.history").record(
+      pending_request.method,
+      pending_request.url,
+      nil,
+      "cancelled"
+    )
   end
   if pending_handle then
     -- Runs the `on_cancel` callback registered below (which flips
@@ -115,6 +139,7 @@ local function send_current_buffer(ra)
   pending_token = pending_token + 1
   local my_token = pending_token
   in_flight = true
+  pending_request = { method = request.method, url = request.url }
 
   local view = require("runtime-analysis.view")
   local summary = ("%s %s"):format(request.method, request.url)
@@ -141,14 +166,37 @@ local function send_current_buffer(ra)
 
   require("runtime-analysis.runner").run_async(request, function(resp_lines, run_err, meta)
     if not is_current(my_token) then
-      -- Superseded by a later send, or cancelled — the result arrived,
-      -- but nothing here still cares about it.
+      -- Two different reasons land here, and only one still needs a
+      -- history entry: a cancelled request (`pending_token == my_token`,
+      -- `in_flight` already false) was already recorded with note
+      -- "cancelled" at cancel time — recording it again here with its real,
+      -- now-irrelevant outcome would just double it up. A *superseded*
+      -- request (`pending_token ~= my_token`, some later send moved it on)
+      -- was never recorded at all yet, and its real outcome is worth
+      -- keeping even though nothing renders it — the request genuinely
+      -- happened.
+      if pending_token ~= my_token then
+        require("runtime-analysis.history").record(
+          request.method,
+          request.url,
+          meta and meta.status,
+          (not resp_lines) and run_err or nil
+        )
+      end
       return
     end
     in_flight = false
+    pending_request = nil
     if pending_handle == handle then
       pending_handle = nil
     end
+
+    require("runtime-analysis.history").record(
+      request.method,
+      request.url,
+      meta and meta.status,
+      (not resp_lines) and run_err or nil
+    )
 
     if not resp_lines then
       if handle then
@@ -167,6 +215,41 @@ local function send_current_buffer(ra)
       body_start = meta and meta.body_start,
       is_json = meta and meta.is_json,
     })
+  end)
+end
+
+---`vim.ui.select` rather than the quickfix list documentation.nvim's own
+---commands favor — this is "pick exactly one thing and act on it", not
+---"here are several locations to jump through", so the native
+---pick-one primitive is the right one, and it defers to whatever picker UI
+---(telescope, fzf-lua, snacks, or Neovim's own default) the reader already
+---has configured rather than this plugin inventing its own.
+---@param ra RA
+local function browse_history(ra)
+  local history = require("runtime-analysis.history")
+  local entries = history.list()
+  if #entries == 0 then
+    vim.notify("runtime-analysis: no request history for this project yet", vim.log.levels.INFO)
+    return
+  end
+
+  vim.ui.select(entries, {
+    prompt = "runtime-analysis: request history (newest first)",
+    ---@param e RA.History.Entry
+    format_item = function(e)
+      local outcome = e.status and tostring(e.status) or (e.note or "?")
+      return ("%s  %-10s %-6s %s"):format(os.date("%Y-%m-%d %H:%M", e.at), outcome, e.method, e.url)
+    end,
+  }, function(choice)
+    if not choice then
+      return
+    end
+    -- Reopens exactly the way documentation.nvim's own Endpoints mode
+    -- already does — method and path pre-filled, nothing else assumed —
+    -- since this history entry is, by design, exactly that much and no
+    -- more (see history.lua's own doc-comment for why headers and body
+    -- were never recorded to begin with).
+    ra.open_request({ ("%s %s"):format(choice.method, choice.url), "" })
   end)
 end
 
@@ -203,6 +286,21 @@ function M.setup(ra)
         desc = "Cancel the in-flight request, if any",
         run = function()
           cancel_pending(ra)
+        end,
+      },
+      {
+        path = { "history" },
+        desc = "Browse this project's request history and reopen one",
+        run = function()
+          browse_history(ra)
+        end,
+      },
+      {
+        path = { "history", "clear" },
+        desc = "Clear this project's request history",
+        run = function()
+          require("runtime-analysis.history").clear()
+          vim.notify("runtime-analysis: request history cleared")
         end,
       },
     },

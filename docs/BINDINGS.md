@@ -19,13 +19,16 @@ All four are registered unconditionally by `require("runtime-analysis").setup()`
 | `:RA send` | none | Parses and sends the `###`-block the cursor is in (or nearest above it) — see `###` below; a single-block buffer (no `###` at all) behaves exactly as before that existed. Sends via `lib.nvim.net.curl.fetch_raw` (`runtime-analysis.runner.run_async`) and shows status/headers/body in a persistent split (`runtime-analysis.view`) that never steals focus. **Non-blocking** — a "sending..." placeholder shows immediately, a real `lib.nvim.progress` indicator if available, and a second send before the first replies supersedes it. A JSON body is pretty-printed with real `json` filetype/folding. |
 | `:RA yank` | none | Yank just the last response's body (not status/headers) to the unnamed register. Warns, does not error, when there is no response yet. |
 | `:RA cancel` | none | Discards the in-flight request's eventual result and shows `✗ cancelled`. A *logical* cancel, not a process kill — see `docs/COMMANDS.md` for why. Warns, does not error, when nothing is in flight. |
+| `:RA history` | none | `vim.ui.select` picker over this project's recorded sends (method/url/status/timestamp only — see `docs/COMMANDS.md`), newest first; picking one reopens it via `open_request`. |
+| `:RA history clear` | none | Clears this project's recorded history. No confirmation prompt. |
 | `:RARequest` | none | Flat alias for `:RA request` — see below for why both exist. |
 | `:RASend` | none | Flat alias for `:RA send`. |
 | `:RATelemetry [args]` | see below | Opt-in call counting and usage statistics for any plugin. Full reference: [`lua/runtime-analysis/telemetry/README.md`](../lua/runtime-analysis/telemetry/README.md). |
 
 Built via [`lib.nvim.usercmd.composer`](https://github.com/StefanBartl/lib.nvim/blob/main/lua/lib/nvim/usercmd/composer/README.md)
 — the same verb-first shape `:DocMap`, `:MDView` and `:Replace` already use
-(`<Tab>` after `:RA ` completes `request`/`send`/`yank`/`cancel`). `:RATelemetry` stays a
+(`<Tab>` after `:RA ` completes `request`/`send`/`yank`/`cancel`/`history`;
+`:RA history <Tab>` completes `clear`). `:RATelemetry` stays a
 second, separate compound command rather than folding under `:RA telemetry
 ...`, the same split documentation.nvim draws between `:DocMap`
 (writes/verifies) and `:DocBrowse` (only reads) — here between "runs a
@@ -47,6 +50,14 @@ everything, so nothing behaves differently than before `###` support
 existed. A real, committed `.http`/`.rest` file works identically once
 opened with `:e` — `*.http` resolves to filetype `http` natively in
 Neovim, `*.rest` via this plugin's own [`ftdetect/runtime-analysis.lua`](../ftdetect/runtime-analysis.lua).
+
+### Request history
+
+`runtime-analysis.history` records method/url/status/timestamp for every
+send, per project (`lib.nvim.fs.project_key()`), via `lib.nvim.cache.disk`
+— no headers, no body, on either side (a header is very often where the
+real secret actually lives). Capped at `history.MAX_ENTRIES` (200), oldest
+dropped first. Full reasoning: `docs/COMMANDS.md`'s own section on it.
 
 ### `:RATelemetry` subcommands
 
@@ -85,8 +96,8 @@ triggered directly by a command.
 
 `:checkhealth runtime-analysis` — see [`lua/runtime-analysis/health.lua`](../lua/runtime-analysis/health.lua)
 for exactly what it reports (Neovim version, `curl`, required lib.nvim
-modules, live telemetry instances, cache directory, optional mdview.nvim
-and lib.nvim.progress).
+modules, live telemetry instances, this project's history entry count,
+cache directory, optional mdview.nvim and lib.nvim.progress).
 
 ## Global-surface collision check
 
