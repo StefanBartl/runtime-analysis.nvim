@@ -16,8 +16,11 @@ The architectural split this plugin exists inside — static truth in
 documentation.nvim, runtime truth here — is
 [`documentation.nvim/docs/ECOSYSTEM.md`](https://github.com/StefanBartl/documentation.nvim/blob/main/docs/ECOSYSTEM.md);
 its sequencing section is the closest thing to a committed plan either
-plugin has, and step 8 there (a telemetry mode in `:DocBrowse`) is the one
-item below that is genuinely next rather than speculative.
+plugin has. Steps 1–8 there have all shipped (see `docs/FINISHED.md`);
+step 9 (full-file previews / a browser request runner / a Runtime tab
+under `serve`) is entirely documentation.nvim's own, gated on its serve
+tier — nothing left below is genuinely next rather than Long-term or
+speculative.
 
 **The thesis this backlog is filtered against:** does the feature answer a
 question that can only be answered *by running the code*? Anything a static
@@ -42,15 +45,9 @@ same kind of overlay `docs/IDEAS.md` §6 uses for its own five-item shortlist.
 | **Medium** | Multi-day. Either a real decision has to be made first (a schema, a security trade-off, an open question the section names explicitly), or it touches several files or a small state machine — but the shape and the cost are both known. |
 | **Long-term** | Blocked on something this document itself already says is unmeasured or unresolved: an unmeasured `debug.getinfo` cost, several open design questions, another repository's half of the work, or a section the document itself calls speculative. |
 
-Twenty-seven items have shipped out of this section since it was first written —
-see [`docs/FINISHED.md`](FINISHED.md) for the full record of each. What
-remains open:
-
-### Medium
-
-| Item | Note |
-| --- | --- |
-| §6.2 Endpoint coverage | Request history (§1.3) now exists and needs no changes; what remains is a real route-pattern-to-URL matching strategy, not just a join key |
+Twenty-eight items have shipped out of this section since it was first written —
+see [`docs/FINISHED.md`](FINISHED.md) for the full record of each. Every
+remaining open item is Long-term/speculative:
 
 ### Long-term / speculative
 
@@ -78,9 +75,9 @@ The README originally named four: async sending, `###` multi-request
 support, request history, `.http`/`.rest` file support. **All four have
 shipped** — see [`docs/FINISHED.md`](FINISHED.md) for the full record of
 each. This section is intentionally left empty rather than deleted: the
-number itself (`§1.x`) is still cited elsewhere in this document (§6.2)
-and in `docs/FINISHED.md`, and removing the section would orphan those
-references without actually freeing the number for reuse.
+number itself (`§1.x`) is still cited in `docs/FINISHED.md`, and removing
+the section would orphan those references without actually freeing the
+number for reuse.
 
 ---
 
@@ -181,19 +178,10 @@ lazy?), loaded but not declared (generated? wrapped? a typo'd key?).
 ## 6. The static × runtime join
 
 The reason two plugins exist. `documentation.nvim/docs/ECOSYSTEM.md` §7 has
-the full argument; these are the concrete pieces.
-
-### 6.2 Endpoint coverage
-
-documentation.nvim knows every route the source declares (`core/endpoints.lua`);
-this plugin's request runner knows which ones were actually sent. "Three of
-your eleven routes have never been exercised" is a real answer neither can
-give alone. Request history (`runtime-analysis.history`, see
-[`docs/FINISHED.md`](FINISHED.md)) now exists and needs no changes to serve
-this — what remains is entirely the join itself: reading
-documentation.nvim's declared-route list and matching it against this
-plugin's recorded URLs, which still needs a real matching strategy (a route
-like `/users/:id` is not a literal string a recorded URL will ever equal).
+the full argument; these are the concrete pieces. §6.1, §6.2 and §6.3 have
+all shipped — see [`docs/FINISHED.md`](FINISHED.md) for each — leaving
+this section intentionally empty rather than deleted, the same reasoning
+§1's own empty section states.
 
 ---
 

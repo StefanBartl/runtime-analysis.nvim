@@ -168,9 +168,9 @@ coverage line.
 
 ### 1.7 Endpoint inventory × request history × response shape
 
-`ROADMAP.md` §6.2 covers "which declared routes were never sent". The extension
-worth recording: the request runner sees **what the endpoint actually
-returned**. Crossing a real response against the handler's documented
+§6.2 (see `docs/FINISHED.md`, shipped 2026-08-04) covers "which declared
+routes were never sent". The extension worth recording: the request
+runner sees **what the endpoint actually returned**. Crossing a real response against the handler's documented
 `@return` — or against a route whose handler carries no doc block at all
 (`core/endpoints.lua` already records that) — is drift detection over an API
 contract, which is this ecosystem's whole thesis applied one layer out from
