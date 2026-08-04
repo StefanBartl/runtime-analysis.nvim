@@ -26,7 +26,7 @@ shipped functions *are* the original functions — the same objects, not a
 "nearly-free branch" — and `stop()` puts them back. That is why there is no
 `if enabled then count() end` scattered through ~250 files, and why
 `debug.sethook` (which fires on every Lua call in the process) was never an
-option. Same pattern [`lib.nvim.system.proc_trace`](../system/README.md)
+option. Same pattern [`lib.nvim.system.proc_trace`](https://github.com/StefanBartl/lib.nvim/blob/main/lua/lib/nvim/system/README.md)
 already uses for `vim.fn.system`.
 
 When it *is* on:

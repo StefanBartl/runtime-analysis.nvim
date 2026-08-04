@@ -263,3 +263,12 @@ this short list.
 
 Run `:checkhealth runtime-analysis` to verify all of the above on your
 system.
+
+**Dev-only:** [documentation.nvim](https://github.com/StefanBartl/documentation.nvim)
+generates `docs/map/`, this repository's own module map, adopted per that
+project's [`docs/REUSE.md`](https://github.com/StefanBartl/documentation.nvim/blob/main/docs/REUSE.md)
+— not a runtime dependency, nothing here requires it installed as a plugin.
+`nvim --headless -l scripts/gen_map.lua` regenerates it; `--check` (the CI
+gate, `.github/workflows/ci.yml`'s `map` job) verifies it is current and
+drift-free without writing anything. `git config core.hooksPath scripts/hooks`
+installs a local pre-commit hook running the same check.
