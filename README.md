@@ -16,6 +16,7 @@
 ## Table of Contents
 
 - [Overview](#overview)
+- [Installation](#installation)
 - [Commands](#commands)
 - [Setup](#setup)
 - [Telemetry](#telemetry)
@@ -29,6 +30,88 @@
 Runtime truth, paired with documentation.nvim's static truth. Two features
 today: an in-editor HTTP request runner, and `runtime-analysis.telemetry` —
 opt-in call counting and usage statistics, moved here from lib.nvim.
+
+## Installation
+
+Requires Neovim 0.10+ (`vim.system`) and
+[`lib.nvim`](https://github.com/StefanBartl/lib.nvim). `curl` on `PATH` for
+the request runner.
+
+<details open>
+<summary><b>lazy.nvim</b></summary>
+
+```lua
+{
+  "StefanBartl/runtime-analysis.nvim",
+  lazy = false,  -- telemetry auto-instrumentation (opts.telemetry) needs to
+                 -- be live before sibling plugins load, to catch their own
+                 -- lazy-load moment -- see "Telemetry" below. Request-runner-
+                 -- only usage works just as well cmd-lazy-loaded instead:
+                 -- cmd = { "RARequest", "RASend" },
+  dependencies = { "StefanBartl/lib.nvim" },
+  opts = {},
+}
+```
+</details>
+
+<details>
+<summary><b>vim.pack</b> (Neovim 0.12+, built in)</summary>
+
+```lua
+vim.pack.add({
+  { src = "https://github.com/StefanBartl/lib.nvim" },
+  { src = "https://github.com/StefanBartl/runtime-analysis.nvim" },
+})
+
+require("runtime-analysis").setup({})
+```
+</details>
+
+<details>
+<summary><b>mini.deps</b></summary>
+
+```lua
+local add, now = MiniDeps.add, MiniDeps.now
+add({
+  source = "StefanBartl/runtime-analysis.nvim",
+  depends = { "StefanBartl/lib.nvim" },
+})
+-- `now`, not `later`: telemetry auto-instrumentation needs to be live
+-- before sibling plugins load, the same reason the lazy.nvim block above
+-- uses `lazy = false` rather than a lazy trigger.
+now(function()
+  require("runtime-analysis").setup({})
+end)
+```
+</details>
+
+<details>
+<summary><b>packer.nvim</b></summary>
+
+```lua
+use({
+  "StefanBartl/runtime-analysis.nvim",
+  requires = { "StefanBartl/lib.nvim" },
+  config = function()
+    require("runtime-analysis").setup({})
+  end,
+})
+```
+</details>
+
+<details>
+<summary><b>paq-nvim</b> / manual <code>rtp</code></summary>
+
+```lua
+require("paq")({
+  "StefanBartl/lib.nvim",
+  "StefanBartl/runtime-analysis.nvim",
+})
+
+-- paq does no lazy-loading and runs no config hooks:
+require("runtime-analysis").setup({})
+```
+</details>
 
 ## Commands
 
