@@ -638,7 +638,7 @@ return function(H)
     t.wrap(mod, "fs", { profile_args = true, sample = 10 })
     t.start()
 
-    for i = 1, 500 do
+    for _ = 1, 500 do
       -- 1-in-10 sampled = 50 fingerprinted calls, all identical -- well
       -- past DOMINANT_MIN_CALLS (20) if measured against the *sample*,
       -- but far short of it against the true 500 calls at a naive
