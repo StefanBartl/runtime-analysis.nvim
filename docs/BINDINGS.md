@@ -1,8 +1,8 @@
 # runtime-analysis.nvim — Commands, Autocommands & Keymaps
 
 Hand-maintained, not generated — this small a surface (one compound verb,
-two flat aliases, one second compound command, no keymaps or autocommands)
-is small enough that a generator (the way
+two flat aliases, one second compound command, no keymaps, a handful of
+opt-in autocommands) is small enough that a generator (the way
 [documentation.nvim's own `docs/BINDINGS.md`](https://github.com/StefanBartl/documentation.nvim/blob/main/docs/BINDINGS.md)
 is built from its live keymap table) would cost more than it saves. Update
 this file by hand whenever a command's shape changes.
@@ -171,8 +171,22 @@ Vim navigation.
 
 ## Autocommands
 
-**None.** Nothing here watches buffer or window events; every action is
-triggered directly by a command.
+None user-facing — nothing here watches buffer or window events, and every
+*action* is triggered directly by a command. Five real registrations exist,
+all opt-in plumbing behind telemetry/usage tracking rather than something a
+keymap could ever collide with:
+
+| Event | Module | Group | Does |
+| --- | --- | --- | --- |
+| `VimLeavePre` | `telemetry/init.lua` | `ra_telemetry_<namespace>`, one per live instance | Flush persisted counters on exit (`stop()` is deliberately not called — the process is ending). |
+| `VimEnter` | `telemetry/init.lua` | same, per instance | Checks the "data has been sitting a while" reminder outside a periodic flush. |
+| `User LazyLoad` | `telemetry/lazy.lua` | `runtime_analysis_telemetry_lazyload` | Auto-instrumentation catch-up: wraps + starts an instance the moment lazy.nvim finishes loading a plugin listed in `opts.telemetry.plugins`. |
+| `UIEnter` (`once = true`) | `telemetry/startup.lua` | `runtime_analysis_startup` | Stops startup-cost timing — only fires if `telemetry.startup.autostart()` was wired into the caller's own lazy.nvim `init` hook. |
+| `CmdlineLeave` | `usage.lua` | `runtime_analysis_usage` | Counts a typed command by name, unless the cmdline was aborted — active only between `:RA usage start` and `:RA usage stop`. |
+
+None of these exist unless the corresponding feature is actually enabled: a
+setup with `opts.telemetry` unset and `:RA usage start` never run installs
+none of them.
 
 ## Health check
 
