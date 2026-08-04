@@ -295,6 +295,14 @@ end
 ---config wants, since startup is over by then and leaving the `require`
 ---wrapper installed for the rest of the session would keep paying for
 ---something with nothing left to measure.
+---
+---**Call this from this plugin's own lazy.nvim `init` function**, not from
+---a line in `init.lua`: lazy.nvim runs every plugin's `init` in one pass
+---*before* it loads any plugin at all (`loader.M.startup`, step 1 of 4), so
+---that hook is both early enough and lives in the spec that declares the
+---plugin — uninstalling removes it automatically. A line in `init.lua`
+---would have to be removed by hand forever, because an uninstalled plugin
+---runs no code and could never take it back out.
 ---@return boolean started
 function M.autostart()
   if not M.start() then

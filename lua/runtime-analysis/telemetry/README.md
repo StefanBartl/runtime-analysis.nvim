@@ -612,9 +612,19 @@ plugin's startup cost actually sits in — lazy.nvim already reports
 per-plugin totals, so the value here is specifically the level below that.
 
 ```lua
--- The VERY first line of init.lua, before lazy.setup() or anything else:
-require("runtime-analysis.telemetry.startup").autostart()
+-- In this plugin's own lazy.nvim spec. `init` is the right hook, not a
+-- line in init.lua — see "Why `init`, and not init.lua" below.
+{
+  "StefanBartl/runtime-analysis.nvim",
+  init = function()
+    require("runtime-analysis.telemetry.startup").autostart()
+  end,
+}
 ```
+
+Without lazy.nvim, the equivalent is a call as early in your config as you
+can put it — the constraint is only ever "before the modules you want to
+see are loaded".
 
 ```
 startup attribution  —  stopped
@@ -644,11 +654,32 @@ every **cache miss** instead. Nesting falls out of a stack: a module's
 what makes the output a waterfall rather than a list where every parent
 double-counts its children.
 
+### Why `init`, and not a line in init.lua
+
+lazy.nvim's startup sequence runs **every** plugin's `init` function first,
+in one pass, *before* it loads a single plugin (`loader.M.startup`: step 1
+is init, step 2 is start plugins, step 3 is rtp plugins). So `init` is
+already the earliest per-plugin hook that exists, and it captures
+essentially every plugin module load without touching your config's entry
+point at all.
+
+That matters beyond convenience. This feature could have been shipped as
+"paste this into the top of your `init.lua`" — or worse, as something the
+plugin writes there for you on install. The second is the one to name
+explicitly, because it sounds helpful and is not: **an uninstalled plugin
+runs no code**, so it could never remove that line again. It would outlive
+the plugin in a version-controlled file, and `init.lua` is frequently not
+even the real entry point (a `lua/config/` tree, `init.vim`, or a
+Nix-managed read-only file). A spec-level `init` has none of that: it lives
+in the same block that declares the plugin, so removing the plugin removes
+it, and there is nothing left to error or to clean up.
+
 **Honest limits, all of them:**
 
 - **Only modules required *after* `autostart()` runs are ever seen.**
-  Anything already in `package.loaded` by then is invisible, not free —
-  which is exactly why the snippet above says "the very first line."
+  Anything already in `package.loaded` by then is invisible, not free.
+  With the `init` hook above, that means lazy.nvim itself and whatever your
+  config does before `lazy.setup()` — a small, fixed set, not your plugins.
 - A `package.loaded` cache hit is not a load and is never recorded. It
   costs one table index; recording it would bury the real loads.
 - Only the *global* `require` is wrapped. Code that captured a local
