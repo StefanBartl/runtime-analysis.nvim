@@ -58,6 +58,23 @@
 ---@field top? integer                 # keep only the N busiest entries
 ---@field since? string|integer        # "7d" / "24h" / a day count; filters the day buckets
 
+---@class RA.Telemetry.Comparison.Entry
+---@field key string
+---@field current integer
+---@field previous integer
+---@field delta integer                # current - previous
+---@field delta_pct? number            # (current - previous) / previous; absent when previous == 0 (see new_functions instead)
+
+---docs/ROADMAP.md §4.2 — `inst.compare()`'s own result shape.
+---@class RA.Telemetry.Comparison
+---@field days integer                                    # window size, both windows the same length
+---@field current_total integer
+---@field previous_total integer
+---@field new_functions RA.Telemetry.Comparison.Entry[]    # silent in the previous window, called in this one
+---@field cold_functions RA.Telemetry.Comparison.Entry[]   # called in the previous window, silent in this one
+---@field changed RA.Telemetry.Comparison.Entry[]          # called in both, sorted by |delta| desc
+---@field incomplete_previous_window boolean                # true when 2 × days exceeds retention_days — the previous window may already be missing pruned buckets
+
 -- ---------------------------------------------------------------------------
 -- Collected data
 -- ---------------------------------------------------------------------------
@@ -135,6 +152,9 @@
 ---@field report fun(opts?: RA.Telemetry.ReportOpts): RA.Telemetry.Report
 ---@field lines fun(opts?: RA.Telemetry.ReportOpts): string[]
 ---@field markdown fun(opts?: RA.Telemetry.ReportOpts): string[]
+---@field compare fun(opts?: { days?: integer }): RA.Telemetry.Comparison
+---@field compare_lines fun(opts?: { days?: integer }): string[]
+---@field compare_markdown fun(opts?: { days?: integer }): string[]
 ---@field coverage fun(): { called: string[], uncalled: string[] }
 ---@field resolved_modules fun(): table<string, string>
 ---@field reset fun(): nil

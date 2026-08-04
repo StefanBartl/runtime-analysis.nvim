@@ -26,6 +26,57 @@ Newest first, by date; original document order within a date.
 
 ## 2026-08-04
 
+### §4.2 Comparison across time windows
+
+`report({ since = "7d" })` already existed; "this week versus last week"
+did not. The roadmap entry's own prediction held: day buckets were already
+stored, so this shipped as a pure report mode, no collection-side change
+at all — `registry.lua`/`init.lua`'s hot path is untouched by this entry.
+
+`store.lua` gained one new function, `M.previous_window(data, days)`,
+paired with the existing `M.since(data, days)`: half-open on the boundary
+they share (`since`'s own cutoff), so the two windows never overlap and
+together cover exactly `2 × days` days with no double-counted boundary
+day. `report.lua` gained `M.compare(data, opts)`, building on both: every
+key seen in either window is classified into exactly one of three buckets
+— **newly hot** (silent in the previous window, called in this one),
+**went cold** (the reverse), or **changed** (called in both, sorted by
+`|delta|` — the roadmap entry's own stated interest, "what changed," not
+two raw tables side by side). A changed entry's `delta_pct` is relative to
+its own previous count, which is exactly why a newly-hot/cold entry gets
+no `delta_pct` at all — dividing by a previous count of zero is not a
+percentage.
+
+**One honest limit, surfaced rather than silently wrong:** the "previous"
+window can only be as complete as retention allows. `inst.compare`'s own
+`days` window pairs with the *previous* `days` window immediately before
+it — a comparison spanning `2 × days` days total — and if that exceeds
+`cfg.retention_days` (30 by default), older buckets in the previous window
+may already be pruned. `M.compare` computes this once
+(`incomplete_previous_window`) and both renderers surface it as a visible
+warning line rather than a comparison that quietly under-reports the
+previous total.
+
+New instance methods, mirroring `report`/`lines`/`markdown`'s own shape
+exactly: `inst.compare(opts)`, `inst.compare_lines(opts)`,
+`inst.compare_markdown(opts)` (`opts.days`, default 7). New command:
+`:RATelemetry compare [namespace] [days]` — the same "every instance, or
+just one" shape `report`/`start`/`stop`/`reset` already share, with a
+third, purely positional token (this command's argument grammar is
+deliberately positional-only, per its own module doc-comment) overriding
+the default window.
+
+Verified: `telemetry_spec.lua` — `store.previous_window` against
+hand-dated day buckets (a key in both windows, a key in only one, a bucket
+older than either window correctly excluded); `report.compare`'s three-way
+classification and `delta`/`delta_pct` math on synthetic data, plus the
+`incomplete_previous_window` flag both unset (ample retention) and set (a
+20-day window against 30-day retention); both renderers producing
+non-empty output that names the window size; and one end-to-end pass
+through a real instance — day buckets written straight to disk the same
+way the existing persistence tests do, `telemetry.new()` loading them back,
+`t.compare()` reporting the correct current/previous totals.
+
 ### §3.4 Error and failure fingerprinting
 
 `errors` already counted how *often* a wrapped function raised; the roadmap

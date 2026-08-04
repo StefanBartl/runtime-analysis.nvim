@@ -307,6 +307,30 @@ function M.since(data, days)
   return out, total
 end
 
+---Sum the day buckets covering the `days`-day window immediately *before*
+---`since(data, days)`'s own window — docs/ROADMAP.md §4.2 ("this week vs
+---last week"). Half-open on the newer side (`day < newer_cutoff`, `since`'s
+---own cutoff) so the two windows never overlap and together cover exactly
+---`2 * days` days with no double-counted boundary day.
+---@param data RA.Telemetry.Data
+---@param days integer
+---@return table<string, integer> calls_by_key
+---@return integer total
+function M.previous_window(data, days)
+  local older_cutoff = os.date("%Y-%m-%d", os.time() - (days * 2) * 86400)
+  local newer_cutoff = os.date("%Y-%m-%d", os.time() - days * 86400)
+  local out, total = {}, 0
+  for day, keys in pairs(data.days or {}) do
+    if day >= older_cutoff and day < newer_cutoff then
+      for key, n in pairs(keys) do
+        out[key] = (out[key] or 0) + n
+        total = total + n
+      end
+    end
+  end
+  return out, total
+end
+
 ---Parse `"7d"` / `"24h"` / `7` into a day count.
 ---@param since string|integer|nil
 ---@return integer|nil

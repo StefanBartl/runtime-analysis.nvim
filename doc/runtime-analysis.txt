@@ -399,6 +399,7 @@ the rest of this plugin. Command surface: >
   :RATelemetry coverage        which wrapped functions were never called
   :RATelemetry export [path]   JSON, or Markdown if path ends .md
   :RATelemetry open [ns]       render + open externally
+  :RATelemetry compare [ns] [days]  "this window vs the one before it"
 <
 Reading a namespace does not need an editor session at all —
 scripts/telemetry.lua in the repository is a headless CLI counterpart,

@@ -753,6 +753,30 @@ function M.new(opts)
     return report_mod.markdown(inst.report(report_opts))
   end
 
+  ---"This week vs last week" (docs/ROADMAP.md §4.2) — day buckets are
+  ---already stored, so this reads `merged()` the same way `inst.report`
+  ---does; nothing about collection changes for this to exist.
+  ---@param compare_opts? { days?: integer }
+  ---@return RA.Telemetry.Comparison
+  function inst.compare(compare_opts)
+    return report_mod.compare(merged(), {
+      days = compare_opts and compare_opts.days,
+      retention_days = cfg.retention_days,
+    })
+  end
+
+  ---@param compare_opts? { days?: integer }
+  ---@return string[]
+  function inst.compare_lines(compare_opts)
+    return report_mod.compare_lines(inst.compare(compare_opts))
+  end
+
+  ---@param compare_opts? { days?: integer }
+  ---@return string[]
+  function inst.compare_markdown(compare_opts)
+    return report_mod.compare_markdown(inst.compare(compare_opts))
+  end
+
   ---The inverse question: which registered functions were never called? An
   ---exported, documented, never-used function is a maintenance cost, and this
   ---is the set difference between the wrap list and the observed keys.

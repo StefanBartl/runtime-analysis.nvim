@@ -773,6 +773,115 @@ return function(H)
   end
 
   -- -------------------------------------------------------------------------
+  -- comparison across time windows (docs/ROADMAP.md §4.2): "this week vs
+  -- last week" — pure logic first (store.previous_window, report.compare),
+  -- then one end-to-end pass through a real instance.
+  -- -------------------------------------------------------------------------
+  local report_mod = require("runtime-analysis.telemetry.report")
+  do
+    local data = store.empty()
+    local function ago(days)
+      return os.date("%Y-%m-%d", os.time() - days * 86400)
+    end
+    -- current window (last 7d): f=10 (today), g=5 (day 3)
+    data.days[ago(0)] = { f = 10 }
+    data.days[ago(3)] = { g = 5 }
+    -- previous window (7-14d ago): f=4 (day 10), h=8 (day 12)
+    data.days[ago(10)] = { f = 4 }
+    data.days[ago(12)] = { h = 8 }
+    -- well outside either window
+    data.days[ago(40)] = { ancient = 100 }
+
+    local prev, prev_total = store.previous_window(data, 7)
+    H.eq(prev_total, 12, "previous_window sums only the 7-14 day-ago range")
+    H.eq(prev.f, 4, "a key present in both windows, previous-window count only")
+    H.eq(prev.h, 8, "a key only in the previous window")
+    H.eq(prev.g, nil, "a key only in the current window is absent here")
+    H.eq(prev.ancient, nil, "a bucket older than the previous window is excluded")
+
+    local current, current_total = store.since(data, 7)
+    H.eq(current_total, 15, "sanity — since() still sums the current window as before")
+    H.eq(current.f, 10, "sanity — current window's own count for f")
+
+    local cmp = report_mod.compare(data, { days = 7 })
+    H.eq(cmp.current_total, 15, "compare: current_total matches since()")
+    H.eq(cmp.previous_total, 12, "compare: previous_total matches previous_window()")
+
+    local by_key = {}
+    for _, list in ipairs({ cmp.new_functions, cmp.cold_functions, cmp.changed }) do
+      for _, e in ipairs(list) do
+        by_key[e.key] = e
+      end
+    end
+    H.ok(by_key.g ~= nil, "g (only in current) is classified")
+    H.eq(by_key.g.current, 5, "g: current count")
+    H.eq(by_key.g.previous, 0, "g: previous count is 0, not nil, once classified")
+    local g_is_new = vim.tbl_contains(
+      vim.tbl_map(function(e)
+        return e.key
+      end, cmp.new_functions),
+      "g"
+    )
+    H.ok(g_is_new, "g: classified as newly hot (silent before, called now)")
+
+    local h_is_cold = vim.tbl_contains(
+      vim.tbl_map(function(e)
+        return e.key
+      end, cmp.cold_functions),
+      "h"
+    )
+    H.ok(h_is_cold, "h (only in previous) classified as gone cold")
+
+    local f_is_changed = vim.tbl_contains(
+      vim.tbl_map(function(e)
+        return e.key
+      end, cmp.changed),
+      "f"
+    )
+    H.ok(f_is_changed, "f (in both) classified as changed, not new or cold")
+    H.eq(by_key.f.current, 10, "f: current count")
+    H.eq(by_key.f.previous, 4, "f: previous count")
+    H.eq(by_key.f.delta, 6, "f: delta is current - previous")
+    H.eq(by_key.f.delta_pct, 6 / 4, "f: delta_pct relative to previous")
+
+    H.eq(cmp.incomplete_previous_window, false, "retention_days (unset) never flags incomplete")
+    local cmp_flagged = report_mod.compare(data, { days = 20, retention_days = 30 })
+    H.eq(
+      cmp_flagged.incomplete_previous_window,
+      true,
+      "2x a 20-day window exceeds a 30-day retention — flagged, not silently wrong"
+    )
+
+    -- Rendering doesn't error and mentions the window size.
+    local lines = report_mod.compare_lines(cmp)
+    H.ok(#lines > 0, "compare_lines produces output")
+    H.ok(lines[1]:find("7d", 1, true) ~= nil, "compare_lines names the window size")
+    local md = report_mod.compare_markdown(cmp)
+    H.ok(#md > 0, "compare_markdown produces output")
+  end
+
+  -- End-to-end: a real instance, persisted day buckets fabricated directly
+  -- on disk (the same technique the retention/pruning test above uses
+  -- indirectly via store.empty()), t.compare() reading them back correctly.
+  do
+    local namespace = ns("compare_e2e")
+    local data = store.empty()
+    data.days[os.date("%Y-%m-%d", os.time())] = { ["mod.f"] = 9 }
+    data.days[os.date("%Y-%m-%d", os.time() - 10 * 86400)] = { ["mod.f"] = 3 }
+    data.functions["mod.f"] = { calls = 12 }
+    store.save(namespace, data, { dir = tmpdir })
+
+    local t = telemetry.new({ namespace = namespace, persist = true, dir = tmpdir })
+    local cmp = t.compare({ days = 7 })
+    H.eq(cmp.current_total, 9, "t.compare: current window read back correctly")
+    H.eq(cmp.previous_total, 3, "t.compare: previous window read back correctly")
+
+    local lines = t.compare_lines({ days = 7 })
+    H.ok(#lines > 0, "t.compare_lines: produces output for a real instance")
+    t.reset()
+  end
+
+  -- -------------------------------------------------------------------------
   -- lifecycle reminder: fires once, persists that it fired, escalates once
   -- -------------------------------------------------------------------------
   do
