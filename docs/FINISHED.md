@@ -26,6 +26,76 @@ Newest first, by date; original document order within a date.
 
 ## 2026-08-04
 
+### §5.2 Wrapper provenance
+
+Given a function, say who wrapped it — the narrow, high-value slice of §5.1
+("Runtime inspection — a second pillar," still unbuilt, still carrying its
+own three open design questions inherited from lib.nvim's rejection of the
+idea) the roadmap entry itself said should ship first. The entry's own
+framing turned out to be exactly right about the shape of the answer: this
+plugin's own telemetry wraps are answerable precisely; everything else
+(`lib.nvim.system.proc_trace`, any of the many plugins that monkey-patch
+`vim.notify`) is genuinely best-effort, and the shipped feature says so in
+its own output rather than pretending otherwise.
+
+New top-level module,
+[`lua/runtime-analysis/provenance.lua`](../lua/runtime-analysis/provenance.lua):
+`M.inspect(path)` takes a dotted string — `"vim.notify"`,
+`"lib.nvim.notify.create"` — since a `:RA`-style command can only ever take
+a string, never a live table reference. Resolution tries two strategies in
+order: a global-table walk (the `vim.*` case) first, then `require()` of
+the whole prefix (the `lib.nvim`-style module-field case) — and stops
+there. It deliberately does not guess where a module boundary sits inside
+a longer dotted path (`a.b.c.field` where `c` is a table field of module
+`a.b`, not its own requirable path) — the same "a wrong guess is worse than
+no answer" stance `cost_vs_use`'s own module-root join and `curl.parse`'s
+own unrecognized-flag handling already take elsewhere in this plugin.
+
+**The exact half needed one new, small query, not a new mechanism.**
+`telemetry/registry.lua` already tracks every subscriber per wrapped site
+(the shared wrap layer every instance goes through, per that file's own
+long-standing doc-comment on why); the only thing missing was a read-only
+way to ask it. New: `registry.M.info(container, field)`, sitting right
+beside the existing `is_wrapped` it was modeled after, returning which
+namespace(s) — by name, sorted — currently subscribe, or an empty, honest
+`{ wrapped = false }` when the field has been reassigned since (checked the
+identical way `is_wrapped`/`detach` already do: `container[field] ==
+site.wrapper`, not merely "does a site exist").
+
+**The best-effort half is `debug.getinfo(value, "S")`, reported as data,
+not as certainty.** Where a currently-installed function was actually
+*defined* (`short_src`/`linedefined`, or "defined in C" for `what == "C"`)
+is the one honest signal available with no registry to consult — it cannot
+say *who* installed a wrapper or *when*, only give a reader something real
+to compare against where they expected the function to live. `M.lines`
+appends the caveat explicitly whenever `telemetry.wrapped` is false, rather
+than leaving the reader to infer the limits of what they're looking at.
+
+New command: `:RA provenance <path>`, under the request runner's own `:RA`
+verb rather than a new top-level command — this plugin does not yet have a
+dedicated "runtime inspection" command surface (that's §5.1's, still
+unbuilt), and a single narrow query does not warrant inventing one on its
+own.
+
+`docs/IDEAS.md` §4.1 (the cross-repo idea this entry's own roadmap text
+already pointed at — a shared wrapper-registry marker convention that would
+make provenance answerable for `proc_trace` and third-party wraps too, not
+only this plugin's own) is updated to reflect that the best-effort half now
+has a real, shipped shape to compare a future improvement against, rather
+than describing a feature that did not exist yet.
+
+Verified: `provenance_spec.lua`, against real globals and real telemetry
+instances rather than stubs (provenance's whole point is inspecting what is
+*actually* installed, so a fake container would only prove the fake
+worked) — a real unwrapped global (`vim.trim`); every failure shape (no
+dot, unresolvable container, missing field, a non-function target) with
+its own distinct, checkable error; a function this plugin's own telemetry
+genuinely wraps, reported by real namespace, and confirmed no longer
+reported as wrapped immediately after `unwrap()` (registry state read
+live, not cached); two instances wrapping the identical function, both
+namespaces present, none dropped; and the `require()`-based module-path
+resolution strategy, not only the global-table one.
+
 ### §7.2 Plugin cost-versus-use
 
 What each plugin costs at startup versus how much it is actually used —

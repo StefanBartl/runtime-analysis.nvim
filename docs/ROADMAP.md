@@ -42,7 +42,7 @@ same kind of overlay `docs/IDEAS.md` §6 uses for its own five-item shortlist.
 | **Medium** | Multi-day. Either a real decision has to be made first (a schema, a security trade-off, an open question the section names explicitly), or it touches several files or a small state machine — but the shape and the cost are both known. |
 | **Long-term** | Blocked on something this document itself already says is unmeasured or unresolved: an unmeasured `debug.getinfo` cost, several open design questions, another repository's half of the work, or a section the document itself calls speculative. |
 
-Twenty items have shipped out of this section since it was first written —
+Twenty-one items have shipped out of this section since it was first written —
 see [`docs/FINISHED.md`](FINISHED.md) for the full record of each. What
 remains open:
 
@@ -56,7 +56,6 @@ remains open:
 
 | Item | Note |
 | --- | --- |
-| §5.2 Wrapper provenance | The narrow, high-value slice of §5.1 worth shipping first; the telemetry registry already knows its own wrappers |
 | §6.2 Endpoint coverage | Request history (§1.3) now exists and needs no changes; what remains is a real route-pattern-to-URL matching strategy, not just a join key |
 | §6.3 Documentation priority by real usage | Needs §6.1's mechanism to exist first |
 | §7.1 Keymap and command usage | Mechanically the existing wrap machinery pointed at `vim.keymap.set` plus a `CmdlineLeave` hook; stays local and opt-in, never grows a "share this" feature |
@@ -190,16 +189,6 @@ right ones and are still unanswered:
    (Calling has side effects; reporting is honest but less useful.)
 3. Where the result renders — `lib.nvim.ui.kit` float, a scratch buffer, or
    something else.
-
-### 5.2 Wrapper provenance
-
-A narrow, high-value slice of §5.1 that should probably ship first: given a
-function, say *who wrapped it*. Between this plugin's own telemetry,
-`lib.nvim.system.proc_trace`, and any number of plugins that monkey-patch
-`vim.notify`, a Neovim session accumulates wrappers, and "why is this
-function not the one in the source" is a genuinely hard question today. The
-telemetry registry already knows its own wrappers; the rest would be
-best-effort.
 
 ### 5.3 Diff loaded-vs-declared
 

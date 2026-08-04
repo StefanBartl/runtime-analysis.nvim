@@ -267,6 +267,18 @@ Response assertions ~
                                 register — the same convention |:RA-yank|
                                 already uses.
 
+                                                         *:RA-provenance*
+:RA provenance {path}           Who wrapped this function right now.
+                                {path} is a dotted string, e.g.
+                                `vim.notify` or
+                                `lib.nvim.notify.create` — resolved via a
+                                global-table walk first, then require() of
+                                the whole prefix. Exact for this plugin's
+                                own telemetry wraps (named by namespace);
+                                best-effort otherwise (a debug.getinfo
+                                source location). See
+                                |runtime-analysis-provenance| below.
+
                                                    *runtime-analysis-history*
 Request history ~
   Every |:RA-send|/|:RASend| records one entry via
@@ -347,6 +359,24 @@ curl import/export ~
   produces, the same one request history and the "sending ..." placeholder
   already keep unresolved. Exporting is sharing, and a `{{token}}` must
   render as `{{token}}` there too.
+
+                                              *runtime-analysis-provenance*
+Wrapper provenance ~
+  |:RA-provenance| — "who wrapped this function," docs/ROADMAP.md §5.2, the
+  narrow slice of the still-unbuilt `:RAInspect` (§5.1) worth shipping on
+  its own first. `{path}` is a dotted string, resolved via a global-table
+  walk first, then require() of the whole prefix — and stops there; it
+  does not guess where a module boundary sits inside a longer path.
+
+  Two different answers, and the output states which one it is giving:
+  this plugin's own telemetry wrapper is **exact**
+  (`runtime-analysis.telemetry.registry` is the one shared wrap layer
+  every instance goes through, so it genuinely knows every subscribing
+  namespace by name); anyone else's wrapper (`lib.nvim.system.proc_trace`,
+  any plugin that monkey-patches `vim.notify`) is **best-effort** — a
+  `debug.getinfo` source location, the only honest signal available with
+  no registry to consult. It cannot say who installed a wrapper or when,
+  only where the function currently there was actually defined.
 
                                                     *runtime-analysis-auth-shorthand*
 Auth: shorthand ~
