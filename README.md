@@ -160,6 +160,21 @@ number of plugins monkey-patch `vim.notify`): a `debug.getinfo` source
 location, honestly labeled as an inference rather than a certainty. Full
 reasoning: [`docs/COMMANDS.md`](docs/COMMANDS.md).
 
+```vim
+:RA usage start
+:RA usage
+:RA usage stop
+```
+
+Which of your own keymaps and typed commands you actually press — opt-in,
+local-only, and the one feature here that records *what the person did*
+rather than *what the code did*. `:RA usage start` wraps `vim.keymap.set`
+so every function-callback mapping registered from then on counts its own
+presses, plus a `CmdlineLeave` hook for typed commands; `:RA usage` reports
+current counts, `:RA usage stop` ends collection. Built on
+`runtime-analysis.telemetry` itself, pointed at the editor instead of code.
+Full reasoning: [`docs/COMMANDS.md`](docs/COMMANDS.md).
+
 ## Setup
 
 ```lua

@@ -412,6 +412,38 @@ giving:
   resolving there was actually defined, not *who* put it there or *when*.
   The output says so explicitly whenever it falls back to this.
 
+## `:RA usage`, `:RA usage start`, `:RA usage stop`
+
+`docs/ROADMAP.md` §7.1: which of your own keymaps and typed commands you
+actually press. A different *product* from everything else `:RA` does —
+instrumenting the editor rather than instrumenting code — and the first
+feature in this plugin that records *what the person did* rather than
+*what the code did*.
+
+```vim
+:RA usage start   " begin counting — nothing runs before this
+:RA usage         " report current counts
+:RA usage stop    " stop counting; collected counts stay readable
+```
+
+**Opt-in, local, and never grows a "share this" feature** — the exact
+posture the roadmap entry itself demanded before naming the feature worth
+building. `:RA usage start` wraps `vim.keymap.set` so every
+function-callback mapping registered from that point on counts its own
+presses, and installs a `CmdlineLeave` hook that counts a typed command by
+name once it actually commits (an aborted, `<Esc>`-cancelled command line
+records nothing). Built on `runtime-analysis.telemetry` itself — one real
+instance underneath, the same `wrap_fn` mechanism §7.2's cost-vs-use report
+already reads for code, pointed at editor input instead.
+
+**Honest limits, not silently dropped cases.** Only mappings set *after*
+`:RA usage start` are ever seen. A string-rhs mapping
+(`vim.keymap.set('n', 'x', ':SomeCommand<CR>')`) has no function to wrap —
+if the command it runs goes through `:`, the `CmdlineLeave` hook may still
+count that, but the mapping that triggered it will not be. A buffer-local
+mapping sharing the same mode+lhs as a different mapping elsewhere is
+combined into one count, not tracked per buffer.
+
 ### Why `:RARequest`/`:RASend` exist as separate flat commands, not only `:RA request`/`:RA send`
 
 `:RA`, built via `lib.nvim.usercmd.composer`, is the verb-first shape

@@ -42,7 +42,7 @@ same kind of overlay `docs/IDEAS.md` §6 uses for its own five-item shortlist.
 | **Medium** | Multi-day. Either a real decision has to be made first (a schema, a security trade-off, an open question the section names explicitly), or it touches several files or a small state machine — but the shape and the cost are both known. |
 | **Long-term** | Blocked on something this document itself already says is unmeasured or unresolved: an unmeasured `debug.getinfo` cost, several open design questions, another repository's half of the work, or a section the document itself calls speculative. |
 
-Twenty-one items have shipped out of this section since it was first written —
+Twenty-two items have shipped out of this section since it was first written —
 see [`docs/FINISHED.md`](FINISHED.md) for the full record of each. What
 remains open:
 
@@ -58,7 +58,6 @@ remains open:
 | --- | --- |
 | §6.2 Endpoint coverage | Request history (§1.3) now exists and needs no changes; what remains is a real route-pattern-to-URL matching strategy, not just a join key |
 | §6.3 Documentation priority by real usage | Needs §6.1's mechanism to exist first |
-| §7.1 Keymap and command usage | Mechanically the existing wrap machinery pointed at `vim.keymap.set` plus a `CmdlineLeave` hook; stays local and opt-in, never grows a "share this" feature |
 | Test coverage for the request runner's real transport | `runner.lua` is only exercised against a real transport at the lib.nvim end today |
 | `scripts/gen_map.lua` + documentation.nvim as a dev dependency | A real CI gate (checkout, generate, byte-compare), not a documentation update — see Housekeeping below for why it was not attempted alongside the smaller items in this pass |
 
@@ -247,17 +246,6 @@ bridge document as one of its two aggregate lines and still unbuilt.
 Speculative, and grouped separately because it is a different *product*
 than everything above — instrumenting the editor rather than instrumenting
 code.
-
-### 7.1 Keymap and command usage
-
-Which of your mappings you actually press. The honest use case is pruning:
-a config accumulates bindings for years and nothing ever tells you which
-ones went cold. Mechanically it is the existing wrap machinery pointed at
-`vim.keymap.set`'s callbacks plus a `CmdlineLeave` hook.
-
-**The one real caveat:** this is the first thing in this plugin that would
-record *what the person did* rather than *what the code did*. It stays
-local, it stays opt-in, and it should never grow a "share this" feature.
 
 ### 7.3 LSP request latency
 

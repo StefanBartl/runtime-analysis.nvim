@@ -172,6 +172,25 @@ function M.check()
     h_warn("runtime-analysis.env failed to load", { tostring(env) })
   end
 
+  h_start("runtime-analysis.nvim: keymap/command usage")
+
+  local ok_usage, usage = pcall(require, "runtime-analysis.usage")
+  if ok_usage then
+    if usage.is_running() then
+      local report = usage.report()
+      h_ok(
+        ("tracking — %d mapping(s)/command(s) seen, %d press(es) total"):format(
+          report.wrapped,
+          report.total_calls
+        )
+      )
+    else
+      h_info("not tracking — opt-in, :RA usage start to begin")
+    end
+  else
+    h_warn("runtime-analysis.usage failed to load", { tostring(usage) })
+  end
+
   h_start("runtime-analysis.nvim: optional tools")
 
   local ok_mdview = pcall(require, "mdview")

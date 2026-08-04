@@ -279,6 +279,22 @@ Response assertions ~
                                 source location). See
                                 |runtime-analysis-provenance| below.
 
+                                                             *:RA-usage*
+:RA usage                       Report keymap/command press counts
+                                collected since |:RA-usage-start|. A kit
+                                float if `lib.nvim.ui.kit` is available,
+                                `vim.notify` otherwise.
+
+                                                       *:RA-usage-start*
+:RA usage start                 Start counting — opt-in, nothing runs
+                                before this.
+
+                                                        *:RA-usage-stop*
+:RA usage stop                  Stop counting. Collected counts stay
+                                readable via |:RA-usage|.
+
+                                See |runtime-analysis-usage| below.
+
                                                    *runtime-analysis-history*
 Request history ~
   Every |:RA-send|/|:RASend| records one entry via
@@ -377,6 +393,30 @@ Wrapper provenance ~
   `debug.getinfo` source location, the only honest signal available with
   no registry to consult. It cannot say who installed a wrapper or when,
   only where the function currently there was actually defined.
+
+                                                    *runtime-analysis-usage*
+Keymap and command usage ~
+  |:RA-usage| — docs/ROADMAP.md §7.1: which of your own keymaps and typed
+  commands you actually press. The one feature in this plugin that records
+  *what the person did* rather than *what the code did*, and it ships with
+  exactly the posture that caveat demands: opt-in
+  (|:RA-usage-start|/|:RA-usage-stop|, nothing runs on `setup()` alone) and
+  local-only, no account, no upload, no "share this" feature.
+
+  Built on `runtime-analysis.telemetry` itself, the same wrap mechanism
+  §7.2's cost-vs-use report already reads for code — one real instance
+  underneath. `:RA usage start` wraps `vim.keymap.set` so a function-
+  callback mapping's own callback is wrapped exactly once, at the moment
+  it is set, not per press; a `CmdlineLeave` autocmd counts a typed
+  command once it actually commits (an `<Esc>`-aborted line counts
+  nothing).
+
+  Honest limits: only mappings set *after* `:RA usage start` are ever
+  seen; a string-rhs mapping (`vim.keymap.set('n', 'x',
+  ':SomeCommand<CR>')`) has no function to wrap; a buffer-local mapping
+  sharing the same mode+lhs as a different mapping elsewhere is combined
+  into one count, not tracked per buffer; a typed command's name is read
+  heuristically and can occasionally misparse an unusual range.
 
                                                     *runtime-analysis-auth-shorthand*
 Auth: shorthand ~
@@ -513,9 +553,10 @@ Reports: Neovim version, `curl` on PATH, every required lib.nvim module
 loading, live telemetry instances and persistently disabled namespaces in
 this session, the telemetry cache directory and whether it is writable,
 this project's history entry count, this project's defined environments
-and which one (if any) is active, whether mdview.nvim and
-lib.nvim.progress are available, and whether `setup()` has registered its
-commands yet in this session.
+and which one (if any) is active, whether keymap/command usage tracking
+is running and how many presses it has counted so far, whether mdview.nvim
+and lib.nvim.progress are available, and whether `setup()` has registered
+its commands yet in this session.
 
 ==============================================================================
 9. ROADMAP                                           *runtime-analysis-roadmap*
