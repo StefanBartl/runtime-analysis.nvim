@@ -63,6 +63,7 @@ local specs = {
   "provenance_spec.lua",
   "usage_spec.lua",
   "loaded_spec.lua",
+  "inspect_spec.lua",
   "lazy_spec.lua",
 }
 

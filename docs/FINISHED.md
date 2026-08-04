@@ -26,6 +26,57 @@ Newest first, by date; original document order within a date.
 
 ## 2026-08-04
 
+### §5.1 `:RA inspect <module>`
+
+"Runtime inspection — a second pillar," and the most on-thesis idea in
+the whole document: inspect what is actually loaded, right now. lib.nvim's
+own roadmap turned this down as `:LibInspect` — "actually
+executing/requiring code is a different trust model than docmap's pure
+static scan" — and named a future tool as the right home; this plugin is
+that tool.
+
+Walks a live `package.loaded[module]` table and renders it: functions
+(upvalue counts, source location — the same `debug.getinfo` primitives
+`provenance.lua`, §5.2, already uses for a single function), nested
+tables (their own shape), metatables, and which direct keys *shadow* a
+table `__index`. New top-level module
+[`lua/runtime-analysis/inspect.lua`](../lua/runtime-analysis/inspect.lua),
+wired up as `:RA inspect <module>` (`<Tab>`-completing live against
+`package.loaded`, the same dynamic-completer shape `:RA env` already
+uses for environment names).
+
+**The three open design questions lib.nvim's rejection left unanswered,
+each resolved on its own terms, not by default:**
+
+1. **Cycle and depth limits when walking a live table.** Cycle-*safety*
+   comes from an identity-keyed `seen` set tracking the current ancestor
+   chain — the same convention lib.nvim's own `lib.lua.tables.deep_copy`
+   already uses for the identical reason — which alone guarantees
+   termination on a table with a real cycle in it, no depth cap
+   required for correctness. `max_depth` (default 3) is a *separate*,
+   purely cosmetic readability cap on top of that: enough to see through
+   this section's own motivating example, "a config table after three
+   merge passes." A table shared between two sibling branches (not
+   nested in itself) is walked in full both times, not falsely flagged
+   as a cycle — the ancestor-chain set is cleared on return from each
+   branch, not accumulated forever.
+2. **Whether to call into `__index` functions.** Never. A direct key
+   also reachable through a *table* `__index` is reported as shadowing
+   it — answerable by comparing keys, no invocation needed. When
+   `__index` is a function, only its presence is reported: calling it
+   would be a real side effect on the code being inspected, the same
+   "record it, don't guess it" trade-off `documentation.core.loaded_diff`
+   and `endpoint_coverage.lua` already take elsewhere in this ecosystem
+   (§5.3, §6.2). `:RA inspect` stays a pure read.
+3. **Where the result renders.** `lib.nvim.ui.kit.viewer`, falling back
+   to `vim.notify` when kit is unavailable — not actually a fresh
+   decision by the time this shipped: `telemetry/command.lua`'s own
+   `show` and `:RA usage` already established this exact convention for
+   every other report in this plugin, so `:RA inspect` just plugs into
+   it rather than picking a fourth rendering surface.
+
+Full writeup: `docs/COMMANDS.md`'s own `:RA inspect <module>` section.
+
 ### §5.3 Diff loaded-vs-declared
 
 "The sharpest form of the static × runtime join" this document names —

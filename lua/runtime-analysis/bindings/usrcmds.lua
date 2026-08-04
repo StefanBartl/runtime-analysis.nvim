@@ -21,9 +21,9 @@
 --- the *names* staying flat, but a user's own keymap to either flat command
 --- would break silently on a bare rename. Keeping both costs four lines and
 --- breaks nothing; dropping the flat pair would be a breaking change for a
---- purely cosmetic gain. `:RA yank`/`:RA cancel`/`:RA history` get no flat
---- alias: all are new, have no external references, and no keymap could
---- already exist for any of them.
+--- purely cosmetic gain. `:RA yank`/`:RA cancel`/`:RA history`/`:RA
+--- inspect` get no flat alias: all are new, have no external references,
+--- and no keymap could already exist for any of them.
 ---
 --- **`:RA history`** (docs/ROADMAP.md §1.3) reads `runtime-analysis.history`,
 --- a per-project record of method/url/status/timestamp for every send this
@@ -63,6 +63,26 @@ composer.register_type("RA_ENV_NAME", {
   end,
   complete = function(arg_lead)
     local names = require("runtime-analysis.env").list_names()
+    return vim.tbl_filter(function(n)
+      return n:find(arg_lead or "", 1, true) == 1
+    end, names)
+  end,
+})
+
+-- Same shape, for `:RA inspect <Tab>` — completes against whatever is
+-- actually in `package.loaded` right now, read live at completion time
+-- for the identical reason `RA_ENV_NAME` above reads `list_names()` live
+-- rather than a list frozen when `setup()` ran.
+composer.register_type("RA_LOADED_MODULE", {
+  validate = function(raw)
+    return true, raw, nil
+  end,
+  complete = function(arg_lead)
+    local names = {}
+    for name in pairs(package.loaded) do
+      names[#names + 1] = name
+    end
+    table.sort(names)
     return vim.tbl_filter(function(n)
       return n:find(arg_lead or "", 1, true) == 1
     end, names)
@@ -484,6 +504,37 @@ local function do_provenance(path)
   vim.notify(table.concat(provenance.lines(info), "\n"))
 end
 
+---`:RA inspect <module>` (docs/ROADMAP.md §5.1) — walk a live
+---`package.loaded` table and render it: functions with upvalue counts and
+---source, tables with their own shape, metatables, and what a direct key
+---shadows through `__index`. See `runtime-analysis.inspect`'s own
+---doc-comment for the three design questions this resolves — inherited
+---unanswered from lib.nvim's own rejection of this exact idea as
+---`:LibInspect`. The narrower `:RA provenance` (§5.2) answers "who
+---wrapped this one function"; this answers "what does this whole module
+---actually contain, right now".
+---@param module_id string
+local function do_inspect(module_id)
+  local inspect = require("runtime-analysis.inspect")
+  local report, err = inspect.inspect(module_id)
+  if not report then
+    vim.notify("runtime-analysis: " .. err, vim.log.levels.ERROR)
+    return
+  end
+
+  local lines = inspect.lines(report)
+  local ok_kit, kit = pcall(require, "lib.nvim.ui.kit")
+  if ok_kit then
+    kit.viewer({
+      lines = lines,
+      title = (" runtime-analysis: inspect %s "):format(module_id),
+      width = math.min(110, math.max(60, vim.o.columns - 8)),
+    })
+  else
+    vim.notify(table.concat(lines, "\n"))
+  end
+end
+
 ---`:RA usage [start|stop]` (docs/ROADMAP.md §7.1) — keymap/command usage,
 ---the one feature in this plugin that records *what the person did* rather
 ---than *what the code did* (see `runtime-analysis.usage`'s own doc-comment
@@ -616,6 +667,14 @@ function M.setup(ra)
         args = { { name = "path", type = "STRING" } },
         run = function(ctx)
           do_provenance(ctx.args.path)
+        end,
+      },
+      {
+        path = { "inspect" },
+        desc = "Walk a live package.loaded table -- functions, tables, metatables, what's shadowed",
+        args = { { name = "module_id", type = "RA_LOADED_MODULE" } },
+        run = function(ctx)
+          do_inspect(ctx.args.module_id)
         end,
       },
       {

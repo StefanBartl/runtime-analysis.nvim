@@ -45,7 +45,7 @@ same kind of overlay `docs/IDEAS.md` §6 uses for its own five-item shortlist.
 | **Medium** | Multi-day. Either a real decision has to be made first (a schema, a security trade-off, an open question the section names explicitly), or it touches several files or a small state machine — but the shape and the cost are both known. |
 | **Long-term** | Blocked on something this document itself already says is unmeasured or unresolved: an unmeasured `debug.getinfo` cost, several open design questions, another repository's half of the work, or a section the document itself calls speculative. |
 
-Twenty-nine items have shipped out of this section since it was first written —
+Thirty items have shipped out of this section since it was first written —
 see [`docs/FINISHED.md`](FINISHED.md) for the full record of each. Every
 remaining open item is Long-term/speculative:
 
@@ -55,8 +55,7 @@ remaining open item is Long-term/speculative:
 | --- | --- |
 | §2.6 GraphQL / multipart / file upload | "Neither is a priority without a concrete need" |
 | §4.3 Standard trace formats | §3.1 (call trees) shipped, so this is no longer *meaningless* — but a real trace format needs nested call stacks and timing spans, not the flat one-level caller histogram §3.1 actually built; still separate, unbuilt work |
-| §4.4 A real dashboard rather than a report | Gated on the browser-tier decision `docs/IDEAS.md` §3.1 says to make *before* building anything, so a third pipeline does not get built by accident |
-| §5.1 `:RAInspect <module>` | Three open design questions, inherited unanswered from lib.nvim's own rejection of this exact idea |
+| §4.4 A real dashboard rather than a report | Revisited 2026-08-04 and deliberately left open — no evidence yet that the Markdown report actually feels limiting, this section's own stated precondition |
 | §7.3 LSP request latency | Explicitly low priority; territory other tools already cover well |
 
 ### Rejected outright — not phased
@@ -145,33 +144,12 @@ re-litigated from a blank slate before that evidence exists.
 
 ## 5. Runtime inspection — a second pillar
 
-Currently the plugin has one collection mechanism (wrapping) and one I/O
-tool (the request runner). This is the missing third thing, and it is the
-most on-thesis idea in this document: **inspect what is actually loaded,
-right now.**
-
-lib.nvim's own roadmap turned this down as `:LibInspect` with a precise
-reason — "actually executing/requiring code is a different trust model than
-docmap's pure static scan" — and named a future tool as the right home.
-**This is that tool.** Executing and inspecting live state is not a foreign
-concern here; it is the entire premise.
-
-### 5.1 `:RAInspect <module>`
-
-Walk a live `package.loaded` table and render it: functions, their upvalue
-counts, tables and their shapes, metatables, what is shadowed. The
-questions it answers that no static scan can: *is this module even loaded*,
-*is this function the one the source declares or has something wrapped it*,
-*what does this config table actually contain after three merge passes*.
-
-lib.nvim's rejection listed three open design questions that are still the
-right ones and are still unanswered:
-
-1. Cycle and depth limits when walking a live table.
-2. Whether to call into `__index` functions or just report that they exist.
-   (Calling has side effects; reporting is honest but less useful.)
-3. Where the result renders — `lib.nvim.ui.kit` float, a scratch buffer, or
-   something else.
+§5.1 (`:RA inspect <module>`) has shipped — see
+[`docs/FINISHED.md`](FINISHED.md) for the full record. This section is
+intentionally left empty rather than deleted, the same reasoning §1's own
+empty section states: the number itself (`§5.x`) is still cited in
+`docs/FINISHED.md`, and removing the section would orphan that reference
+without actually freeing the number for reuse.
 
 ---
 

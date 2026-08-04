@@ -382,9 +382,7 @@ unresolved. Exporting is sharing, and a `{{token}}` must render as
 ## `:RA provenance <path>`
 
 `docs/ROADMAP.md` §5.2: "who wrapped this function," the narrow slice of
-the still-unbuilt `:RAInspect` (§5.1 — three open design questions
-inherited from lib.nvim's own rejection of that exact idea, still
-unanswered) worth shipping on its own first.
+`:RA inspect` (§5.1, below) worth shipping on its own first.
 
 ```vim
 :RA provenance vim.notify
@@ -411,6 +409,49 @@ giving:
   `debug.getinfo`'s own source location: *where* the function currently
   resolving there was actually defined, not *who* put it there or *when*.
   The output says so explicitly whenever it falls back to this.
+
+## `:RA inspect <module>`
+
+`docs/ROADMAP.md` §5.1: "Runtime inspection — a second pillar." Walks a
+live `package.loaded[module]` table and renders it: functions (upvalue
+counts, source location), nested tables (their own shape), metatables,
+and what a direct key *shadows* through `__index`. lib.nvim's own roadmap
+turned this down as `:LibInspect` — "actually executing/requiring code is
+a different trust model than docmap's pure static scan" — and named a
+future tool as the right home; this is that tool.
+
+```vim
+:RA inspect runtime-analysis.telemetry
+```
+
+`<Tab>`-completes against `package.loaded`, live — whatever is actually
+loaded in this session, not a list frozen at `setup()`.
+`runtime-analysis.loaded` (§5.3) already answers the flat, one-level
+question "what functions does this module have right now", the half
+documentation.nvim's own `:DocBrowse` "loaded" mode joins against; this
+answers the deeper one a config author actually needs — what a table
+*contains*, after however many merge passes built it.
+
+**Three open design questions inherited from lib.nvim's rejection,
+resolved:**
+
+- **Cycle and depth limits.** Cycle-*safety* comes from an identity-keyed
+  `seen` set tracking the current ancestor chain — the same convention
+  lib.nvim's own `lib.lua.tables.deep_copy` already uses — which alone
+  guarantees termination on a table with a real cycle in it.
+  `max_depth` (default 3) is a separate, purely cosmetic cap on top of
+  that, for readability: enough to see through a config table after a
+  few merge passes, not a correctness mechanism.
+- **`__index` is reported, never called.** A direct key that would also
+  resolve through a table `__index` is flagged as shadowing it — answered
+  by comparing keys, no invocation needed. When `__index` is a function,
+  only its presence is reported: calling it would be a real side effect
+  on the code being inspected, the same "record it, don't guess it"
+  trade-off `documentation.core.loaded_diff` and `endpoint_coverage.lua`
+  already take elsewhere in this ecosystem.
+- **Renders via the same float every other report in this plugin already
+  uses** — `lib.nvim.ui.kit.viewer`, falling back to `vim.notify` when
+  kit is unavailable, exactly like `:RATelemetry` and `:RA usage`.
 
 ## `:RA usage`, `:RA usage start`, `:RA usage stop`
 
