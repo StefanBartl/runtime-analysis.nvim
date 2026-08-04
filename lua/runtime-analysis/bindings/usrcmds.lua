@@ -51,6 +51,24 @@
 
 local composer = require("lib.nvim.usercmd.composer")
 
+-- A dynamic completer, registered once: `M.setup` may run more than once in
+-- a session (`:source`-ing config during development), and
+-- `composer.register_type` overwriting an existing name is exactly what
+-- that needs — registering here, at require-time, means `:RA env <Tab>`
+-- always reflects whatever `runtime-analysis.env`'s files say *right now*,
+-- not a list frozen when `setup()` first ran.
+composer.register_type("RA_ENV_NAME", {
+  validate = function(raw)
+    return true, raw, nil
+  end,
+  complete = function(arg_lead)
+    local names = require("runtime-analysis.env").list_names()
+    return vim.tbl_filter(function(n)
+      return n:find(arg_lead or "", 1, true) == 1
+    end, names)
+  end,
+})
+
 local M = {}
 
 -- Pending-request tracking (docs/ROADMAP.md §1.1). One token per send;
@@ -136,6 +154,18 @@ local function send_current_buffer(ra)
     return
   end
 
+  -- docs/ROADMAP.md §2.1: `{{name}}` placeholders resolve against the
+  -- selected environment right here, immediately before the request goes
+  -- out — `request` itself stays untouched below (the "sending" summary,
+  -- the pending-request record, and the history entry all read `request`,
+  -- never `resolved_request`), so a `{{token}}` renders as `{{token}}`
+  -- everywhere except inside the one real outgoing request.
+  local resolved_request, resolve_err = require("runtime-analysis.env").resolve(request)
+  if not resolved_request then
+    vim.notify("runtime-analysis: " .. resolve_err, vim.log.levels.ERROR)
+    return
+  end
+
   pending_token = pending_token + 1
   local my_token = pending_token
   in_flight = true
@@ -164,7 +194,7 @@ local function send_current_buffer(ra)
   end
   pending_handle = handle
 
-  require("runtime-analysis.runner").run_async(request, function(resp_lines, run_err, meta)
+  require("runtime-analysis.runner").run_async(resolved_request, function(resp_lines, run_err, meta)
     if not is_current(my_token) then
       -- Two different reasons land here, and only one still needs a
       -- history entry: a cancelled request (`pending_token == my_token`,
@@ -253,6 +283,53 @@ local function browse_history(ra)
   end)
 end
 
+---`:RA env [name]` (docs/ROADMAP.md §2.1). With `name`, selects it directly
+---(or reports the available names if it doesn't exist); with no argument,
+---offers every name the project's env files define via `vim.ui.select`, the
+---same picker `browse_history` above already uses for the identical "pick
+---exactly one thing" shape.
+---@param name string?
+local function select_environment(name)
+  local env = require("runtime-analysis.env")
+
+  if name and name ~= "" then
+    local ok, err = env.set_current(name)
+    if ok then
+      vim.notify("runtime-analysis: environment set to " .. name)
+    else
+      vim.notify("runtime-analysis: " .. err, vim.log.levels.ERROR)
+    end
+    return
+  end
+
+  local names = env.list_names()
+  if #names == 0 then
+    vim.notify(
+      "runtime-analysis: no environments defined — create "
+        .. env.SHARED_FILE
+        .. " at the project root",
+      vim.log.levels.INFO
+    )
+    return
+  end
+
+  vim.ui.select(names, {
+    prompt = ("runtime-analysis: select environment (current: %s)"):format(
+      env.current() or "none"
+    ),
+  }, function(choice)
+    if not choice then
+      return
+    end
+    local ok, err = env.set_current(choice)
+    if ok then
+      vim.notify("runtime-analysis: environment set to " .. choice)
+    else
+      vim.notify("runtime-analysis: " .. err, vim.log.levels.ERROR)
+    end
+  end)
+end
+
 ---@param ra RA The plugin's own module table — read for `ra.opts` and called
 ---back into for `ra.open_request` so every command stays in sync with a
 ---`setup()` that has already run.
@@ -301,6 +378,14 @@ function M.setup(ra)
         run = function()
           require("runtime-analysis.history").clear()
           vim.notify("runtime-analysis: request history cleared")
+        end,
+      },
+      {
+        path = { "env" },
+        desc = "Show/select the environment {{vars}} resolve against",
+        args = { { name = "name", type = "RA_ENV_NAME", optional = true } },
+        run = function(ctx)
+          select_environment(ctx.args.name)
         end,
       },
     },

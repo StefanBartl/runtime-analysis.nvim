@@ -29,6 +29,8 @@ local DEPS = {
   "lib.nvim.net.curl",
   "lib.nvim.cache.disk",
   "lib.nvim.fs.project_key",
+  "lib.nvim.fs.find_root",
+  "lib.nvim.fs.json",
   "lib.nvim.git",
   "lib.nvim.usercmd",
   "lib.nvim.usercmd.composer",
@@ -149,6 +151,25 @@ function M.check()
     end
   else
     h_warn("runtime-analysis.history failed to load", { tostring(history) })
+  end
+
+  h_start("runtime-analysis.nvim: environments")
+
+  local ok_env, env = pcall(require, "runtime-analysis.env")
+  if ok_env then
+    local ok_names, names = pcall(env.list_names)
+    if ok_names then
+      if #names == 0 then
+        h_info(("no environments defined — create %s at the project root"):format(env.SHARED_FILE))
+      else
+        h_ok(("%d defined: %s"):format(#names, table.concat(names, ", ")))
+      end
+      h_info("active: " .. (env.current() or "none selected — :RA env <name>"))
+    else
+      h_warn("failed to read this project's environment files", { tostring(names) })
+    end
+  else
+    h_warn("runtime-analysis.env failed to load", { tostring(env) })
   end
 
   h_start("runtime-analysis.nvim: optional tools")

@@ -226,6 +226,81 @@ the same posture `:RATelemetry reset` already takes for clearing
 telemetry counts, and for the same reason: this data is disposable and
 locally-scoped, not something a confirmation dialog meaningfully protects.
 
+## `:RA env [name]`
+
+`{{name}}` inside a request buffer's url, header values or body — `{{baseUrl}}/users/:id`
+— resolves against a *named* environment (`dev`/`staging`/`prod`, or any
+name a project's own files define), docs/ROADMAP.md §2.1. With an argument,
+selects that environment directly (or reports the available names if it
+doesn't exist, rather than silently doing nothing); with none, offers every
+defined name via `vim.ui.select`, the same picker `:RA history` already
+uses. **Session-scoped, not persisted across restarts** — which environment
+you meant is a fact about the current editing session, not one worth
+writing to disk.
+
+### Where names and values come from
+
+Two per-project JSON files at the project root — the same split IntelliJ's
+HTTP Client already uses for exactly this problem, matched rather than
+invented (the same reasoning `docs/ROADMAP.md`'s "Deliberately not: owning
+the `.http` filetype" already gives for `parse.lua`'s own request shape):
+
+```
+http-client.env.json          shared, safe to commit — non-secret
+                               defaults (a baseUrl, a tenant id)
+http-client.private.env.json  gitignored, per-machine — the file a real
+                               token belongs in
+```
+
+```json
+// http-client.env.json
+{
+  "dev": { "baseUrl": "http://localhost:3000" },
+  "prod": { "baseUrl": "https://api.example.com" }
+}
+```
+
+```json
+// http-client.private.env.json
+{
+  "dev": { "token": "..." },
+  "prod": { "token": "..." }
+}
+```
+
+Both files are optional and merged per environment name, the private file's
+own keys winning on overlap: a project can commit only the shared file and
+every reader still has working defaults; a reader who also drops a private
+file next to it layers their own secrets on top of those, without either
+file ever needing to know about the other's existence. `.gitignore`
+already lists `http-client.private.env.json` in this repository's own root,
+and `runtime-analysis.env` warns once per session (`vim.notify`, `WARN`) if
+that file exists on disk but its name is not found anywhere in the
+project's own `.gitignore` — a substring check, not a real gitignore
+pattern matcher, so it is a nudge worth heeding rather than a guarantee.
+
+### The trap this was built to avoid
+
+Stated up front in the roadmap entry this ships: an environment file is
+where a real API token ends up, and it must never leak into something this
+plugin writes to disk or shows on screen incidentally. Resolution happens
+**exactly once**, in `runtime-analysis.env.resolve`, immediately before a
+request is handed to curl inside `send_current_buffer`
+(`lua/runtime-analysis/bindings/usrcmds.lua`) — the raw, unresolved request
+(`{{token}}` still literal) is what everything *else* reads: the
+`→ sending METHOD url ...` placeholder and every `:RA history` entry both
+show/record the placeholder text exactly as typed, never the value it
+resolved to. A `{{token}}` renders as `{{token}}` everywhere except inside
+the one real outgoing request.
+
+A request with no `{{placeholder}}` at all is entirely unaffected by any of
+this — `M.resolve` returns it unchanged, even with no environment ever
+selected, so a plain hardcoded request works exactly as it always has.
+Referencing a variable with nothing selected, or one the selected
+environment doesn't define, is a clear `vim.notify` error naming exactly
+which variable is missing — never a silent `{{name}}` sent to a real server
+as a literal string.
+
 ### Why `:RARequest`/`:RASend` exist as separate flat commands, not only `:RA request`/`:RA send`
 
 `:RA`, built via `lib.nvim.usercmd.composer`, is the verb-first shape

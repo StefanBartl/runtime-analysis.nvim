@@ -37,8 +37,9 @@ Two features today:
     `net.curl`'s `fetch_raw`/`fetch_raw_blocking` for the request runner,
     `usercmd.composer` for |:RA|, `progress` for the sending/cancel
     indicator and telemetry's own reports, `fs.project_key` + `cache.disk`
-    for request history (and telemetry's own persistence), plus `git`,
-    `ui.kit`, `usercmd`, `notify` and `autocmd`.
+    for request history (and telemetry's own persistence), `fs.find_root` +
+    `fs.json` for environment files (|:RA-env|), plus `git`, `ui.kit`,
+    `usercmd`, `notify` and `autocmd`.
   - `curl` on PATH — every |:RASend| shells out to it via lib.nvim.
 
 Optional:
@@ -224,6 +225,16 @@ Multiple requests, and real files ~
 :RA history clear               Clear this project's recorded history. No
                                 confirmation prompt.
 
+                                                                *:RA-env*
+:RA env [name]                  With `name` (`<Tab>`-completed), select it
+                                as the active environment `{{var}}`
+                                placeholders resolve against. With none,
+                                vim.ui.select over every name the project's
+                                env files define. See
+                                |runtime-analysis-environments| below.
+                                Session-scoped, not persisted across
+                                restarts.
+
                                                    *runtime-analysis-history*
 Request history ~
   Every |:RA-send|/|:RASend| records one entry via
@@ -246,6 +257,33 @@ Request history ~
   Honest limit: the url is stored verbatim — a secret embedded in a query
   string is not stripped, since doing so generically and correctly is a
   real, separate problem.
+
+                                              *runtime-analysis-environments*
+Variables and environments ~
+  `{{name}}` inside a request buffer's url, header values or body — e.g.
+  `{{baseUrl}}/users/:id` — resolves against the environment selected by
+  |:RA-env|. Names and values come from two per-project JSON files at the
+  project root, the same split IntelliJ's HTTP Client already uses: >
+
+  http-client.env.json          shared, safe to commit — non-secret
+                                 defaults (a baseUrl, a tenant id)
+  http-client.private.env.json  gitignored, per-machine — the file a
+                                 real token belongs in
+<
+  Both optional, merged per environment name with the private file's own
+  keys winning on overlap. `runtime-analysis.env` warns once per session
+  if the private file exists on disk but its name is not found anywhere in
+  the project's own `.gitignore` (a substring check, not a real gitignore
+  matcher).
+
+  Resolution happens exactly once, immediately before a request is handed
+  to curl: request history (above) and the "-> sending ..." placeholder
+  both keep the literal `{{token}}`, never the value it resolved to. A
+  request with no placeholders at all is unaffected even with no
+  environment selected. Referencing an undefined variable, or one with no
+  environment selected at all, is a `vim.notify` error naming exactly what
+  is missing — never a silent `{{name}}` sent to a real server as a
+  literal string.
 
                                                     *runtime-analysis-auth-shorthand*
 Auth: shorthand ~
@@ -350,7 +388,8 @@ the method and path are pre-filled and the reader completes the base URL
 Reports: Neovim version, `curl` on PATH, every required lib.nvim module
 loading, live telemetry instances and persistently disabled namespaces in
 this session, the telemetry cache directory and whether it is writable,
-this project's history entry count, whether mdview.nvim and
+this project's history entry count, this project's defined environments
+and which one (if any) is active, whether mdview.nvim and
 lib.nvim.progress are available, and whether `setup()` has registered its
 commands yet in this session.
 
