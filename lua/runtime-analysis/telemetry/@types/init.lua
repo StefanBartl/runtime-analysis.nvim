@@ -138,6 +138,26 @@
 ---@field entries RA.Telemetry.ReportEntry[]
 
 -- ---------------------------------------------------------------------------
+-- Startup attribution (docs/ROADMAP.md §3.3)
+-- ---------------------------------------------------------------------------
+
+---One module load, timed. `self_ms` excludes everything this module required
+---in turn (which is what makes the report a waterfall rather than a list
+---where every parent double-counts its children); `total_ms` includes it.
+---@class RA.Telemetry.Startup.Entry
+---@field modname string
+---@field total_ms number
+---@field self_ms number
+---@field depth integer      # how deep in the require chain this load started
+---@field errored? boolean   # the module raised while loading; its timing is still recorded
+
+---@class RA.Telemetry.Startup.Report
+---@field running boolean
+---@field total_ms number                                  # sum of every module's self time
+---@field modules RA.Telemetry.Startup.Entry[]
+---@field roots { root: string, self_ms: number }[]        # per module-root (a plugin's own Lua namespace) totals, descending
+
+-- ---------------------------------------------------------------------------
 -- Instance
 -- ---------------------------------------------------------------------------
 

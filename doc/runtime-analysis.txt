@@ -400,7 +400,19 @@ the rest of this plugin. Command surface: >
   :RATelemetry export [path]   JSON, or Markdown if path ends .md
   :RATelemetry open [ns]       render + open externally
   :RATelemetry compare [ns] [days]  "this window vs the one before it"
+  :RATelemetry startup [top]   which module a plugin's startup cost sits in
 <
+Startup attribution (|:RATelemetry| `startup`) needs one manual call as the
+very first line of init.lua, before anything else loads — only modules
+required after it are ever seen: >lua
+
+  require("runtime-analysis.telemetry.startup").autostart()
+<
+It wraps the global `require`, times every cache miss (a `package.loaded`
+hit is not a load), and reports self-vs-total time per module and per
+module root, then stops itself at `UIEnter`. See the telemetry README for
+the full set of honest limits.
+
 Reading a namespace does not need an editor session at all —
 scripts/telemetry.lua in the repository is a headless CLI counterpart,
 built on the same `telemetry.load()` a live instance never had to exist

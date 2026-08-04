@@ -17,6 +17,8 @@
 ---   :RATelemetry coverage        which wrapped functions were never called
 ---   :RATelemetry export [path]   write a snapshot (JSON, or Markdown if path ends .md)
 ---   :RATelemetry open [ns]       render + open externally (report_style: auto/kit/mdview/file)
+---   :RATelemetry compare [ns] [days]  this window vs the one before it (default 7d)
+---   :RATelemetry startup [top]   which module a plugin's startup cost sits in
 
 local usercmd = require("lib.nvim.usercmd")
 local notify = require("lib.nvim.notify").create("[runtime-analysis.telemetry]")
@@ -39,6 +41,7 @@ local SUBCOMMANDS = {
   "export",
   "open",
   "compare",
+  "startup",
 }
 
 ---@return RA.Telemetry
@@ -334,6 +337,16 @@ function M.setup()
       end
     elseif first == "open" then
       open_report(rest)
+    elseif first == "startup" then
+      -- docs/ROADMAP.md §3.3. Namespace-free on purpose: this measures
+      -- module loads, not one namespace's wrapped functions, so the
+      -- second slot every other subcommand uses for a namespace is a
+      -- `top` count here instead.
+      local startup = require("runtime-analysis.telemetry.startup")
+      show(
+        startup.lines(startup.report({ top = tonumber(rest) or 40 })),
+        "runtime-analysis.telemetry — startup"
+      )
     elseif first == "compare" then
       -- `rest` is a namespace exactly the way every other subcommand's
       -- second slot already is; a third token, if numeric, overrides
@@ -353,7 +366,7 @@ function M.setup()
     end
   end, {
     nargs = "*",
-    desc = "runtime-analysis.telemetry: report|start|stop|reset|disable|enable|disabled|coverage|export|open|compare [namespace] [days]",
+    desc = "runtime-analysis.telemetry: report|start|stop|reset|disable|enable|disabled|coverage|export|open|compare|startup [namespace] [days]",
     complete = function(arg_lead, cmd_line)
       -- Second token of `start`/`stop`/`reset`/`open`/`compare` is always a
       -- namespace, never another subcommand — narrow completion there
