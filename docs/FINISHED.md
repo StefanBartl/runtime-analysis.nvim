@@ -46,17 +46,18 @@ pass: a dead link in `lua/runtime-analysis/telemetry/README.md` pointing
 at `../system/README.md` (a path that only ever made sense inside
 lib.nvim, where `lib.nvim.system.proc_trace` actually lives — fixed to an
 absolute GitHub link, the same fix shape an earlier dead-link finding in
-this repo already used), and a `docs/BINDINGS.md` reference to
-`runtime-analysis.env.SHARED_FILE` that the checker read as a missing
-module member. The second one is a real limitation worth recording
-plainly rather than chasing: `doc-references-missing` cross-references
-against `documentation.core.docs`'s own function index
-(`idx.fns_by_module`), built from `vim.treesitter`-extracted function
-definitions — a plain `M.SHARED_FILE = "..."` data-field assignment is
-never in that index no matter what `---@type` annotation sits above it,
-since the checker only ever tracked functions. `env.lua` still gained
-proper `---@type string` annotations on both exported constants (correct
-regardless), but the actual fix was rewording `docs/BINDINGS.md`'s prose
+this repo already used), and a `docs/BINDINGS.md` reference to the
+`SHARED_FILE` constant `runtime-analysis.env` exports, written as a
+dotted path the checker read as a missing module member. The second one
+is a real limitation worth recording plainly rather than chasing:
+`doc-references-missing` cross-references against `documentation.core
+.docs`'s own function index (`idx.fns_by_module`), built from
+`vim.treesitter`-extracted function definitions — a plain data-field
+assignment on the module table is never in that index no matter what
+`---@type` annotation sits above it, since the checker only ever tracked
+functions. `env.lua` still gained proper `---@type string` annotations
+on both exported constants (correct regardless), but the actual fix was
+rewording `docs/BINDINGS.md`'s prose
 to stop presenting the constant as a dotted module-member reference.
 
 New `map` job in `.github/workflows/ci.yml`, mirroring
