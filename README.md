@@ -117,6 +117,20 @@ header is very often where the real secret actually lives, and a response
 can be large and contain secrets of its own. `:RA history clear` empties
 the current project's history.
 
+```vim
+:RA env dev
+```
+
+`{{baseUrl}}/users/:id` in a request buffer resolves against the selected
+environment, read from two per-project JSON files at the project root —
+`http-client.env.json` (shared, safe to commit) and
+`http-client.private.env.json` (gitignored — the file a real token belongs
+in). With no argument, `:RA env` offers every name either file defines via
+`vim.ui.select`. Resolution happens exactly once, right before a request is
+handed to curl — request history and the "sending ..." placeholder both
+keep the literal `{{token}}`, never the value it resolved to. Full
+reasoning: [`docs/COMMANDS.md`](docs/COMMANDS.md).
+
 ## Setup
 
 ```lua
@@ -196,8 +210,9 @@ this short list.
   not previously exposed by that module at all), `usercmd.composer` for
   `:RA`, `progress` for the sending/cancel indicator and telemetry's own
   reports, `fs.project_key` + `cache.disk` for request history (and
-  telemetry's own persistence), plus `git`, `ui.kit`, `usercmd`, `notify`
-  and `autocmd`.
+  telemetry's own persistence), `fs.find_root` + `fs.json` for environment
+  files (`:RA env`), plus `git`, `ui.kit`, `usercmd`, `notify` and
+  `autocmd`.
 - `curl` on PATH.
 - [mdview.nvim](https://github.com/StefanBartl/mdview.nvim) — optional,
   soft dependency: renders a telemetry report as a live browser tab.

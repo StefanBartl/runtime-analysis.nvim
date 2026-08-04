@@ -26,6 +26,82 @@ Newest first, by date; original document order within a date.
 
 ## 2026-08-04
 
+### §2.1 Variables and environments
+
+`{{baseUrl}}/users/:id`, resolved from a per-project environment file — the
+single feature that separates "I can send a request" from "I keep my
+requests in this repo", now that §1 is fully shipped and the runner is
+daily-use material. The roadmap entry's own trap, stated up front: an
+environment file is where a real API token ends up, and it must never leak
+into anything this plugin writes to disk or shows on screen incidentally.
+
+Two per-project JSON files at the project root, the same split IntelliJ's
+HTTP Client already uses for exactly this problem — matched rather than
+invented, the same reasoning `parse.lua`'s own request shape already
+follows: `http-client.env.json` (shared, safe to commit) and
+`http-client.private.env.json` (gitignored — `.gitignore` in this
+repository's own root now lists it). Both optional, merged per environment
+name with the private file's own keys winning on overlap, so a project
+committing only the shared file still gives every reader working defaults.
+
+New module, [`lua/runtime-analysis/env.lua`](../lua/runtime-analysis/env.lua):
+`load_all`/`list_names`/`current`/`set_current`/`resolve`. The active
+environment is **session state, not saved state** — the same "a fact about
+this editing session, not worth writing to disk" posture `:RA cancel`'s own
+pending-request tracking already takes, chosen for the identical reason.
+
+**The trap, closed at the one place it actually matters:** `M.resolve`
+substitutes `{{name}}` and is called exactly once, in
+`send_current_buffer` (`bindings/usrcmds.lua`), immediately before a
+request is handed to `runner.run_async` — every other read of `request` in
+that function (the `→ sending METHOD url ...` placeholder, the pending-
+request record, every `history.record` call) keeps the original,
+unresolved table `M.resolve` never mutates. A `{{token}}` renders as
+`{{token}}` in the response pane's "sending" line and in `:RA history`
+forever after; only the one real outgoing request ever sees the value it
+resolved to.
+
+A request with no `{{placeholder}}` at all resolves to an unchanged copy
+with no error even with no environment ever selected — the common case
+(a plain hardcoded request) is entirely unaffected by this feature
+existing. Referencing a variable with nothing selected, or one the selected
+environment doesn't define, is a `vim.notify` error naming exactly which
+variable and which environments are available — never a silent `{{name}}`
+handed to curl as a literal string that would just fail unhelpfully
+downstream.
+
+**New command: `:RA env [name]`.** With a name, selects it directly (or
+reports the available ones if it doesn't exist); with none, `vim.ui.select`
+over every name the project's files define — the same picker `:RA history`
+already uses, for the identical "pick exactly one thing" shape.
+`<Tab>`-completed via a small custom composer arg type
+(`RA_ENV_NAME`, registered in `bindings/usrcmds.lua`) whose completer reads
+`env.list_names()` live rather than a static enum, since the set of names
+is data on disk, not something knowable when the command is registered.
+
+**One safety net past the roadmap entry's own literal scope, added while
+building it:** `M.load_all` warns once per session (`vim.notify`, `WARN`)
+if `http-client.private.env.json` exists on disk but its filename does not
+appear anywhere in the project's own `.gitignore` — a substring check
+against that file's raw content, not a real gitignore pattern matcher (a
+broader rule like `*.private.env.json` would also cover it and this check
+would still warn), so it is a nudge worth heeding, not a guarantee. Stated
+plainly as a scope addition, not a silent one: the roadmap entry only said
+the file "must be gitignore-able by default," not that this module should
+itself check.
+
+Verified: `env_spec.lua` — file-merge precedence (private wins on
+overlap, either side's unique keys survive), `set_current` rejecting an
+unknown name and naming the available ones, `resolve`'s three shapes (no
+placeholders at all → unchanged pass-through with no environment required;
+a placeholder with nothing selected → named error; every variable present
+→ substituted url/headers/body with the original request table provably
+unmutated afterward), and a placeholder the selected environment doesn't
+define → a named error, not a silent literal. Every case passes an
+isolated `opts.root` so the suite never touches this repository's own real
+`.gitignore` or project root — the identical isolation `history_spec.lua`
+already gets from its own `opts.dir`.
+
 ### §1.1 Async sending
 
 `:RASend` blocked until the response arrived — fine for a request bounded

@@ -42,7 +42,7 @@ same kind of overlay `docs/IDEAS.md` §6 uses for its own five-item shortlist.
 | **Medium** | Multi-day. Either a real decision has to be made first (a schema, a security trade-off, an open question the section names explicitly), or it touches several files or a small state machine — but the shape and the cost are both known. |
 | **Long-term** | Blocked on something this document itself already says is unmeasured or unresolved: an unmeasured `debug.getinfo` cost, several open design questions, another repository's half of the work, or a section the document itself calls speculative. |
 
-Twelve items have shipped out of this section since it was first written —
+Thirteen items have shipped out of this section since it was first written —
 see [`docs/FINISHED.md`](FINISHED.md) for the full record of each. What
 remains open:
 
@@ -56,7 +56,6 @@ remains open:
 
 | Item | Note |
 | --- | --- |
-| §2.1 Variables and environments | The feature that makes a request collection shareable; the security trap (tokens ending up in an env file) has to be designed in from the start, not added after |
 | §2.3 curl import / export | Import is both the more valuable half and the harder one — real argument parsing, not templating |
 | §2.5 Response assertions | Keep it to "is this endpoint still 200", not a general assertion language |
 | §3.2 Sampling | Mechanically straightforward; the honest-limits wording ("a sampled count is an estimate") has to ship in the same commit |
@@ -109,20 +108,6 @@ references without actually freeing the number for reuse.
 Everything here is "the runner is used daily now" work. Do none of it until
 §1 is done and the thing is actually being used.
 
-### 2.1 Variables and environments
-
-`{{baseUrl}}/users/:id`, resolved from a per-project environment file, with
-`dev`/`staging`/`prod` as named sets. This is the single feature that
-separates "I can send a request" from "I keep my requests in this repo" —
-without it, every committed request hardcodes a host and is wrong for
-everyone else.
-
-**The trap, stated up front:** an environment file is where API tokens end
-up. It must be gitignore-able by default and must never be echoed into the
-response pane or a log. A `{{token}}` that renders as `{{token}}` in
-history and as its real value only in the actual request is the design to
-aim for.
-
 ### 2.3 curl import / export
 
 Paste a `curl` command line, get a request buffer; the reverse for sharing.
@@ -142,9 +127,9 @@ endpoint, is it still 200" shape, not as a general assertion language.
 ### 2.6 GraphQL / multipart / file upload
 
 Named for completeness. GraphQL is mostly "a POST with a specific body
-shape" and is cheap once §2.1 exists; multipart file upload is a real
-`curl` argument-construction problem and much less so. Neither is a
-priority without a concrete need.
+shape" and is cheap now that §2.1 (see `docs/FINISHED.md`) exists;
+multipart file upload is a real `curl` argument-construction problem and
+much less so. Neither is a priority without a concrete need.
 
 ---
 
