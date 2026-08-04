@@ -26,12 +26,14 @@ local M = {}
 ---Bash line-continuation (`\` at end of line) joined into one logical
 ---line before tokenizing — the shape every multi-header "copy as cURL"
 ---snippet actually pastes as.
+---@internal
 ---@param cmd string
 ---@return string
 local function join_continuations(cmd)
   return (cmd:gsub("\\[ \t]*\r?\n", " "))
 end
 
+---@internal
 ---@param cmd string
 ---@return string[]
 local function tokenize(cmd)
@@ -282,12 +284,14 @@ end
 ---regardless of which OS this plugin happens to run on, and `M.format`'s
 ---whole point is producing something safe to paste into any real shell or
 ---share verbatim in a doc.
+---@internal
 ---@param s string
 ---@return string
 local function shq(s)
   return "'" .. s:gsub("'", "'\\''") .. "'"
 end
 
+---@internal
 ---@param headers table<string, string>
 ---@return string?
 local function content_type_of(headers)

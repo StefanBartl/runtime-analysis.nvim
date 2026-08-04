@@ -37,6 +37,7 @@
 
 local M = {}
 
+---@internal
 ---@param namespace string
 ---@param main string
 ---@param settings table
@@ -53,6 +54,7 @@ local function auto_wrap(namespace, main, settings)
   })
 end
 
+---@internal
 ---@param lib_opts table
 local function wrap_lib_nvim(lib_opts)
   local ok, telemetry_wrap = pcall(require, "lib.strategies.telemetry_wrap")

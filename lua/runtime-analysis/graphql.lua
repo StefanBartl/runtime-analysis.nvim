@@ -42,6 +42,7 @@ end
 ---add a blank line between GraphQL query and variables if you need it").
 ---No blank line at all means no variables block, the whole body is query
 ---text.
+---@internal
 ---@param body string
 ---@return string query
 ---@return string? variables_text

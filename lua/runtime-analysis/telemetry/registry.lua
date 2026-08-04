@@ -40,6 +40,7 @@ local sites = setmetatable({}, { __mode = "k" })
 
 ---Recompute the per-site "does anyone want this?" flags. Called whenever the
 ---subscriber set or an instance's mode changes — never per call.
+---@internal
 ---@param site table
 local function refresh(site)
   local args, time, errors, outermost, callers = false, false, false, false, false
@@ -84,6 +85,7 @@ end
 ---@param errored boolean
 ---@param err_fp string|nil
 ---@param caller_key string|nil docs/ROADMAP.md §3.1 -- `"short_src:currentline"` of the immediate caller, or nil when nobody wants it or `debug.getinfo` returned nothing (a C caller, e.g. `vim.schedule`'s own dispatch)
+---@internal
 local function dispatch(site, fp, dur, errored, err_fp, caller_key)
   local subs = site.subs
   for i = 1, #subs do
@@ -103,6 +105,7 @@ end
 -- The wrapper
 -- ---------------------------------------------------------------------------
 
+---@internal
 ---@param site table
 ---@return function
 local function make_wrapper(site)

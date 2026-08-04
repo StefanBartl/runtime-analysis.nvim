@@ -34,6 +34,7 @@
 
 local M = {}
 
+---@internal
 ---@param s string?
 ---@return string
 local function esc(s)
@@ -111,6 +112,7 @@ tr.fnrow:hover td{background:var(--accent-soft)}
 .empty{padding:40px 24px;color:var(--muted);font-size:14px;text-align:center}
 ]]
 
+---@internal
 ---@param n number?
 ---@return string
 local function num(n)
@@ -121,6 +123,7 @@ local function num(n)
   return (s:reverse():gsub("(%d%d%d)", "%1 "):reverse():gsub("^%s+", ""))
 end
 
+---@internal
 ---@param fingerprints { fingerprint: string, count: integer, share: number }[]?
 ---@param symbol string
 ---@return string
@@ -142,6 +145,7 @@ end
 ---Turn one report's entries into flat row objects, JSON-ready — the exact
 ---data a browser-side `<script>` needs, computed here rather than
 ---client-side so the JS stays render-only.
+---@internal
 ---@param report RA.Telemetry.Report
 ---@return table[]
 local function rows_for(report)

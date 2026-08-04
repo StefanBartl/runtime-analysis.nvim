@@ -47,6 +47,7 @@ local M = {}
 
 local DEFAULT_MAX_DEPTH = 3
 
+---@internal
 ---@param fn function
 ---@return integer
 local function upvalue_count(fn)
@@ -54,6 +55,7 @@ local function upvalue_count(fn)
   return (ok and info and info.nups) or 0
 end
 
+---@internal
 ---@param fn function
 ---@return { what: string, short_src: string, linedefined: integer }?
 local function source_of(fn)
@@ -64,6 +66,7 @@ local function source_of(fn)
   return { what = info.what, short_src = info.short_src, linedefined = info.linedefined }
 end
 
+---@internal
 ---@param t table
 ---@return integer
 local function count_fields(t)
@@ -79,6 +82,7 @@ end
 ---already handled separately elsewhere): guessing at a useful
 ---representation for those is exactly the kind of thing this module's
 ---own "record it, don't guess it" posture refuses.
+---@internal
 ---@param v any
 ---@return string?
 local function scalar_repr(v)
@@ -100,6 +104,7 @@ end
 ---itself a table. `nil` when there is no metatable, no `__index`, or
 ---`__index` is a function — see the module doc-comment's second design
 ---question for why a function `__index` is never called to find out.
+---@internal
 ---@param t table
 ---@return table<string, true>? shadowed
 local function shadowed_keys(t)
@@ -117,6 +122,7 @@ local function shadowed_keys(t)
   return out
 end
 
+---@internal
 ---@param mt table?
 ---@return "table"|"function"|"other"|nil
 local function index_kind_of(mt)
@@ -132,6 +138,7 @@ local function index_kind_of(mt)
   return "other"
 end
 
+---@internal
 ---@param t table
 ---@param seen table<table, true>
 ---@param depth integer
@@ -223,6 +230,7 @@ function M.inspect(module_id, opts)
   return report, nil
 end
 
+---@internal
 ---@param node RA.Inspect.Node one `walk` entry
 ---@param indent string
 ---@param out string[]

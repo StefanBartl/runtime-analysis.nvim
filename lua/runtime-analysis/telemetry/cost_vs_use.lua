@@ -33,12 +33,14 @@ local M = {}
 ---a three-line pure-string function, and pulling in `startup.lua` for it
 ---would be the wrong kind of coupling for what is otherwise a
 ---deliberately decoupled join (see the module doc-comment).
+---@internal
 ---@param modname string
 ---@return string
 local function root_of(modname)
   return (modname:match("^([^.]+)") or modname)
 end
 
+---@internal
 ---@param t table
 ---@return integer
 local function count_keys(t)
@@ -133,6 +135,7 @@ function M.build_all(namespaces, startup_report)
   return out
 end
 
+---@internal
 ---@param n number
 ---@return string
 local function num(n)

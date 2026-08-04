@@ -105,6 +105,7 @@ local DEFAULT_CACHE_DIR = vim.fn.stdpath("cache") .. "/runtime-analysis.nvim/cac
 -- Helpers
 -- ---------------------------------------------------------------------------
 
+---@internal
 ---@param prefix string|nil
 ---@param name string
 ---@return string
@@ -118,6 +119,7 @@ end
 ---Decide whether a field is in scope. `only`/`except` are exact names by
 ---design — `filter` is the one escape hatch, rather than two overlapping ones
 ---(exact names plus patterns) that each need their own edge cases explained.
+---@internal
 ---@param name string
 ---@param fn function
 ---@param opts RA.Telemetry.WrapOpts
@@ -157,6 +159,7 @@ end
 ---keys (`bindings.actions.next_heading`), and "profile everything under
 ---`core.`" is then a one-liner instead of a list that goes stale the moment a
 ---module gains a function.
+---@internal
 ---@param spec string[]|true|fun(key: string): boolean|nil
 ---@param key string
 ---@return boolean
@@ -182,6 +185,7 @@ end
 ---Scope a *module* (not a function) for `wrap_loaded`. Deliberately the same
 ---vocabulary as the per-function `only`/`except`/`filter`, one level up, so
 ---there is one thing to learn rather than two.
+---@internal
 ---@param name string
 ---@param opts RA.Telemetry.WrapLoadedOpts
 ---@return boolean
@@ -221,6 +225,7 @@ end
 ---arguments," not a parallel reimplementation of it) — both are the
 ---identical shape (`RA.Telemetry.ArgStats`) and the identical bound, so one
 ---function owns the logic rather than two copies drifting apart.
+---@internal
 ---@param bucket RA.Telemetry.ArgStats?
 ---@param fp string
 ---@param max_values integer
@@ -247,6 +252,7 @@ local function accumulate(bucket, fp, max_values)
   return bucket
 end
 
+---@internal
 ---@return RA.Telemetry.Data
 local function empty_delta()
   return {
@@ -895,6 +901,7 @@ end
 ---Is any of `main` itself or `main.*` present in `package.loaded` yet?
 ---Checked before `M.auto()` creates an instance, so a plugin that has not
 ---loaded anything wrappable yet does not leave an empty namespace behind.
+---@internal
 ---@param main string
 ---@return boolean
 local function module_tree_loaded(main)
@@ -915,6 +922,7 @@ end
 ---helper produces. Not `wrap_loaded()`'s own default (that stays
 ---unopinionated); `M.auto()` is specifically the "instrument a whole plugin
 ---generically" convenience, where this default earns its keep.
+---@internal
 ---@param name string
 ---@return boolean
 local function default_module_filter(name)

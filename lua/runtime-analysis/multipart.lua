@@ -47,6 +47,7 @@ end
 
 ---`boundary=...` out of a `Content-Type` header value — quoted or bare,
 ---curl and every real client accept both.
+---@internal
 ---@param content_type string
 ---@return string? boundary
 local function extract_boundary(content_type)
@@ -62,6 +63,7 @@ M._extract_boundary = extract_boundary -- test-only
 ---`--boundary--` lines. Deliberately tolerant of what comes before the
 ---first delimiter and after the last: a body pasted with leading/trailing
 ---blank lines still parses the same real parts.
+---@internal
 ---@param body string
 ---@param boundary string
 ---@return RA.Multipart.Part[]
@@ -103,6 +105,7 @@ M._parse_parts = parse_parts -- test-only
 
 ---A part's field `name` and optional `filename`, out of its
 ---`Content-Disposition: form-data; name="..."; filename="..."` header.
+---@internal
 ---@param part RA.Multipart.Part
 ---@return string? name
 ---@return string? filename
@@ -119,6 +122,7 @@ end
 ---recognized only when it is the part's *entire* content (one line,
 ---nothing else), the same way `parse.lua` elsewhere never guesses at a
 ---shape that could mean two different things.
+---@internal
 ---@param part RA.Multipart.Part
 ---@return string content
 ---@return string? file_ref the path after `< `, when the content is exactly one such line

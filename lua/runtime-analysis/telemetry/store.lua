@@ -63,6 +63,7 @@ function M.empty()
 end
 
 ---Normalize whatever came back from disk into the current shape.
+---@internal
 ---@param raw any
 ---@return RA.Telemetry.Data
 local function normalize(raw)
@@ -136,6 +137,7 @@ end
 ---by argument profiling (`functions[key].args`) and error fingerprinting
 ---(`functions[key].error_fp`, docs/ROADMAP.md §2.5), the identical shape
 ---for both, hence one merge function rather than two copies of it.
+---@internal
 ---@param dst RA.Telemetry.ArgStats
 ---@param src RA.Telemetry.ArgStats
 ---@param max_values integer
@@ -184,6 +186,7 @@ function M.count_keys(t)
   return n
 end
 
+---@internal
 ---@param dst RA.Telemetry.Timing
 ---@param src RA.Telemetry.Timing
 local function merge_timing(dst, src)

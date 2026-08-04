@@ -47,6 +47,7 @@ local M = {}
 ---all) passes through unchanged as the `Authorization` value — a generic
 ---fallback rather than an error, so a scheme this function does not know
 ---about specifically still works, just without the encoding help.
+---@internal
 ---@param value string
 ---@return string
 local function resolve_auth_shorthand(value)
