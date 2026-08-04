@@ -61,3 +61,5 @@
 ---from.
 ---@class RA.Inspect.Report : RA.Inspect.Node
 ---@field module_id string
+
+return {}
