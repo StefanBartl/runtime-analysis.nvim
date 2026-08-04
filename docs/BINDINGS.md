@@ -22,6 +22,8 @@ All four are registered unconditionally by `require("runtime-analysis").setup()`
 | `:RA history` | none | `vim.ui.select` picker over this project's recorded sends (method/url/status/timestamp only — see `docs/COMMANDS.md`), newest first; picking one reopens it via `open_request`. |
 | `:RA history clear` | none | Clears this project's recorded history. No confirmation prompt. |
 | `:RA env [name]` | environment name, optional, `<Tab>`-completed | With `name`, selects it as the active environment `{{var}}` placeholders resolve against; with none, `vim.ui.select` over every name the project's env files define. See `docs/COMMANDS.md` for the file format. |
+| `:RA import` | none (or a range, e.g. `'<,'>RA import`) | Parses a `curl` command line — from the system clipboard, or the given range's lines — into a new request buffer. |
+| `:RA export` | none | Yanks the `###` block under the cursor as a shareable `curl` command line to the unnamed register. |
 | `:RARequest` | none | Flat alias for `:RA request` — see below for why both exist. |
 | `:RASend` | none | Flat alias for `:RA send`. |
 | `:RATelemetry [args]` | see below | Opt-in call counting and usage statistics for any plugin. Full reference: [`lua/runtime-analysis/telemetry/README.md`](../lua/runtime-analysis/telemetry/README.md). |
@@ -29,9 +31,9 @@ All four are registered unconditionally by `require("runtime-analysis").setup()`
 Built via [`lib.nvim.usercmd.composer`](https://github.com/StefanBartl/lib.nvim/blob/main/lua/lib/nvim/usercmd/composer/README.md)
 — the same verb-first shape `:DocMap`, `:MDView` and `:Replace` already use
 (`<Tab>` after `:RA ` completes `request`/`send`/`yank`/`cancel`/`history`/
-`env`; `:RA history <Tab>` completes `clear`, `:RA env <Tab>` completes
-whatever names this project's env files currently define). `:RATelemetry`
-stays a
+`env`/`import`/`export`; `:RA history <Tab>` completes `clear`, `:RA env
+<Tab>` completes whatever names this project's env files currently
+define). `:RATelemetry` stays a
 second, separate compound command rather than folding under `:RA telemetry
 ...`, the same split documentation.nvim draws between `:DocMap`
 (writes/verifies) and `:DocBrowse` (only reads) — here between "runs a
@@ -71,6 +73,17 @@ files at the project root (`runtime-analysis.env.SHARED_FILE`/`.PRIVATE_FILE`),
 merged per name with the private file's own keys winning on overlap. Full
 reasoning, file format and the "trap" this exists to avoid:
 `docs/COMMANDS.md`'s own section on it.
+
+### curl import/export (`:RA import` / `:RA export`)
+
+`:RA import` reads a `curl` command line — from a real range invocation's
+selected lines, or the system clipboard otherwise — and parses it
+(`lua/runtime-analysis/curl.lua`, a real if bounded argument parser) into
+a new request buffer via `open_request`. `:RA export` is the reverse:
+formats the `###` block under the cursor as a shareable command line,
+yanked to the unnamed register. Neither resolves `{{var}}` placeholders —
+see `docs/COMMANDS.md` for the full reasoning, the same trap `:RA env`'s
+own section states.
 
 ### `:RATelemetry` subcommands
 

@@ -330,6 +330,88 @@ local function select_environment(name)
   end)
 end
 
+---`:RA import` (docs/ROADMAP.md §2.3) — parses a `curl` command line into a
+---new request buffer via `ra.open_request`, the same entry point
+---documentation.nvim's own Endpoints mode already uses. Two sources, in
+---order of precedence: a real visual/line-range invocation (`'<,'>RA
+---import`) reads the selected lines; a bare `:RA import` reads the system
+---clipboard (`+`), falling back to the unnamed register — "paste a curl
+---command" is the roadmap entry's own framing, and a real OS paste is
+---exactly what that means for a bare invocation with nothing selected.
+---@param ra RA
+---@param ctx table composer's handler context — only `ctx.range` is read
+local function do_import(ra, ctx)
+  local source
+  if ctx.range and ctx.range.range and ctx.range.range > 0 then
+    local lines = vim.api.nvim_buf_get_lines(0, ctx.range.line1 - 1, ctx.range.line2, false)
+    source = table.concat(lines, "\n")
+  else
+    local clipboard = vim.fn.getreg("+")
+    source = (clipboard ~= "" and clipboard) or vim.fn.getreg('"')
+  end
+
+  if not source or vim.trim(source) == "" then
+    vim.notify(
+      "runtime-analysis: nothing to import — select a curl command, or copy one to the clipboard first",
+      vim.log.levels.WARN
+    )
+    return
+  end
+
+  local request, err = require("runtime-analysis.curl").parse(source)
+  if not request then
+    vim.notify("runtime-analysis: " .. err, vim.log.levels.ERROR)
+    return
+  end
+
+  local lines = { ("%s %s"):format(request.method, request.url) }
+  local names = vim.tbl_keys(request.headers)
+  table.sort(names)
+  for _, name in ipairs(names) do
+    lines[#lines + 1] = ("%s: %s"):format(name, request.headers[name])
+  end
+  if request.body then
+    lines[#lines + 1] = ""
+    vim.list_extend(lines, vim.split(request.body, "\n", { plain = true }))
+  end
+
+  ra.open_request(lines)
+end
+
+---`:RA export` (docs/ROADMAP.md §2.3) — the reverse of `:RA import`: parses
+---whichever `###` block the cursor is in (the identical resolution `:RA
+---send` uses) and formats it as a `curl` command line via
+---`runtime-analysis.curl.format`, yanked to the unnamed register the same
+---way `:RA yank` already yanks a response body.
+---
+---**Never resolves `{{var}}` placeholders** — `runtime-analysis.curl.format`
+---is handed the raw, unresolved request `parse.parse` returns, the same
+---request `send_current_buffer` keeps for history/the "sending ..."
+---placeholder. Exporting is sharing, and `runtime-analysis.env`'s own trap
+---applies here identically: a `{{token}}` must render as `{{token}}`,
+---never the value it would resolve to.
+local function do_export()
+  local parse = require("runtime-analysis.parse")
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+  local blocks = parse.split(lines)
+  local block_lines = lines
+  if #blocks > 0 then
+    local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
+    local block = parse.block_at(blocks, cursor_line)
+    block_lines = block and block.lines or lines
+  end
+
+  local request, err = parse.parse(block_lines)
+  if not request then
+    vim.notify("runtime-analysis: " .. err, vim.log.levels.ERROR)
+    return
+  end
+
+  local cmd = require("runtime-analysis.curl").format(request)
+  vim.fn.setreg('"', cmd)
+  vim.notify("runtime-analysis: curl command yanked to the unnamed register")
+end
+
 ---@param ra RA The plugin's own module table — read for `ra.opts` and called
 ---back into for `ra.open_request` so every command stays in sync with a
 ---`setup()` that has already run.
@@ -386,6 +468,21 @@ function M.setup(ra)
         args = { { name = "name", type = "RA_ENV_NAME", optional = true } },
         run = function(ctx)
           select_environment(ctx.args.name)
+        end,
+      },
+      {
+        path = { "import" },
+        desc = "Import a curl command (visual selection, or the clipboard) into a new request buffer",
+        range = true,
+        run = function(ctx)
+          do_import(ra, ctx)
+        end,
+      },
+      {
+        path = { "export" },
+        desc = "Export the request under the cursor as a curl command, yanked to the unnamed register",
+        run = function()
+          do_export()
         end,
       },
     },
