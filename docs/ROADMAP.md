@@ -58,14 +58,6 @@ remaining open item is Long-term/speculative:
 | §4.4 A real dashboard rather than a report | Revisited 2026-08-04 and deliberately left open — no evidence yet that the Markdown report actually feels limiting, this section's own stated precondition |
 | §7.3 LSP request latency | Explicitly low priority; territory other tools already cover well |
 
-### Rejected outright — not phased
-
-§3.5 (a general profiler) and everything in "Deliberately not building" at
-the end of this document are not on any timeline at all. A documented
-rejection is not a phase with an infinite delay attached to it; it is a
-closed question, kept here so it does not get re-opened from a blank slate.
-
----
 
 ## 1. HTTP request runner — the stated gaps
 
@@ -189,7 +181,6 @@ checklist pass have now shipped — moved to [`docs/FINISHED.md`](FINISHED.md).
 
 | Idea | Why not | Revisit if |
 |---|---|---|
-| **A general Lua profiler** | `:profile` and LuaJIT's profiler exist and are better at it; this module's premise is cheap-and-always-on, which is a different instrument (§3.5) | Realistically never — point at the real profiler instead |
 | **A standalone binary / web app** | `docs/ECOSYSTEM.md` §6 costed this in full and answered "a Neovim plugin": every input this needs already lives in the editor, and a separate process would have to re-acquire all of it | The data outgrows what an editor session can hold — nowhere near true |
 | **Telemetry that leaves the machine** | No account, no upload, no aggregation service. The word "telemetry" carries an expectation this deliberately does not meet, and the README should probably say so more loudly than it does | Never |
 | **Sending requests from documentation.nvim's static HTML page** | A browser page cannot `pcall(require, ...)` a Neovim plugin — this is why step 6 became an editor mode instead. Not a gap, a category error | Never |
