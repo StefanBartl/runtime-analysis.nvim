@@ -56,9 +56,12 @@ local function sanitize(key)
   return s
 end
 
+---@param root? string Absolute repository root — see `M.list`'s own
+---doc-comment for why a reader (unlike a recorder) sometimes needs one
+---other than cwd.
 ---@return string
-local function cache_key()
-  return "history/" .. sanitize(project_key())
+local function cache_key(root)
+  return "history/" .. sanitize(project_key(root))
 end
 
 ---Record one send attempt for the current project. Best-effort — a disk
@@ -102,10 +105,21 @@ end
 ---This project's history, newest first — the order a picker should show
 ---it in, so the most likely entry to want is at the top rather than
 ---requiring a scroll to the bottom.
----@param opts? Lib.Cache.Opts See `M.record`'s own note on this parameter.
+---
+---`opts.root`, unlike `M.record`, is a real feature here rather than a
+---test-only escape hatch: `M.record` always writes for wherever the reader
+---is *currently working* (cwd), which is the only sensible meaning for "I
+---just sent a request" — but a cross-repo reader (documentation.nvim's own
+---endpoint-coverage join, docs/ROADMAP.md §6.2) analyzes a tree via
+---`opts.root`, which is not necessarily cwd at all, and needs *that*
+---project's history, not whichever one Neovim happens to be sitting in.
+---@param opts? Lib.Cache.Opts|{ root?: string } `root` overrides the
+---project key (default cwd, via `project_key()`); the rest is `M.record`'s
+---own cache-dir override, unchanged.
 ---@return RA.History.Entry[]
 function M.list(opts)
-  local entries = disk.load(cache_key(), opts) or {}
+  opts = opts or {}
+  local entries = disk.load(cache_key(opts.root), opts) or {}
   local out = {}
   for i = #entries, 1, -1 do
     out[#out + 1] = entries[i]
@@ -113,10 +127,11 @@ function M.list(opts)
   return out
 end
 
----@param opts? Lib.Cache.Opts See `M.record`'s own note on this parameter.
+---@param opts? Lib.Cache.Opts|{ root?: string } See `M.list`'s own note on `root`.
 ---@return boolean ok
 function M.clear(opts)
-  return disk.clear(cache_key(), opts)
+  opts = opts or {}
+  return disk.clear(cache_key(opts.root), opts)
 end
 
 M.MAX_ENTRIES = MAX_ENTRIES

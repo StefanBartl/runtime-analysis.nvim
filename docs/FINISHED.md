@@ -26,6 +26,47 @@ Newest first, by date; original document order within a date.
 
 ## 2026-08-04
 
+### §6.2 Endpoint coverage
+
+The last non-speculative Medium item. documentation.nvim knows every
+route the source declares; this plugin's request history knows which
+ones were actually sent. "Three of your eleven routes have never been
+exercised" is a real answer neither side can give alone. Request history
+(§1.3) needed no changes to serve this — what remained, exactly as this
+entry said it would, was the join itself.
+
+**Shipped entirely as new work in
+[documentation.nvim](https://github.com/StefanBartl/documentation.nvim)**
+— a new `documentation.core.endpoint_coverage` module, soft dependency
+(`pcall(require, "runtime-analysis.history")`), joined into the existing
+Endpoints browse mode as a leading `○` badge for a route history never
+matched, plus real sends (timestamp + outcome) in the detail pane when
+there are any. The one real design question the entry itself named —
+"a route like `/users/:id` is not a literal string a recorded URL will
+ever equal" — resolved to converting a declared route path into a Lua
+pattern matching one segment per param (`:id` — Express/Fastify/Koa/
+Connect/Restify — or `{id}` — Hapi), and extracting a recorded URL's own
+path the same way regardless of whether it is a real absolute URL, a
+bare path, or an unresolved `{{var}}`-templated one (`runtime-analysis.env`'s
+own trap: history records the template, never the resolved value, so a
+`{{baseUrl}}` prefix is stripped exactly like a real scheme+host would
+be). Deliberately narrower than a full path-to-regexp implementation:
+optional params, wildcards and regex routes are outside what this
+pattern can express, and a route using one is simply never matched, not
+matched wrong.
+
+**One real addition on this repository's own side, small but genuine.**
+`history.list()`/`history.clear()` gained an `opts.root` override —
+`M.record` stays cwd-only (recording is always "I just sent a request
+from *here*"), but a cross-repo reader like documentation.nvim's join
+analyzes `opts.root`, which is not necessarily cwd at all, and needed
+*that* project's history rather than whichever one Neovim happened to be
+sitting in.
+
+Full writeup: documentation.nvim's `lua/documentation/editor/browse/README.md`
+("Endpoints mode" section) and `lua/documentation/core/endpoint_coverage.lua`
+itself.
+
 ### §3.1 Call trees, not just counts
 
 The single biggest capability gap in the whole document, gated on one

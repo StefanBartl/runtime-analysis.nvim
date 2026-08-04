@@ -88,6 +88,24 @@ return function(H)
     )
   end
 
+  -- `opts.root` (docs/ROADMAP.md §6.2): a reader analyzing a different tree
+  -- than cwd gets *that* tree's history, not whichever project Neovim
+  -- happens to be sitting in — `M.record` itself stays cwd-only (recording
+  -- is always "I just sent a request from here"), only `M.list`/`M.clear`
+  -- take the override.
+  do
+    local dir = vim.fn.tempname()
+    -- Recorded with no `root` — keys on cwd, same as every other test here.
+    history.record("GET", "https://api.example.com/here", 200, nil, { dir = dir })
+
+    eq(#history.list({ dir = dir }), 1, "history.list: cwd's own history, unaffected by root")
+    eq(
+      #history.list({ dir = dir, root = "/not/the/same/project/at/all" }),
+      0,
+      "history.list: a different root reads a genuinely different, empty history"
+    )
+  end
+
   -- Clearing.
   do
     local dir = vim.fn.tempname()
