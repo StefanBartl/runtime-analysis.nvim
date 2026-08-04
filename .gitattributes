@@ -1,0 +1,29 @@
+# Shell scripts and git hooks must keep LF endings regardless of core.autocrlf.
+# With CRLF, `set -euo pipefail` is parsed as `pipefail\r` and bash aborts with
+# "invalid option name" — the hook silently stops working on a Windows clone.
+*.sh              text eol=lf
+scripts/hooks/*   text eol=lf
+
+# Lua sources too, because `.stylua.toml` sets `line_endings = "Unix"` and a
+# formatter's rule that the working tree contradicts is a rule that fails only
+# for some contributors. With `core.autocrlf=true` on Windows, a checked-out
+# `.lua` file arrives CRLF, `stylua --check` rejects every line of it, and the
+# same command passes on Linux CI — which is the worst shape a check can have:
+# green where nobody is looking, red where the work happens.
+*.lua             text eol=lf
+
+# Generated map artifacts: keep them out of diffs and language stats, but do
+# not mark them binary — they are reviewed on purpose.
+#
+# `eol=lf` for the same reason as the two blocks above, and here it is not a
+# tidiness argument but a correctness one: `scripts/gen_map.lua --check`
+# regenerates these in memory and byte-compares them against what is on disk.
+# The generator writes LF. With `core.autocrlf=true` on Windows they are
+# checked out as CRLF, every byte after the first newline differs, and the
+# `map` CI gate reports the map as stale forever — on a clean checkout, with
+# nothing actually wrong. Regenerating appears to fix it locally until the
+# next `git checkout` or `git stash` converts them back. Same convention
+# documentation.nvim's own `.gitattributes` already uses, verbatim reasoning.
+docs/map/index.html      text eol=lf linguist-generated=true
+docs/map/module_map.json text eol=lf linguist-generated=true
+docs/map/overview.md     text eol=lf linguist-generated=true
