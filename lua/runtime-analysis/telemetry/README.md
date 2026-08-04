@@ -419,6 +419,7 @@ require("runtime-analysis.telemetry.command").setup()
 :RATelemetry open [ns]       " render + open externally — see "Browser report" below
 :RATelemetry compare [ns] [days]   " "this week vs last week" — see below
 :RATelemetry startup [top]   " which module a plugin's startup cost sits in
+:RATelemetry cost            " startup cost vs. call count, worst first
 ```
 
 `start`/`stop`/`reset`/`open`/`compare` take an optional namespace —
@@ -693,6 +694,51 @@ leaving the wrapper installed would keep paying for something with nothing
 left to measure. `start()`/`stop()`/`reset()`/`report()` are all available
 directly if you want a different window.
 
+## Plugin cost vs. use
+
+`:RATelemetry cost` (docs/ROADMAP.md §7.2) — startup attribution above
+answers "what did loading cost"; a telemetry report answers "how much is it
+actually used." Combined: **the report that gets plugins deleted.**
+
+```
+cost vs. use — worst (expensive, underused) first
+
+  legacy-widget.nvim              41.20 ms startup           3 calls  (0.1 calls/ms)
+      matched module root(s): legacy_widget
+  markdown.nvim                    9.80 ms startup       8 200 calls  (836.7 calls/ms)
+      matched module root(s): markdown
+```
+
+**The join the roadmap entry treated as free is the reason this shipped
+after §3.3 rather than alongside it.** Startup attribution groups by module
+*root* — a plugin's own Lua namespace, `"markdown"` for
+`require("markdown.buffer")`. Telemetry groups by *namespace* — a
+caller-chosen label, usually the repo name, `"markdown.nvim"`. The two are
+only sometimes the same string, and guessing when they match (stripping
+`".nvim"`, fuzzy comparison) would silently attribute one plugin's startup
+cost to a different plugin on a name collision — worse than reporting
+nothing.
+
+The actual join needs no guessing: `inst.resolved_modules()` already knows,
+for every function that resolves to a real module path
+(`wrap_loaded()`/explicit `module_id` only — a plain `wrap(tbl, "label")`
+does not resolve, by the identical honest-limits rule that function's own
+doc-comment already states), which real modules a namespace's own calls
+live in. Reading the module root off those real paths and matching it
+against startup's own per-root totals joins on the one thing both features
+already track honestly — a real Lua module path, never a name that merely
+looks similar.
+
+**`startup_ms` is `nil`, never `0`, whenever cost genuinely cannot be
+determined** — "unknown" and "measured at zero" are different claims, and
+`:RATelemetry cost` names which of two reasons applies: no real module path
+resolves for this namespace at all, or one does but it never appears in the
+startup report (`autostart()` was not running, or it loaded too early to be
+seen). New module:
+[`lua/runtime-analysis/telemetry/cost_vs_use.lua`](cost_vs_use.lua) — a
+pure join over already-collected data from both features, requiring
+neither `telemetry.startup` nor a live instance to test in isolation.
+
 ## Error fingerprinting
 
 `errors` (docs/ROADMAP.md §2.5) already counted how *often* a wrapped function
@@ -832,6 +878,7 @@ ways to surprise, notably around `package.loaded` identity. Use explicit
 | `store.lua` | persistence, namespace sanitization, merge-on-write, day buckets, pruning, module-id map, read-without-an-instance |
 | `fingerprint.lua` | argument → bounded, non-secret string key |
 | `startup.lua` | startup attribution: wraps `require`, times each cache miss, self-vs-total waterfall (standalone — no instance, no namespace, no persistence) |
+| `cost_vs_use.lua` | joins `startup.lua`'s per-root cost against a namespace's own `resolved_modules()`, on real module paths only — never a name guess |
 | `report.lua` | report building + rendering (terminal lines and Markdown), incl. the memoization hint |
 | `report_file.lua` | where a rendered Markdown report lives on disk, and writing one there |
 | `report_style.lua` | resolve `report_style` ("auto"/"kit"/"mdview"/"file") to a concrete destination |

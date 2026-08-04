@@ -401,6 +401,7 @@ the rest of this plugin. Command surface: >
   :RATelemetry open [ns]       render + open externally
   :RATelemetry compare [ns] [days]  "this window vs the one before it"
   :RATelemetry startup [top]   which module a plugin's startup cost sits in
+  :RATelemetry cost            startup cost vs. call count, worst first
 <
 Startup attribution (|:RATelemetry| `startup`) is opt-in, from this
 plugin's own lazy.nvim spec — `init` runs for every plugin before lazy
@@ -420,6 +421,15 @@ module root, then stops itself at `UIEnter`. Only modules required after
 it starts are ever seen. See the telemetry README for the full set of
 honest limits, and for why this is an `init` hook rather than a line in
 your own init.lua.
+
+`:RATelemetry cost` combines `startup` with a live instance's own call
+count into one number: what a plugin costs to load versus how much it is
+used. The join is on real module paths (`resolved_modules()`), never a
+name comparison between a startup module root and a telemetry namespace
+— those are only sometimes the same string, and guessing would risk
+attributing one plugin's cost to another. `startup_ms` reads "unknown",
+not "0", whenever no real module path can be matched. See the telemetry
+README's own "Plugin cost vs. use" section for the full reasoning.
 
 Reading a namespace does not need an editor session at all —
 scripts/telemetry.lua in the repository is a headless CLI counterpart,

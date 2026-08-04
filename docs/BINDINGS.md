@@ -111,11 +111,12 @@ own section states.
 | `:RATelemetry open [ns]` | render + open externally (`report_style`: `auto`/`kit`/`mdview`/`file`) |
 | `:RATelemetry compare [ns] [days]` | "this window vs the one before it" (default 7 days) — newly-hot/gone-cold/changed functions |
 | `:RATelemetry startup [top]` | which module a plugin's startup cost sits in, as a waterfall. Opt-in via `autostart()` from this plugin's own lazy.nvim `init` hook — see the telemetry README for why `init` and not `init.lua`. |
+| `:RATelemetry cost` | startup cost vs. call count per namespace, worst (expensive, underused) first — joins `startup` and every live instance's own `resolved_modules()` on real module paths, never a name guess. |
 
 `<Tab>` after `start `/`stop `/`reset `/`open `/`compare ` completes
 namespaces only; `compare`'s own third token (a day count) is not
-completed, and `startup` takes no namespace at all (its second token is a
-`top` count).
+completed, and neither `startup` nor `cost` take a namespace at all
+(`startup`'s second token is a `top` count; `cost` takes no arguments).
 
 ## Keymaps
 
