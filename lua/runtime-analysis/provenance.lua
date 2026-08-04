@@ -121,8 +121,9 @@ function M.lines(info)
   )
 
   if info.telemetry.wrapped then
-    out[#out + 1] =
-      ("  wrapped by runtime-analysis.telemetry: %s"):format(table.concat(info.telemetry.namespaces, ", "))
+    out[#out + 1] = ("  wrapped by runtime-analysis.telemetry: %s"):format(
+      table.concat(info.telemetry.namespaces, ", ")
+    )
   else
     out[#out + 1] = "  not wrapped by runtime-analysis.telemetry"
   end

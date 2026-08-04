@@ -219,8 +219,13 @@ end
 ---@return string[]
 function M.lines(report)
   local out = {}
-  out[#out + 1] = ("startup attribution  —  %s"):format(report.running and "collecting" or "stopped")
-  out[#out + 1] = ("  %d module(s) loaded · %.1f ms total"):format(#report.modules, report.total_ms)
+  out[#out + 1] = ("startup attribution  —  %s"):format(
+    report.running and "collecting" or "stopped"
+  )
+  out[#out + 1] = ("  %d module(s) loaded · %.1f ms total"):format(
+    #report.modules,
+    report.total_ms
+  )
   out[#out + 1] = ""
 
   if #report.modules == 0 then

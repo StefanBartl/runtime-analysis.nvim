@@ -47,7 +47,10 @@ return function(H)
   do
     local info, err = provenance.inspect("vim.this_field_does_not_exist")
     eq(info, nil, "inspect: a missing field on a real container fails")
-    ok(err and err:find("this_field_does_not_exist", 1, true) ~= nil, "inspect: the error names the field")
+    ok(
+      err and err:find("this_field_does_not_exist", 1, true) ~= nil,
+      "inspect: the error names the field"
+    )
   end
 
   -- The target resolves, but is not a function at all.
@@ -76,7 +79,11 @@ return function(H)
     assert(info, "inspect: the wrapped function resolves")
     eq(info.telemetry.wrapped, true, "inspect: a live-wrapped function is reported as wrapped")
     eq(#info.telemetry.namespaces, 1, "inspect: exactly one subscriber namespace")
-    eq(info.telemetry.namespaces[1], t.namespace, "inspect: the namespace is the real one, not a guess")
+    eq(
+      info.telemetry.namespaces[1],
+      t.namespace,
+      "inspect: the namespace is the real one, not a guess"
+    )
     ok(info.source ~= nil, "inspect: a source location is reported for the installed wrapper")
 
     t.stop()
@@ -142,6 +149,9 @@ return function(H)
     local joined = table.concat(lines, "\n")
     ok(joined:find("vim.trim", 1, true) ~= nil, "lines: names the inspected path")
     ok(joined:find("not wrapped", 1, true) ~= nil, "lines: states plainly when not wrapped")
-    ok(joined:find("best%-effort", 1, false) ~= nil, "lines: the best-effort caveat is shown when unwrapped")
+    ok(
+      joined:find("best%-effort", 1, false) ~= nil,
+      "lines: the best-effort caveat is shown when unwrapped"
+    )
   end
 end

@@ -44,8 +44,16 @@ return function(H)
   do
     env._reset_for_test()
     local dir = vim.fn.tempname()
-    write_json(dir, env.SHARED_FILE, { dev = { baseUrl = "http://localhost:3000", shared_only = "s" } })
-    write_json(dir, env.PRIVATE_FILE, { dev = { baseUrl = "http://overridden:9999", token = "secret" } })
+    write_json(
+      dir,
+      env.SHARED_FILE,
+      { dev = { baseUrl = "http://localhost:3000", shared_only = "s" } }
+    )
+    write_json(
+      dir,
+      env.PRIVATE_FILE,
+      { dev = { baseUrl = "http://overridden:9999", token = "secret" } }
+    )
 
     local vars = env.load_all({ root = dir }).dev
     eq(vars.baseUrl, "http://overridden:9999", "load_all: private file wins on overlap")
@@ -103,7 +111,11 @@ return function(H)
   do
     env._reset_for_test()
     local dir = vim.fn.tempname()
-    write_json(dir, env.SHARED_FILE, { dev = { baseUrl = "http://localhost:3000", token = "abc123" } })
+    write_json(
+      dir,
+      env.SHARED_FILE,
+      { dev = { baseUrl = "http://localhost:3000", token = "abc123" } }
+    )
     env.set_current("dev", { root = dir })
 
     local request = {
@@ -143,7 +155,11 @@ return function(H)
 
     local request = { method = "GET", url = "{{baseUrl}}/{{missing}}", headers = {} }
     local resolved, err = env.resolve(request, { root = dir })
-    eq(resolved, nil, "resolve: nil result when a variable is undefined in the selected environment")
+    eq(
+      resolved,
+      nil,
+      "resolve: nil result when a variable is undefined in the selected environment"
+    )
     ok(err and err:find("missing", 1, true) ~= nil, "resolve: error names the undefined variable")
   end
 end

@@ -160,7 +160,9 @@ function M.check()
     local ok_names, names = pcall(env.list_names)
     if ok_names then
       if #names == 0 then
-        h_info(("no environments defined — create %s at the project root"):format(env.SHARED_FILE))
+        h_info(
+          ("no environments defined — create %s at the project root"):format(env.SHARED_FILE)
+        )
       else
         h_ok(("%d defined: %s"):format(#names, table.concat(names, ", ")))
       end

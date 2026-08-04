@@ -464,7 +464,11 @@ return function(H)
     H.eq(entry.error_fp[1].fingerprint, '"connection timed out"', "dominant error message first")
     H.eq(entry.error_fp[1].count, 3, "dominant error's own count")
     H.eq(entry.error_fp[1].share, 3 / 4, "share computed against errors, not total calls")
-    H.eq(entry.error_fp[2].fingerprint, '"not found"', "the other distinct error also fingerprinted")
+    H.eq(
+      entry.error_fp[2].fingerprint,
+      '"not found"',
+      "the other distinct error also fingerprinted"
+    )
     H.eq(entry.error_fp[2].count, 1, "... with its own real count")
     H.eq(entry.error_other or 0, 0, "nothing evicted — well within max_arg_values")
 
@@ -513,7 +517,8 @@ return function(H)
         error("boom " .. i, 0)
       end,
     }
-    local t = telemetry.new({ namespace = ns("error_bounded"), persist = false, max_arg_values = 4 })
+    local t =
+      telemetry.new({ namespace = ns("error_bounded"), persist = false, max_arg_values = 4 })
     t.wrap(mod)
     t.start({ errors = true })
     for i = 1, 50 do
@@ -550,7 +555,11 @@ return function(H)
     t1.unwrap()
 
     local on_disk = store.load(namespace, { dir = tmpdir })
-    H.eq(on_disk.functions.f.error_fp.values['"disk full"'], 1, "error fingerprint reached the disk")
+    H.eq(
+      on_disk.functions.f.error_fp.values['"disk full"'],
+      1,
+      "error fingerprint reached the disk"
+    )
 
     local t2 = telemetry.new({ namespace = namespace, persist = true, dir = tmpdir })
     t2.wrap(mod)
@@ -649,7 +658,11 @@ return function(H)
     local entry = t.report().entries[1]
     H.eq(entry.calls, 500, "sample_dominant: true call count unaffected")
     H.ok(entry.args ~= nil, "sample_dominant: fingerprinting happened on the sampled subset")
-    H.eq(entry.args[1].share, 1.0, "sample_dominant: share is 100% of the *sample*, not the true calls")
+    H.eq(
+      entry.args[1].share,
+      1.0,
+      "sample_dominant: share is 100% of the *sample*, not the true calls"
+    )
     H.ok(entry.hint ~= nil, "sample_dominant: the memoization hint still fires under sampling")
 
     t.stop()

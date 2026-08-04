@@ -77,7 +77,10 @@ return function(H)
     local parent = require("ra_spec_parent")
     startup.stop()
 
-    ok(parent ~= nil and parent.leaf ~= nil, "startup: the module still loads correctly through the wrapper")
+    ok(
+      parent ~= nil and parent.leaf ~= nil,
+      "startup: the module still loads correctly through the wrapper"
+    )
 
     local by_name = {}
     for _, e in ipairs(startup.report().modules) do
@@ -110,7 +113,11 @@ return function(H)
     require("ra_spec_parent")
     startup.stop()
 
-    eq(#startup.report().modules, 0, "startup: a package.loaded cache hit is never recorded as a load")
+    eq(
+      #startup.report().modules,
+      0,
+      "startup: a package.loaded cache hit is never recorded as a load"
+    )
   end
 
   -- A module that raises during load: recorded, flagged, the error still
