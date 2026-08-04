@@ -42,7 +42,7 @@ same kind of overlay `docs/IDEAS.md` §6 uses for its own five-item shortlist.
 | **Medium** | Multi-day. Either a real decision has to be made first (a schema, a security trade-off, an open question the section names explicitly), or it touches several files or a small state machine — but the shape and the cost are both known. |
 | **Long-term** | Blocked on something this document itself already says is unmeasured or unresolved: an unmeasured `debug.getinfo` cost, several open design questions, another repository's half of the work, or a section the document itself calls speculative. |
 
-Twenty-six items have shipped out of this section since it was first written —
+Twenty-seven items have shipped out of this section since it was first written —
 see [`docs/FINISHED.md`](FINISHED.md) for the full record of each. What
 remains open:
 
@@ -57,8 +57,7 @@ remains open:
 | Item | Note |
 | --- | --- |
 | §2.6 GraphQL / multipart / file upload | "Neither is a priority without a concrete need" |
-| §3.1 Call trees | The single biggest capability gap in the whole document, but explicitly gated on measuring `debug.getinfo`'s real cost first — do not build before that number exists |
-| §4.3 Standard trace formats | Meaningless before §3.1 (call trees) exists — nothing to export yet |
+| §4.3 Standard trace formats | §3.1 (call trees) shipped, so this is no longer *meaningless* — but a real trace format needs nested call stacks and timing spans, not the flat one-level caller histogram §3.1 actually built; still separate, unbuilt work |
 | §4.4 A real dashboard rather than a report | Gated on the browser-tier decision `docs/IDEAS.md` §3.1 says to make *before* building anything, so a third pipeline does not get built by accident |
 | §5.1 `:RAInspect <module>` | Three open design questions, inherited unanswered from lib.nvim's own rejection of this exact idea |
 | §5.3 Diff loaded-vs-declared | The sharpest join in this document, and it needs both plugins' cooperation, not only this repository's own work |
@@ -105,20 +104,6 @@ The module counts calls, times them, fingerprints arguments and bounds its
 own cardinality. Everything below is about the *shape* of what it records,
 not about reading it (that is §4).
 
-### 3.1 Call trees, not just counts
-
-The single biggest capability gap. Today the answer is "`fs.read` was called
-4 812 times"; the question that usually follows is "**by whom**", and the
-data cannot answer it. Recording the immediate caller (one frame of
-`debug.getinfo`, at wrap time) would turn a flat count into a call graph —
-and it is the exact data documentation.nvim's static `calls` extraction
-guesses at, which makes the join in §6 far stronger.
-
-**Cost is the whole question.** `debug.getinfo` per call is not free, and
-this module's headline property is that counting costs 0.014 µs. This has
-to be opt-in per instance, measured before it ships, and honest in the
-README about what it costs — the same treatment `profile_args` already got.
-
 ### 3.5 Deliberately not: a general profiler
 
 Neovim has `:profile`, and LuaJIT has its own profiler. This module's whole
@@ -135,9 +120,12 @@ needs a real profiler is to point at the real profiler.
 ### 4.3 Standard trace formats
 
 Export to a format an existing viewer already opens — speedscope's JSON, or
-the Chrome trace format. Only meaningful once §3.1 (call trees) exists;
-before that there is no tree to view, and a bar chart of counts is
-something the Markdown report already does adequately.
+the Chrome trace format. §3.1 (call trees, see `docs/FINISHED.md`) shipped
+a flat, one-level caller histogram — real per-function evidence of "by
+whom", but not the nested call stacks with timing spans a trace-format
+viewer actually expects. Still nothing a trace format could faithfully
+render; the Markdown report's own `← 61 % lua/fs/init.lua:42` line already
+covers what the current data can honestly show.
 
 ### 4.4 A real dashboard rather than a report
 
