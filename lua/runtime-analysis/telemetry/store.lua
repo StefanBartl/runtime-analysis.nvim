@@ -132,10 +132,14 @@ end
 -- Merging
 -- ---------------------------------------------------------------------------
 
+---Merges one bounded-cardinality fingerprint bucket into another — shared
+---by argument profiling (`functions[key].args`) and error fingerprinting
+---(`functions[key].error_fp`, docs/ROADMAP.md §2.5), the identical shape
+---for both, hence one merge function rather than two copies of it.
 ---@param dst RA.Telemetry.ArgStats
 ---@param src RA.Telemetry.ArgStats
 ---@param max_values integer
-local function merge_args(dst, src, max_values)
+local function merge_fingerprints(dst, src, max_values)
   dst.values = dst.values or {}
   dst.other = dst.other or 0
   dst.distinct = dst.distinct or 0
@@ -212,7 +216,11 @@ function M.merge(base, delta, max_values)
     end
     if src.args then
       dst.args = dst.args or {}
-      merge_args(dst.args, src.args, max_values)
+      merge_fingerprints(dst.args, src.args, max_values)
+    end
+    if src.error_fp then
+      dst.error_fp = dst.error_fp or {}
+      merge_fingerprints(dst.error_fp, src.error_fp, max_values)
     end
   end
 

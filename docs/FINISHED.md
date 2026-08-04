@@ -26,6 +26,58 @@ Newest first, by date; original document order within a date.
 
 ## 2026-08-04
 
+### §3.4 Error and failure fingerprinting
+
+`errors` already counted how *often* a wrapped function raised; the roadmap
+entry's own framing held exactly: recording *what* it raised turned out to
+be a genuine reuse of `profile_args`'s existing bounded-cardinality
+machinery, not a parallel implementation of it — the same shape
+(`RA.Telemetry.ArgStats`), the same cap (`max_arg_values`), the same merge
+function, now shared by two call sites instead of one.
+
+`registry.lua`'s `make_wrapper` already `pcall`s the original whenever
+`site.needs_errors` (or `needs_depth`) is set — the only change there is
+computing `fingerprint.value(res[2])` on the branch that already knows the
+call raised, and only when `site.needs_errors` is actually set, so a
+function opted into `outermost_only` timing alone (needs_depth without
+needs_errors) pays nothing new. `init.lua`'s hot-path `_record` gained one
+new field, `s.error_fp`, accumulated via a helper (`accumulate`) factored
+out of what had been `s.args`'s own inline bounded-cardinality logic —
+factoring it out rather than duplicating it was the point, per the roadmap
+entry's own "reuses" framing, not an incidental cleanup. `store.lua`'s
+`merge_args` (renamed `merge_fingerprints`, since it now merges two
+different kinds of fingerprint bucket) merges `error_fp` across
+flush/reload the identical way `args` already does.
+
+**Cost, stated plainly since this module's whole premise depends on being
+honest about it:** zero on the success path — the fingerprint is computed
+only inside the branch that already pays for `pcall` on an actual raise,
+never on a normal return. The counting-only hot path (`0.014 µs`,
+`telemetry/README.md`'s own measured number) is untouched; nothing here
+required re-measuring it.
+
+`report.lua` renders the new data symmetrically to argument profiles —
+`top_args` renamed `top_fingerprints` (it is called for both now) — with
+one real difference: an error fingerprint's share is computed against the
+function's own `errors` count, not total `calls`, since "67 % of errors
+were this one message" is the readable claim and "0.07 % of calls" usually
+rounds to noise. `entry.error_fp`/`error_other`/`error_distinct` are
+`nil`/absent for any function that never actually raised, so a
+counting-only report (the common case) renders exactly as it always did.
+
+**No new opt-in.** This rides entirely on `errors`, the flag that already
+existed — a caller reading only `entry.errors` sees no change at all;
+`entry.error_fp` is purely additive.
+
+Verified: five new blocks in `telemetry_spec.lua` — dominant/secondary
+error messages fingerprinted with shares computed against `errors` (not
+`calls`); the strict `errors`-opt-in boundary (a function not opted in
+records neither a count nor a fingerprint, mirroring `profile_args`'s own
+posture); bounded cardinality (50 distinct error messages, capped at
+`max_arg_values`, `other`/`distinct` both honest); and a flush + reload +
+second-instance merge round-trip proving `error_fp` counts accumulate
+across sessions the same way `args`/`calls` already do, not overwritten.
+
 ### §2.5 Response assertions
 
 `# @expect status 200` (or `// @expect status 200`), checked once a real

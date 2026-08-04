@@ -436,6 +436,138 @@ return function(H)
   end
 
   -- -------------------------------------------------------------------------
+  -- error fingerprinting (docs/ROADMAP.md §2.5): the same bounded-cardinality
+  -- machinery `profile_args` already uses, pointed at the raised error's own
+  -- value instead of the call's arguments.
+  -- -------------------------------------------------------------------------
+  do
+    local mod = {
+      fetch = function(which)
+        if which == "timeout" then
+          error("connection timed out", 0)
+        end
+        error("not found", 0)
+      end,
+    }
+    local t = telemetry.new({ namespace = ns("error_fp"), persist = false })
+    t.wrap(mod)
+    t.start({ errors = true })
+
+    for _ = 1, 3 do
+      pcall(mod.fetch, "timeout")
+    end
+    pcall(mod.fetch, "missing")
+
+    local entry = t.report().entries[1]
+    H.eq(entry.errors, 4, "every raised error still counted, same as before this existed")
+    H.ok(entry.error_fp ~= nil, "distinct error messages are fingerprinted")
+    H.eq(entry.error_fp[1].fingerprint, '"connection timed out"', "dominant error message first")
+    H.eq(entry.error_fp[1].count, 3, "dominant error's own count")
+    H.eq(entry.error_fp[1].share, 3 / 4, "share computed against errors, not total calls")
+    H.eq(entry.error_fp[2].fingerprint, '"not found"', "the other distinct error also fingerprinted")
+    H.eq(entry.error_fp[2].count, 1, "... with its own real count")
+    H.eq(entry.error_other or 0, 0, "nothing evicted — well within max_arg_values")
+
+    t.stop()
+    t.unwrap()
+  end
+
+  -- error fingerprinting: a passing call must never populate error_fp, and a
+  -- function with no `errors` opt-in at all must never populate it either
+  -- (mirrors profile_args' own strict opt-in, docs/ROADMAP.md §2.5's own
+  -- "reuses the existing machinery" framing extended to this too).
+  do
+    local mod = {
+      ok_fn = function()
+        return "fine"
+      end,
+      quiet_boom = function()
+        error("nobody asked for this", 0)
+      end,
+    }
+    local t = telemetry.new({ namespace = ns("error_fp_optin"), persist = false })
+    t.wrap(mod)
+    -- Only ok_fn opts into `errors`; quiet_boom does not.
+    t.start({ errors = { "ok_fn" } })
+
+    mod.ok_fn()
+    pcall(mod.quiet_boom)
+
+    local by_key = {}
+    for _, e in ipairs(t.report().entries) do
+      by_key[e.key] = e
+    end
+    H.eq(by_key.ok_fn.error_fp, nil, "a call that never errors has no error profile")
+    H.eq(by_key.quiet_boom.errors, 0, "not opted into errors — not even the plain count")
+    H.eq(by_key.quiet_boom.error_fp, nil, "... and certainly no fingerprint")
+
+    t.stop()
+    t.unwrap()
+  end
+
+  -- error fingerprinting: bounded cardinality, the identical discipline the
+  -- argument-fingerprinting test above already proves for `s.args`.
+  do
+    local mod = {
+      f = function(i)
+        error("boom " .. i, 0)
+      end,
+    }
+    local t = telemetry.new({ namespace = ns("error_bounded"), persist = false, max_arg_values = 4 })
+    t.wrap(mod)
+    t.start({ errors = true })
+    for i = 1, 50 do
+      pcall(mod.f, i)
+    end
+    t.stop()
+
+    local entry = t.report().entries[1]
+    H.eq(entry.errors, 50, "every error still counted despite the fingerprint cap")
+    H.eq(#entry.error_fp, 4, "kept exactly max_arg_values distinct error fingerprints")
+    H.eq(entry.error_other, 46, "the rest landed in the other bucket")
+    H.eq(entry.error_distinct, 50, "distinct count still reported honestly")
+    t.unwrap()
+  end
+
+  -- error fingerprinting: survives a flush + reload, and merges across two
+  -- instances the same way `s.args`/`s.calls` already do (see the
+  -- "persistence: merge-on-write" block further down for the pattern this
+  -- mirrors).
+  do
+    local namespace = ns("error_fp_persist")
+    local mod = {
+      f = function()
+        error("disk full", 0)
+      end,
+    }
+
+    local t1 = telemetry.new({ namespace = namespace, persist = true, dir = tmpdir })
+    t1.reset()
+    t1.wrap(mod)
+    t1.start({ errors = true })
+    pcall(mod.f)
+    t1.stop() -- flushes
+    t1.unwrap()
+
+    local on_disk = store.load(namespace, { dir = tmpdir })
+    H.eq(on_disk.functions.f.error_fp.values['"disk full"'], 1, "error fingerprint reached the disk")
+
+    local t2 = telemetry.new({ namespace = namespace, persist = true, dir = tmpdir })
+    t2.wrap(mod)
+    t2.start({ errors = true })
+    pcall(mod.f)
+    t2.stop()
+    t2.unwrap()
+
+    H.eq(
+      store.load(namespace, { dir = tmpdir }).functions.f.error_fp.values['"disk full"'],
+      2,
+      "error fingerprint counts merged across sessions, not overwritten"
+    )
+    t2.reset()
+  end
+
+  -- -------------------------------------------------------------------------
   -- recursion: every entry by default, outermost only on request
   -- -------------------------------------------------------------------------
   do

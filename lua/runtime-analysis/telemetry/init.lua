@@ -214,6 +214,39 @@ local function module_in_scope(name, opts)
   return true
 end
 
+---Accumulate one fingerprint into a bounded-cardinality bucket, creating it
+---if `bucket` is `nil`. Shared by argument profiling (`s.args`) and error
+---fingerprinting (`s.error_fp`, docs/ROADMAP.md §2.5 — literally "reuses the
+---existing argument-fingerprint machinery, pointed at errors instead of
+---arguments," not a parallel reimplementation of it) — both are the
+---identical shape (`RA.Telemetry.ArgStats`) and the identical bound, so one
+---function owns the logic rather than two copies drifting apart.
+---@param bucket RA.Telemetry.ArgStats?
+---@param fp string
+---@param max_values integer
+---@return RA.Telemetry.ArgStats
+local function accumulate(bucket, fp, max_values)
+  if not bucket then
+    bucket = { values = {}, other = 0, distinct = 0, n = 0 }
+  end
+  local cur = bucket.values[fp]
+  if cur then
+    bucket.values[fp] = cur + 1
+  else
+    bucket.distinct = bucket.distinct + 1
+    if bucket.n < max_values then
+      bucket.values[fp] = 1
+      bucket.n = bucket.n + 1
+    else
+      -- Bounded cardinality: a function raising 10 000 distinct error
+      -- messages costs `max_values + 1` entries, not 10 000 — the same
+      -- discipline `s.args` already applies, for the identical reason.
+      bucket.other = bucket.other + 1
+    end
+  end
+  return bucket
+end
+
 ---@return RA.Telemetry.Data
 local function empty_delta()
   return {
@@ -302,7 +335,10 @@ function M.new(opts)
   ---@param fp string|nil
   ---@param dur number|nil
   ---@param errored boolean
-  function inst._record(key, fp, dur, errored)
+  ---@param err_fp string|nil docs/ROADMAP.md §2.5 — set only when `errored`
+  ---and the subscribing instance opted into `errors`; fingerprinted the
+  ---same way an argument is, via the identical bounded-cardinality bucket.
+  function inst._record(key, fp, dur, errored, err_fp)
     local fns = pending.functions
     local s = fns[key]
     if not s then
@@ -320,6 +356,9 @@ function M.new(opts)
 
     if errored then
       s.errors = (s.errors or 0) + 1
+      if err_fp then
+        s.error_fp = accumulate(s.error_fp, err_fp, cfg.max_arg_values)
+      end
     end
 
     if dur then
@@ -339,25 +378,7 @@ function M.new(opts)
     end
 
     if fp then
-      local a = s.args
-      if not a then
-        a = { values = {}, other = 0, distinct = 0, n = 0 }
-        s.args = a
-      end
-      local cur = a.values[fp]
-      if cur then
-        a.values[fp] = cur + 1
-      else
-        a.distinct = a.distinct + 1
-        if a.n < cfg.max_arg_values then
-          a.values[fp] = 1
-          a.n = a.n + 1
-        else
-          -- Bounded cardinality: a function called with 10 000 distinct paths
-          -- costs `max_arg_values + 1` entries, not 10 000.
-          a.other = a.other + 1
-        end
-      end
+      s.args = accumulate(s.args, fp, cfg.max_arg_values)
     end
   end
 

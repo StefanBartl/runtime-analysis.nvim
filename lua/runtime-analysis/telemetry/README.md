@@ -37,6 +37,7 @@ When it *is* on:
 | + timing | two `vim.uv.hrtime()` reads | 0.394 µs |
 | + argument profiling | one fingerprint computation | 0.619 µs |
 | `errors` / `outermost_only` | one `pcall` (the call must return through us even when it raises) | — |
+| `errors`, on an actual raise | + one fingerprint of the error value (docs/ROADMAP.md §2.5) | — (only paid on the already-rare, already-`pcall`'d failure path; the success path above is unaffected) |
 
 Counting is genuinely free at editor scale. Argument profiling is **~44×
 counting** — still nothing on a surface driven by keypresses and autocmds
@@ -569,6 +570,36 @@ fs.find_root                12 480 calls
 
 The hint is suppressed below 20 calls and for zero-argument calls (`()` is
 always 100 % dominant and never actionable).
+
+## Error fingerprinting
+
+`errors` (docs/ROADMAP.md §2.5) already counted how *often* a wrapped function
+raised; it now also fingerprints *what* it raised — reusing the identical
+bounded-cardinality machinery argument profiling uses above, literally the
+same code, pointed at the error value instead of the call's arguments. "This
+function fails 3 % of the time, always with the same message" becomes a
+readable fact instead of a count with no shape:
+
+```
+net.fetch                    4 200 calls
+      3 error(s)
+      ✗  67 %  "connection timed out"
+      ✗  33 %  "DNS resolution failed"
+```
+
+Fingerprinted the same way an argument is (see the table above — short
+values verbatim, long strings truncated, tables by shape only), so a real
+token or path accidentally embedded in an error message is bounded and
+truncated the identical way a real one would be as an argument. Shares are
+computed against the function's own `errors` count, not its total calls —
+"67 % of *errors* were this one" is the readable claim; against total calls
+it would usually round to a number too small to read anything into.
+
+No new opt-in: it rides entirely on `errors`, the same flag that already
+turns on counting-only error tracking. Nothing changes for a caller who only
+ever reads `entry.errors` — `entry.error_fp` is additive, `nil` whenever no
+error has actually been fingerprinted yet (including every function that
+never opted into `errors` at all).
 
 ## Lifecycle reminder
 
