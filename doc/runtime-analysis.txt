@@ -189,6 +189,21 @@ Multiple requests, and real files ~
   opened directly with `:e` works exactly like a scratch buffer from
   |:RA-request| — `:RA send` reads "the current buffer", origin-agnostic.
 
+                                              *runtime-analysis-assertions*
+Response assertions ~
+  `# @expect status 200` (or `// @expect status 200`), a comment line
+  anywhere in a `###` block, checked once |:RA-send|'s response arrives.
+  Deliberately narrow — one directive, one thing it checks ("is this
+  endpoint still 200"), not a general assertion language. At most one per
+  block: a second is a real error, not "last one wins" silently.
+
+  A match is a plain vim.notify (`-> expect status 200`). A mismatch —
+  including a transport failure, itself an automatic mismatch when a
+  status was expected — replaces the quickfix list (`:copen` to see it,
+  never auto-opened) with one entry pointing at the directive's own line,
+  naming both the expected and actual status. Module:
+  `lua/runtime-analysis/assertions.lua`.
+
                                                                *:RA-yank*
 :RA yank                        Yank just the response body (not the status
                                 line or headers) to the unnamed register.

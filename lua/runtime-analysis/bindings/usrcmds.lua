@@ -122,6 +122,42 @@ local function cancel_pending(ra)
   require("runtime-analysis.view").show({ "✗ cancelled" }, { split = ra.opts.split })
 end
 
+---Check an `@expect status N` directive against a send's real outcome —
+---docs/ROADMAP.md §2.5. `actual` is `nil` for a transport failure (no
+---response at all), itself a mismatch when an assertion was expected. A
+---mismatch populates the quickfix list (never auto-opened — the same
+---"never steals focus from the request buffer" posture `:RA send` itself
+---already keeps) rather than only a `vim.notify`, easy to miss once the
+---editor has moved on to something else.
+---@param expect { status: integer, line: integer }?
+---@param expect_line integer? absolute buffer line, for the quickfix entry
+---@param source_bufnr integer
+---@param actual integer? the real HTTP status, or `nil` on transport failure
+local function check_assertion(expect, expect_line, source_bufnr, actual)
+  if not expect then
+    return
+  end
+  if actual == expect.status then
+    vim.notify(("runtime-analysis: ✓ expect status %d"):format(expect.status))
+    return
+  end
+  local actual_str = actual and tostring(actual) or "no response"
+  vim.fn.setqflist({}, " ", {
+    title = "runtime-analysis: response assertions",
+    items = {
+      {
+        bufnr = source_bufnr,
+        lnum = expect_line or 1,
+        text = ("expected status %d, got %s"):format(expect.status, actual_str),
+      },
+    },
+  })
+  vim.notify(
+    ("runtime-analysis: ✗ expect status %d, got %s — see :copen"):format(expect.status, actual_str),
+    vim.log.levels.ERROR
+  )
+end
+
 ---Parse the current buffer as a request and send it asynchronously,
 ---showing the response in the split `view.lua` manages once it arrives.
 ---
@@ -139,16 +175,31 @@ end
 ---@param ra RA
 local function send_current_buffer(ra)
   local parse = require("runtime-analysis.parse")
-  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+  local source_bufnr = vim.api.nvim_get_current_buf()
+  local lines = vim.api.nvim_buf_get_lines(source_bufnr, 0, -1, false)
   local blocks = parse.split(lines)
   local block_lines = lines
+  local block_first = 1
   if #blocks > 0 then
     local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
     local block = parse.block_at(blocks, cursor_line)
     block_lines = block and block.lines or lines
+    block_first = block and block.first or 1
   end
 
-  local request, err = parse.parse(block_lines)
+  -- docs/ROADMAP.md §2.5: an `@expect status N` directive is read (and
+  -- stripped) before `parse.parse` ever sees the block — that module has
+  -- no comment syntax of its own, so a directive left in would otherwise
+  -- fail as a malformed request/header line.
+  local assertions = require("runtime-analysis.assertions")
+  local expect, expect_err = assertions.extract(block_lines)
+  if expect_err then
+    vim.notify("runtime-analysis: " .. expect_err, vim.log.levels.ERROR)
+    return
+  end
+  local expect_line = expect and (block_first - 1 + expect.line)
+
+  local request, err = parse.parse(assertions.strip(block_lines))
   if not request then
     vim.notify("runtime-analysis: " .. err, vim.log.levels.ERROR)
     return
@@ -234,6 +285,7 @@ local function send_current_buffer(ra)
       end
       vim.notify("runtime-analysis: " .. run_err, vim.log.levels.ERROR)
       view.show({ ("✗ %s"):format(run_err) }, { split = ra.opts.split })
+      check_assertion(expect, expect_line, source_bufnr, nil)
       return
     end
 
@@ -245,6 +297,7 @@ local function send_current_buffer(ra)
       body_start = meta and meta.body_start,
       is_json = meta and meta.is_json,
     })
+    check_assertion(expect, expect_line, source_bufnr, meta and meta.status)
   end)
 end
 

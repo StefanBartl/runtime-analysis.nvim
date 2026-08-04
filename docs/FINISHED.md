@@ -26,6 +26,55 @@ Newest first, by date; original document order within a date.
 
 ## 2026-08-04
 
+### §2.5 Response assertions
+
+`# @expect status 200` (or `// @expect status 200`), checked once a real
+response arrives, a mismatch surfaced via the quickfix list — the roadmap
+entry's own stated scope held exactly: one directive, one thing it checks,
+not the general assertion language it explicitly warned against becoming.
+
+New module, [`lua/runtime-analysis/assertions.lua`](../lua/runtime-analysis/assertions.lua):
+`extract`/`strip`, pure logic over a request block's own lines, with no
+knowledge of buffers, sends, or the quickfix list at all — `extract` finds
+at most one directive anywhere in the block (a second is a real, named
+error, not "last one wins" silently, the same fail-loud stance
+`parse.parse` already takes on a malformed header); `strip` removes it
+before the block ever reaches `parse.parse`, which has no comment syntax
+of its own and would otherwise misread the directive as either an invalid
+request line (first in the block) or a malformed header (anywhere else).
+
+Wired into `send_current_buffer` (`bindings/usrcmds.lua`): the directive is
+extracted (and its absolute buffer line computed, for the quickfix entry)
+before parsing, and checked in *both* outcome branches of the async
+callback — a real response compares its status, a transport failure
+(`resp_lines == nil`) counts as an automatic mismatch too, since "no
+response at all" is not a case an assertion for a specific status should
+silently pass. A match is a plain `vim.notify` (`✓ expect status 200`); a
+mismatch populates a fresh quickfix list (`vim.fn.setqflist(..., " ")`,
+replacing rather than accumulating across sends — the same "disposable,
+not accumulating silently" posture `:RA history clear`/`:RATelemetry
+reset` already take) with one entry pointing at the directive's own line,
+and never auto-opens it — the same "never steals focus from the request
+buffer" rule `:RA send` itself already keeps; `:copen` is the reader's own
+call.
+
+**One real bug caught while checking the async-callback's own bufnr
+handling, not by inspection:** the quickfix entry needs the *request*
+buffer's own number, but the response arrives on a later event-loop tick
+by which point `vim.api.nvim_get_current_buf()` could be whatever the
+reader has switched to since sending — so `source_bufnr` is captured once,
+synchronously, at the top of `send_current_buffer`, and closed over by the
+async callback rather than re-read when the response actually lands.
+
+Verified: `assertions_spec.lua` — `extract`'s own directive matching (`#`
+and `//` prefixes, anywhere in the block, a fuzzy near-miss correctly
+*not* matching, two directives producing a named error) and `strip`'s
+line-removal in isolation; an end-to-end pair in `usrcmds_spec.lua` against
+two hermetic local servers (one always `200 OK`, one fixed at
+`404 Not Found`) proving a pass leaves the quickfix list empty and a
+failure populates it with exactly one entry — the right `bufnr`, the right
+`lnum`, and text naming both the expected and actual status.
+
 ### §2.3 curl import / export
 
 Paste a `curl` command line, get a request buffer; the reverse for sharing

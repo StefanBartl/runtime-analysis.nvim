@@ -301,6 +301,31 @@ environment doesn't define, is a clear `vim.notify` error naming exactly
 which variable is missing — never a silent `{{name}}` sent to a real server
 as a literal string.
 
+## Response assertions (`# @expect status N`)
+
+`docs/ROADMAP.md` §2.5: a smoke-test shape for a local API, deliberately
+narrow — "is this endpoint still 200," not a general assertion language.
+A comment line anywhere in a `###` block —
+
+```http
+# @expect status 200
+GET https://api.example.com/users
+```
+
+(`// @expect status 200` also works, IntelliJ HTTP Client's own comment
+style) — checked once `:RA send`'s real response arrives.
+[`lua/runtime-analysis/assertions.lua`](../lua/runtime-analysis/assertions.lua)
+extracts and strips the directive before `runtime-analysis.parse` ever
+sees the block (that module has no comment syntax of its own). At most one
+directive per block: a second is a real error, not "last one wins"
+silently.
+
+A match is a plain `vim.notify`; a mismatch — including a transport
+failure, itself an automatic mismatch when a status was expected — replaces
+the quickfix list (never auto-opened, the same "never steals focus" rule
+`:RA send` itself keeps) with one entry pointing back at the directive's
+own line, naming both the expected and actual status. `:copen` to see it.
+
 ## `:RA import` and `:RA export`
 
 `docs/ROADMAP.md` §2.3: paste a `curl` command line, get a request buffer;

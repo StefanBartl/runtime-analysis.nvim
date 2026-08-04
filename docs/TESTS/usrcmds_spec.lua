@@ -312,9 +312,97 @@ return function(H)
     hist_server:close()
   end
 
+  ---A server that always replies with `response` verbatim — for asserting
+  ---on a specific HTTP status without the delayed-server's request-
+  ---echoing machinery, which this doesn't need.
+  ---@param response string
+  ---@return integer port
+  ---@return uv_tcp_t server
+  local function start_fixed_server(response)
+    local server = uv.new_tcp()
+    assert(server:bind("127.0.0.1", 0))
+    local port = server:getsockname().port
+    server:listen(128, function(listen_err)
+      assert(not listen_err, listen_err)
+      local client = uv.new_tcp()
+      server:accept(client)
+      client:read_start(function(_, chunk)
+        if chunk then
+          client:write(response)
+          client:shutdown(function()
+            client:close()
+          end)
+        end
+      end)
+    end)
+    return port, server
+  end
+
+  -- Response assertions (docs/ROADMAP.md §2.5): a passing `@expect status
+  -- N` leaves the quickfix list alone; a mismatch populates it with an
+  -- entry pointing back at the directive's own line.
+  local assert_pass_buf, assert_fail_buf
+  do
+    local pass_port, pass_server = start_server() -- always replies 200 OK
+    assert_pass_buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_lines(assert_pass_buf, 0, -1, false, {
+      "# @expect status 200",
+      ("GET http://127.0.0.1:%d/expect-ok"):format(pass_port),
+      "",
+    })
+    vim.api.nvim_win_set_buf(winid, assert_pass_buf)
+    vim.api.nvim_win_set_cursor(winid, { 1, 0 })
+
+    vim.fn.setqflist({}, "r") -- start from an empty list
+    local resp_bufnr = vim.fn.bufnr("runtime-analysis://response")
+    vim.cmd("RA send")
+    vim.wait(1000, function()
+      return vim.api.nvim_buf_get_lines(resp_bufnr, 0, 1, false)[1] == "200 OK"
+    end, 10)
+    eq(#vim.fn.getqflist(), 0, "usrcmds: a passing @expect status leaves the quickfix list empty")
+
+    pass_server:close()
+  end
+
+  do
+    local fail_port, fail_server =
+      start_fixed_server(table.concat({ "HTTP/1.1 404 Not Found", "", "" }, "\r\n"))
+    assert_fail_buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_lines(assert_fail_buf, 0, -1, false, {
+      "# @expect status 200",
+      ("GET http://127.0.0.1:%d/expect-fail"):format(fail_port),
+      "",
+    })
+    vim.api.nvim_win_set_buf(winid, assert_fail_buf)
+    vim.api.nvim_win_set_cursor(winid, { 1, 0 })
+
+    vim.fn.setqflist({}, "r")
+    local resp_bufnr = vim.fn.bufnr("runtime-analysis://response")
+    vim.cmd("RA send")
+    vim.wait(1000, function()
+      return vim.api.nvim_buf_get_lines(resp_bufnr, 0, 1, false)[1] == "404 Not Found"
+    end, 10)
+    vim.wait(200, function()
+      return #vim.fn.getqflist() > 0
+    end, 10)
+
+    local qf = vim.fn.getqflist()
+    eq(#qf, 1, "usrcmds: a failed @expect status populates the quickfix list with one entry")
+    eq(qf[1].bufnr, assert_fail_buf, "usrcmds: the quickfix entry points at the request buffer")
+    eq(qf[1].lnum, 1, "usrcmds: ... at the @expect directive's own line")
+    ok(
+      qf[1].text:find("200", 1, true) ~= nil and qf[1].text:find("404", 1, true) ~= nil,
+      "usrcmds: the quickfix text names both the expected and actual status"
+    )
+
+    fail_server:close()
+  end
+
   vim.api.nvim_win_set_buf(winid, prev_buf)
   vim.api.nvim_buf_delete(bufnr, { force = true })
   vim.api.nvim_buf_delete(slow_buf, { force = true })
   vim.api.nvim_buf_delete(race_buf, { force = true })
   vim.api.nvim_buf_delete(cancel_buf, { force = true })
+  vim.api.nvim_buf_delete(assert_pass_buf, { force = true })
+  vim.api.nvim_buf_delete(assert_fail_buf, { force = true })
 end
