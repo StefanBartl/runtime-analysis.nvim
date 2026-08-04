@@ -319,13 +319,13 @@ return function(H)
   ---@return integer port
   ---@return uv_tcp_t server
   local function start_fixed_server(response)
-    local server = uv.new_tcp()
-    assert(server:bind("127.0.0.1", 0))
-    local port = server:getsockname().port
-    server:listen(128, function(listen_err)
+    local fixed_server = uv.new_tcp()
+    assert(fixed_server:bind("127.0.0.1", 0))
+    local fixed_port = fixed_server:getsockname().port
+    fixed_server:listen(128, function(listen_err)
       assert(not listen_err, listen_err)
       local client = uv.new_tcp()
-      server:accept(client)
+      fixed_server:accept(client)
       client:read_start(function(_, chunk)
         if chunk then
           client:write(response)
@@ -335,7 +335,7 @@ return function(H)
         end
       end)
     end)
-    return port, server
+    return fixed_port, fixed_server
   end
 
   -- Response assertions (docs/ROADMAP.md §2.5): a passing `@expect status
