@@ -26,6 +26,80 @@ Newest first, by date; original document order within a date.
 
 ## 2026-08-04
 
+### §3.3 Startup attribution
+
+Which *module* a plugin's startup cost sits in, as a waterfall — lazy.nvim
+already reports per-plugin totals, so the roadmap entry was explicit that
+the value here is the level below that.
+
+**The entry's own stated mechanism did not survive contact with
+lazy.nvim's source, and finding that out was most of the work.** It claimed
+"the lazy adapter (`telemetry.lazy`) already knows exactly when each plugin
+loads, which is half the mechanism." Checked directly rather than assumed:
+lazy.nvim's `loader._load` does time each plugin (`plugin._.loaded.time`,
+plus a nested `Util._profiles` tree) — but that is precisely the number the
+same entry says is *not* the value here. It does **not** time individual
+`require`s at all: its module loader (`loader.M.loader`) resolves and
+`loadfile`s a module with no timing around it, and the only nested
+`Util.track` calls are for `source`ing vim files and for whole plugins. The
+`User LazyLoad` autocmd `telemetry.lazy` already hooks is the wrong
+instrument twice over — it fires *after* `config()` has run (too late to
+measure the thing being asked about) and it is per-plugin, not per-module.
+So the existing adapter turned out to be zero percent of this mechanism,
+not half, and `telemetry/lazy.lua` is untouched by this entry.
+
+What actually works, and what shipped: new standalone module
+[`lua/runtime-analysis/telemetry/startup.lua`](../lua/runtime-analysis/telemetry/startup.lua),
+which wraps the global `require` and times every **cache miss** — an actual
+module load, never a `package.loaded` hit (that costs one table index, is
+not a load, and recording it would bury the real ones). Nesting falls out
+of a stack: a module's *self* time is its total minus everything it
+required in turn, which is what makes the output a waterfall rather than a
+list where every parent double-counts its children. Results group two ways:
+per module, and per module *root* (a plugin's own Lua namespace — a
+dependency-free grouping this module computes itself, without resolving
+real paths or asking any plugin manager).
+
+**Deliberately not part of a `telemetry.new()` instance**, and not wired
+into `runtime-analysis.setup()` either. It measures module loads rather
+than function calls: no namespace, no persistence, no day buckets, and it
+is over by the time the UI is up — folding it into an instance would put
+four permanently-empty fields on every report that never has startup data.
+And `setup()` is far too late to be useful: by then most of a real config
+is already loaded. The documented entry point is a manual
+`require("runtime-analysis.telemetry.startup").autostart()` as the literal
+first line of `init.lua`, which `autostart()` pairs with a one-shot
+`UIEnter` autocmd that stops it again — startup is over by then, and
+leaving the wrapper installed keeps paying for something with nothing left
+to measure.
+
+**One real bug this design has to avoid, and the test that proves it
+doesn't:** a module that *raises* during load must not leave the internal
+stack unbalanced, or every module loaded afterwards has its cost subtracted
+from an entry that already finished. The wrapper `pcall`s and re-raises
+verbatim rather than calling through directly; `startup_spec.lua` asserts
+exactly this by loading a deliberately-raising module and then checking
+that the *next* module still records its own real self time.
+
+New command: `:RATelemetry startup [top]`. Namespace-free, unlike every
+other subcommand — there is no namespace here to take, so the second
+positional slot is a `top` count instead.
+
+Honest limits, all stated in `telemetry/README.md` rather than discovered
+later: only modules required *after* `autostart()` are ever seen (anything
+already in `package.loaded` is invisible, not free — hence "the very first
+line"); only the *global* `require` is wrapped, so code holding a local
+reference to it, or going through `loadfile`/`package.loaded` directly,
+bypasses this entirely.
+
+Verified: `startup_spec.lua`, against real files on disk added to
+`package.path` (a stubbed `require` would prove nothing about the wrapper's
+own stack discipline) — `start`/`stop` idempotence and that the original
+`require` is restored exactly; a parent-requires-leaf pair proving the
+parent's self time genuinely excludes the child while its total includes
+it; a cache hit recording nothing; the raising-module case above; and
+grouping/rendering/`top`/`sort` behavior.
+
 ### §3.2 Sampling
 
 The complement to §3.1 (call trees, still gated on measuring

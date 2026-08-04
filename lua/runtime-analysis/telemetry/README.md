@@ -418,6 +418,7 @@ require("runtime-analysis.telemetry.command").setup()
 :RATelemetry export [path]   " JSON, or Markdown if path ends .md
 :RATelemetry open [ns]       " render + open externally — see "Browser report" below
 :RATelemetry compare [ns] [days]   " "this week vs last week" — see below
+:RATelemetry startup [top]   " which module a plugin's startup cost sits in
 ```
 
 `start`/`stop`/`reset`/`open`/`compare` take an optional namespace —
@@ -604,6 +605,63 @@ different telemetry instances both wrap the identical function with
 different rates, the site uses the more eager (smaller) of the two, so
 neither subscriber ever sees less than it asked for.
 
+## Startup attribution
+
+`:RATelemetry startup` (docs/ROADMAP.md §3.3) answers which *module* a
+plugin's startup cost actually sits in — lazy.nvim already reports
+per-plugin totals, so the value here is specifically the level below that.
+
+```lua
+-- The VERY first line of init.lua, before lazy.setup() or anything else:
+require("runtime-analysis.telemetry.startup").autostart()
+```
+
+```
+startup attribution  —  stopped
+  147 module(s) loaded · 82.3 ms total
+
+  by plugin (module root), self time:
+    telescope                        21.40 ms
+    nvim-treesitter                  18.02 ms
+    lib                               6.11 ms
+
+  by module, self time (total in parentheses):
+    telescope.builtin                 9.80 ms  (14.20)
+    nvim-treesitter.configs           7.44 ms  (18.02)
+```
+
+**How it actually works, since the roadmap entry's own premise was half
+wrong and worth correcting here.** That entry said "the lazy adapter
+already knows exactly when each plugin loads, which is half the mechanism."
+lazy.nvim does time each *plugin* — but checked directly against its own
+source, it does **not** time individual `require`s: its module loader
+resolves and `loadfile`s a module with no timing around it. And the `User
+LazyLoad` autocmd the existing `telemetry.lazy` adapter hooks is the wrong
+instrument twice over — it fires *after* `config()` has already run, and it
+is per-plugin, not per-module. So this wraps the global `require` and times
+every **cache miss** instead. Nesting falls out of a stack: a module's
+*self* time is its total minus everything it required in turn, which is
+what makes the output a waterfall rather than a list where every parent
+double-counts its children.
+
+**Honest limits, all of them:**
+
+- **Only modules required *after* `autostart()` runs are ever seen.**
+  Anything already in `package.loaded` by then is invisible, not free —
+  which is exactly why the snippet above says "the very first line."
+- A `package.loaded` cache hit is not a load and is never recorded. It
+  costs one table index; recording it would bury the real loads.
+- Only the *global* `require` is wrapped. Code that captured a local
+  reference to `require` beforehand, or that goes through `loadfile` /
+  `package.loaded` directly, bypasses this entirely.
+- A module that raises during load is still recorded and flagged
+  (`errored`), and the error propagates verbatim.
+
+`autostart()` stops itself at `UIEnter` — startup is over by then, and
+leaving the wrapper installed would keep paying for something with nothing
+left to measure. `start()`/`stop()`/`reset()`/`report()` are all available
+directly if you want a different window.
+
 ## Error fingerprinting
 
 `errors` (docs/ROADMAP.md §2.5) already counted how *often* a wrapped function
@@ -742,6 +800,7 @@ ways to surprise, notably around `package.loaded` identity. Use explicit
 | `registry.lua` | the one shared wrap layer; instances subscribe to a site |
 | `store.lua` | persistence, namespace sanitization, merge-on-write, day buckets, pruning, module-id map, read-without-an-instance |
 | `fingerprint.lua` | argument → bounded, non-secret string key |
+| `startup.lua` | startup attribution: wraps `require`, times each cache miss, self-vs-total waterfall (standalone — no instance, no namespace, no persistence) |
 | `report.lua` | report building + rendering (terminal lines and Markdown), incl. the memoization hint |
 | `report_file.lua` | where a rendered Markdown report lives on disk, and writing one there |
 | `report_style.lua` | resolve `report_style` ("auto"/"kit"/"mdview"/"file") to a concrete destination |

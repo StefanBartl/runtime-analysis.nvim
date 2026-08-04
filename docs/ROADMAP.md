@@ -42,7 +42,7 @@ same kind of overlay `docs/IDEAS.md` §6 uses for its own five-item shortlist.
 | **Medium** | Multi-day. Either a real decision has to be made first (a schema, a security trade-off, an open question the section names explicitly), or it touches several files or a small state machine — but the shape and the cost are both known. |
 | **Long-term** | Blocked on something this document itself already says is unmeasured or unresolved: an unmeasured `debug.getinfo` cost, several open design questions, another repository's half of the work, or a section the document itself calls speculative. |
 
-Eighteen items have shipped out of this section since it was first written —
+Nineteen items have shipped out of this section since it was first written —
 see [`docs/FINISHED.md`](FINISHED.md) for the full record of each. What
 remains open:
 
@@ -56,12 +56,11 @@ remains open:
 
 | Item | Note |
 | --- | --- |
-| §3.3 Startup attribution | The lazy adapter already knows exactly when each plugin loads — half the mechanism exists |
 | §5.2 Wrapper provenance | The narrow, high-value slice of §5.1 worth shipping first; the telemetry registry already knows its own wrappers |
 | §6.2 Endpoint coverage | Request history (§1.3) now exists and needs no changes; what remains is a real route-pattern-to-URL matching strategy, not just a join key |
 | §6.3 Documentation priority by real usage | Needs §6.1's mechanism to exist first |
 | §7.1 Keymap and command usage | Mechanically the existing wrap machinery pointed at `vim.keymap.set` plus a `CmdlineLeave` hook; stays local and opt-in, never grows a "share this" feature |
-| §7.2 Plugin cost-versus-use | Combines §3.3 with call counts already collected |
+| §7.2 Plugin cost-versus-use | Both halves now exist (§3.3 shipped); what remains is the join, and reconciling module-root vs. telemetry-namespace grouping |
 | Test coverage for the request runner's real transport | `runner.lua` is only exercised against a real transport at the lib.nvim end today |
 | `scripts/gen_map.lua` + documentation.nvim as a dev dependency | A real CI gate (checkout, generate, byte-compare), not a documentation update — see Housekeeping below for why it was not attempted alongside the smaller items in this pass |
 
@@ -131,14 +130,6 @@ guesses at, which makes the join in §6 far stronger.
 this module's headline property is that counting costs 0.014 µs. This has
 to be opt-in per instance, measured before it ships, and honest in the
 README about what it costs — the same treatment `profile_args` already got.
-
-### 3.3 Startup attribution
-
-Which plugin's `config()` cost what, as a waterfall. lazy.nvim already
-reports its own numbers, so the value here is specifically *within* a
-plugin — which of its modules the startup cost actually sits in. The lazy
-adapter (`telemetry.lazy`) already knows exactly when each plugin loads,
-which is half the mechanism.
 
 ### 3.5 Deliberately not: a general profiler
 
@@ -282,10 +273,15 @@ local, it stays opt-in, and it should never grow a "share this" feature.
 
 ### 7.2 Plugin cost-versus-use
 
-Combine startup attribution (§3.3) with per-plugin call counts (already
-collected) into one number: what each plugin costs at startup versus how
-much you actually use it. That is the report that gets plugins deleted, and
-nothing else in either plugin produces it.
+Combine startup attribution (§3.3, shipped — see `docs/FINISHED.md`) with
+per-plugin call counts (already collected) into one number: what each
+plugin costs at startup versus how much you actually use it. That is the
+report that gets plugins deleted, and nothing else in either plugin
+produces it. **Both halves now exist**, which is what changed here: the
+remaining work is the join itself, and one real question it has to answer
+first — startup attribution groups by module *root* (a plugin's own Lua
+namespace) while telemetry groups by *namespace* (a caller-chosen label),
+and those two are only sometimes the same string.
 
 ### 7.3 LSP request latency
 
