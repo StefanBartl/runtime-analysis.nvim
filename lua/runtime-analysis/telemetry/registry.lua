@@ -43,6 +43,7 @@ local sites = setmetatable({}, { __mode = "k" })
 ---@param site table
 local function refresh(site)
   local args, time, errors, outermost = false, false, false, false
+  local sample_rate, sample_blocked = nil, false
   local subs = site.subs
   for i = 1, #subs do
     local s = subs[i]
@@ -50,11 +51,29 @@ local function refresh(site)
     time = time or s.time
     errors = errors or s.errors
     outermost = outermost or s.outermost_only
+
+    -- docs/ROADMAP.md §3.2: sampling is the MINIMUM (most eager) rate any
+    -- subscriber that actually wants expensive work asks for -- so the
+    -- pickiest subscriber's own sample size is never starved by a laxer
+    -- one. A subscriber that wants expensive work with NO sample opt of
+    -- its own needs every call in full, which makes sampling unsafe for
+    -- this site at all: `sample_blocked` overrides any rate collected
+    -- from other subscribers rather than the two silently coexisting.
+    if s.args or s.time or s.errors or s.outermost_only then
+      if s.sample then
+        if not sample_rate or s.sample < sample_rate then
+          sample_rate = s.sample
+        end
+      else
+        sample_blocked = true
+      end
+    end
   end
   site.needs_args = args
   site.needs_time = time
   site.needs_errors = errors
   site.needs_depth = outermost
+  site.sample_rate = (not sample_blocked) and sample_rate or nil
 end
 
 ---@param site table
@@ -86,6 +105,22 @@ local function make_wrapper(site)
     if not (site.needs_args or site.needs_time or site.needs_errors or site.needs_depth) then
       dispatch(site, nil, nil, false)
       return original(...)
+    end
+
+    -- Sampling (docs/ROADMAP.md §3.2): decide once per call whether THIS
+    -- call pays for the expensive path below at all, or takes the same
+    -- cheap counting-only path the branch above already uses. `calls`
+    -- stays exact regardless — it was already free — only args/timing/
+    -- errors/depth become an estimate from the sampled subset, which is
+    -- exactly what makes them affordable on a hot surface in the first
+    -- place (README.md's own "Sampling" section states the honest limit
+    -- this creates).
+    if site.sample_rate then
+      site.sample_tick = (site.sample_tick or 0) + 1
+      if site.sample_tick % site.sample_rate ~= 0 then
+        dispatch(site, nil, nil, false)
+        return original(...)
+      end
     end
 
     local fp
@@ -144,7 +179,7 @@ end
 ---@param field string
 ---@param key string            # the label reported for this instance
 ---@param inst table            # must expose `_record(key, fp, dur_ms, errored, err_fp)`
----@param wants table           # { args, time, errors, outermost_only }
+---@param wants table           # { args, time, errors, outermost_only, sample }
 ---@return boolean ok
 function M.attach(container, field, key, inst, wants)
   local original = rawget(container, field)
@@ -178,6 +213,7 @@ function M.attach(container, field, key, inst, wants)
       local s = site.subs[i]
       s.key, s.args, s.time = key, wants.args, wants.time
       s.errors, s.outermost_only = wants.errors, wants.outermost_only
+      s.sample = wants.sample
       refresh(site)
       return true
     end
@@ -190,6 +226,7 @@ function M.attach(container, field, key, inst, wants)
     time = wants.time or false,
     errors = wants.errors or false,
     outermost_only = wants.outermost_only or false,
+    sample = wants.sample,
   }
   refresh(site)
   return true

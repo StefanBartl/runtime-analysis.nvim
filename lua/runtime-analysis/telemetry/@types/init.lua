@@ -36,6 +36,7 @@
 ---@field time? boolean                        # measure duration for these functions
 ---@field errors? boolean                      # count raised errors for these functions
 ---@field outermost_only? boolean              # recursive calls count once (costs a pcall)
+---@field sample? integer                      # docs/ROADMAP.md §3.2 — only every Nth call pays for args/time/errors/outermost_only; `calls` itself is always exact. Structural, like `outermost_only`: set at wrap()-time, not toggleable via StartOpts.
 ---@field module_id? string                    # the real Lua module path `container` came from, if known (set automatically by wrap_loaded()). Enables a consumer to resolve a wrapped key back to source; omit when the wrap prefix is not a real module path.
 
 --- Scoping for `wrap_loaded()`: the per-function `only`/`except`/`filter`

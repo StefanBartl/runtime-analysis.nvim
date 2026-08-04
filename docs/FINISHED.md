@@ -26,6 +26,59 @@ Newest first, by date; original document order within a date.
 
 ## 2026-08-04
 
+### §3.2 Sampling
+
+The complement to §3.1 (call trees, still gated on measuring
+`debug.getinfo`'s cost — untouched by this entry): instead of recording
+every call in full detail, record every Nth. The roadmap entry's own
+prediction was almost right — "mechanically straightforward" undersold one
+real subtlety, caught before it shipped rather than after: the honest-
+limits wording it also demanded turned out to require an actual code fix,
+not just a caveat in prose.
+
+`sample = N` (`WrapOpts`, structural like `outermost_only` — set at
+`wrap()`/`wrap_loaded()` time, not via `StartOpts`) rides the same site-
+level machinery `errors`/`outermost_only` already use in `registry.lua`:
+`refresh(site)` now also computes `site.sample_rate` as the **minimum**
+rate any subscriber wanting expensive work asks for, so the pickiest
+subscriber is never starved — and a subscriber wanting expensive work with
+*no* sample rate of its own disables sampling for the whole site outright
+(safety over optimality: a subscriber that asked for every call in full
+never silently gets fewer). `make_wrapper` gained one new check, right
+after the existing "does anyone want anything expensive" guard: on a
+non-sampled call, it takes the identical cheap counting-only path that
+guard already uses. **`s.calls` is untouched either way** — it was already
+free at 0.014 µs, and sampling exists specifically to make the *other*
+modes affordable, not to touch the one that already was.
+
+**The real subtlety, and the fix that had to ship in the same commit per
+the roadmap entry's own demand:** argument- and error-fingerprint shares
+(`"91 % of calls share one argument"`) were computed against the
+function's own true `calls`/`errors` count. Without sampling that is
+exactly equal to the fingerprinted total (every call gets fingerprinted),
+so the two were interchangeable and nobody had reason to tell them apart.
+Under sampling they diverge — only the sampled subset is ever
+fingerprinted — and dividing by the true call count would have silently
+deflated every share (a truly dominant argument, sampled 1-in-10, would
+report 10 % instead of the true ~100 %, and the memoization hint would
+essentially never fire again). Fixed at the root: `report.lua` gained
+`fingerprint_total(stats)` (the fingerprint bucket's own `values + other`
+sum) and both `top_fingerprints` call sites — argument profiling, error
+fingerprinting — now divide by that instead of `stats.calls`/`stats.errors`.
+This is a strict correctness fix independent of sampling too (the two
+totals were always mathematically supposed to be the fingerprinted count,
+not the call count; sampling only made the gap between them visible), not
+merely a caveat added to work around a known limitation.
+
+Verified: `telemetry_spec.lua` — `calls` staying exact under sampling
+while `args`/`timing`/`errors` reflect only the sampled subset at the
+expected rate; errors specifically (sampling and error-fingerprinting
+compose, since both ride the same pcall'd branch); a 500-call, 1-in-10-
+sampled dominant-argument scenario proving the memoization hint still
+fires (the actual regression the share-denominator fix prevents); and two
+telemetry instances wrapping the identical function at different rates,
+confirming the site honors the more eager of the two for both.
+
 ### §4.2 Comparison across time windows
 
 `report({ since = "7d" })` already existed; "this week versus last week"
