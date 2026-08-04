@@ -55,6 +55,7 @@ local specs = {
   "usrcmds_spec.lua",
   "history_spec.lua",
   "env_spec.lua",
+  "curl_spec.lua",
   "telemetry_spec.lua",
   "lazy_spec.lua",
 }

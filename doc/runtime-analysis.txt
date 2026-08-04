@@ -235,6 +235,23 @@ Multiple requests, and real files ~
                                 Session-scoped, not persisted across
                                 restarts.
 
+                                                             *:RA-import*
+:RA import                      Parse a `curl` command line into a new
+                                request buffer. Reads the system clipboard
+                                by default, falling back to the unnamed
+                                register; given a real range instead
+                                (e.g. `'<,'>RA import` after visually
+                                selecting one), reads those lines instead.
+                                See |runtime-analysis-curl-import-export|
+                                below.
+
+                                                             *:RA-export*
+:RA export                      The reverse: format whichever `###` block
+                                the cursor is in as a shareable `curl`
+                                command line, yanked to the unnamed
+                                register — the same convention |:RA-yank|
+                                already uses.
+
                                                    *runtime-analysis-history*
 Request history ~
   Every |:RA-send|/|:RASend| records one entry via
@@ -284,6 +301,37 @@ Variables and environments ~
   environment selected at all, is a `vim.notify` error naming exactly what
   is missing — never a silent `{{name}}` sent to a real server as a
   literal string.
+
+                                      *runtime-analysis-curl-import-export*
+curl import/export ~
+  |:RA-import| parses a real `curl` command line — the same shape every
+  API's own docs and every browser's "copy as cURL" already produce — via
+  `runtime-analysis.curl.parse`: a genuine, if bounded, tokenizer (single-
+  and double-quoted strings, an unquoted backslash escaping the next
+  character, bash line continuations joined first), not string
+  templating. Recognizes `-X`/`--request`, `-H`/`--header` (repeatable),
+  `-d`/`--data`/`--data-raw`/`--data-binary` (repeatable, joined with `&`,
+  curl's own behavior), `-u`/`--user` (a real base64-encoded
+  `Authorization: Basic` header), `-b`/`--cookie`, `-A`/`--user-agent`,
+  `-e`/`--referer`, and drops flags meaningless to a request this plugin
+  sends itself (`-s`, `-v`, `-L`, `-o`, `--compressed`, timeouts, TLS
+  material, …) without ever mistaking one's value for the URL. Any
+  `-d`/`--data` with no explicit `-X` implies `POST`, mirroring real
+  curl's own default.
+
+  |:RA-export| is the reverse, `runtime-analysis.curl.format`: headers
+  sorted for deterministic output, single quotes escaped with the
+  standard POSIX `'\''` trick — deliberately not `vim.fn.shellescape`,
+  which escapes for Neovim's own `&shell` (cmd.exe/PowerShell syntax on
+  Windows), the wrong grammar for a `curl` command meant to be pasted into
+  any real shell or shared verbatim in a doc.
+
+  **Neither resolves `{{var}}` placeholders** — the identical trap
+  |runtime-analysis-environments| above names, closed the identical way:
+  both are handed the raw, unresolved request `runtime-analysis.parse`
+  produces, the same one request history and the "sending ..." placeholder
+  already keep unresolved. Exporting is sharing, and a `{{token}}` must
+  render as `{{token}}` there too.
 
                                                     *runtime-analysis-auth-shorthand*
 Auth: shorthand ~

@@ -26,6 +26,87 @@ Newest first, by date; original document order within a date.
 
 ## 2026-08-04
 
+### §2.3 curl import / export
+
+Paste a `curl` command line, get a request buffer; the reverse for sharing
+— the roadmap entry's own framing, and its own verdict on which half
+matters more held up while building it: import is real argument parsing
+(a genuine, if bounded, tokenizer), export is a formatter over data this
+plugin already has in hand.
+
+New module, [`lua/runtime-analysis/curl.lua`](../lua/runtime-analysis/curl.lua).
+No shared shell-tokenizer existed anywhere in lib.nvim (checked before
+writing one) — `usercmd.composer`'s own tail-splitting is a plain
+`gmatch("%S+")` with no quote awareness at all, so this module's own
+`tokenize` is new: single-quoted strings literal (bash semantics — not
+even a backslash is special inside one), double-quoted strings recognizing
+only `\"`/`\\`/`` \$ ``/`` \` ``, an unquoted backslash escaping exactly
+the next character, and adjacent quoted/unquoted segments joining into one
+token the way a real shell's word-splitting does. Bash line continuations
+(`\` at end of line) are joined before tokenizing, since a real multi-line
+"copy as cURL" paste is exactly that shape.
+
+`M.parse` recognizes `-X`/`--request`, `-H`/`--header` (repeatable),
+`-d`/`--data`/`--data-raw`/`--data-binary`/`--data-ascii`
+(repeatable, joined with `&` — curl's own behavior), `-u`/`--user` (become
+a real base64-encoded `Authorization: Basic` header, the identical
+value-add `parse.lua`'s own `Auth:` shorthand already provides for a
+hand-typed request), `-b`/`--cookie`, `-A`/`--user-agent`, `-e`/`--referer`,
+`--url`, a table of value-flags curl understands but this plugin has no
+representation for (`-o`, `-w`, `-m`, `--connect-timeout`, TLS material, …
+— consumed along with their value so it is never mistaken for the URL),
+and a table of boolean flags (`-s`, `-v`, `-L`, `--compressed`, …) dropped
+outright. **Method defaults exactly like real curl's own do**: any
+`-d`/`--data` present with no explicit `-X` implies `POST`, not left as a
+`GET` with a body for the reader to notice.
+
+**One real, honest limit, stated rather than silently gotten wrong**: an
+unrecognized value-flag (one curl understands that isn't in this module's
+own table) is treated as boolean rather than risk swallowing the real URL
+as its argument — the safer of two wrong guesses, since the result is a
+visibly garbled request rather than a silently missing one.
+`--data-urlencode`'s own URL-encoding step is not replicated either, for
+the identical reason: a `key=plain-value` case still comes out identical,
+and a value that actually needed encoding comes out visibly wrong rather
+than silently mis-encoded.
+
+`M.format` is the reverse: a request table back into a multi-line,
+shareable `curl` command line, headers sorted for deterministic output.
+Single-quote escaping is this module's own (the standard POSIX `'\''`
+trick), deliberately not `vim.fn.shellescape` — that escapes for Neovim's
+own `&shell`, cmd.exe/PowerShell syntax on this development machine, which
+is simply the wrong grammar for a curl command meant to be pasted into any
+real shell or shared verbatim in a doc.
+
+**`M.format` never resolves `{{var}}` placeholders — the identical trap
+§2.1's own entry names, closed the identical way.** `do_export`
+(`bindings/usrcmds.lua`) hands it the raw request straight from
+`parse.parse`, the same one `send_current_buffer` keeps unresolved for
+history and the "sending ..." placeholder. Exporting is sharing, and a
+`{{token}}` must render as `{{token}}` there too, not the value it would
+resolve to.
+
+**New commands: `:RA import` (`range = true`) and `:RA export`.**
+`:RA import` with a real visual/line-range invocation reads the selected
+lines; a bare invocation reads the system clipboard (falling back to the
+unnamed register) — "paste a curl command," the roadmap entry's own
+framing, taken literally for the common case of nothing selected. Parses
+into a new buffer via `ra.open_request`, the identical entry point
+documentation.nvim's own Endpoints mode already uses. `:RA export` resolves
+the `###` block under the cursor (the same resolution `:RA send` already
+uses) and yanks the formatted command to the unnamed register, mirroring
+`:RA yank`'s own register convention for the response body.
+
+Verified: `curl_spec.lua` — the tokenizer's four quoting/escaping rules
+directly; `parse`'s data-implies-POST default and `-X`'s override of it;
+repeated `-d` segments joining with `&`; `-u` becoming a real
+base64-encoded header; an ignored value-flag (`-o`) not swallowing the
+real URL; a missing URL producing a real error, not a silent empty string;
+`format` omitting `-X` for `GET`, sorting headers, and escaping an
+embedded single quote; and a full parse → format → parse round-trip
+proving `format`'s own output is valid input to this module's own
+tokenizer.
+
 ### §2.1 Variables and environments
 
 `{{baseUrl}}/users/:id`, resolved from a per-project environment file — the

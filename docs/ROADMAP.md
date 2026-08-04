@@ -42,7 +42,7 @@ same kind of overlay `docs/IDEAS.md` §6 uses for its own five-item shortlist.
 | **Medium** | Multi-day. Either a real decision has to be made first (a schema, a security trade-off, an open question the section names explicitly), or it touches several files or a small state machine — but the shape and the cost are both known. |
 | **Long-term** | Blocked on something this document itself already says is unmeasured or unresolved: an unmeasured `debug.getinfo` cost, several open design questions, another repository's half of the work, or a section the document itself calls speculative. |
 
-Thirteen items have shipped out of this section since it was first written —
+Fourteen items have shipped out of this section since it was first written —
 see [`docs/FINISHED.md`](FINISHED.md) for the full record of each. What
 remains open:
 
@@ -56,7 +56,6 @@ remains open:
 
 | Item | Note |
 | --- | --- |
-| §2.3 curl import / export | Import is both the more valuable half and the harder one — real argument parsing, not templating |
 | §2.5 Response assertions | Keep it to "is this endpoint still 200", not a general assertion language |
 | §3.2 Sampling | Mechanically straightforward; the honest-limits wording ("a sampled count is an estimate") has to ship in the same commit |
 | §3.3 Startup attribution | The lazy adapter already knows exactly when each plugin loads — half the mechanism exists |
@@ -107,12 +106,6 @@ references without actually freeing the number for reuse.
 
 Everything here is "the runner is used daily now" work. Do none of it until
 §1 is done and the thing is actually being used.
-
-### 2.3 curl import / export
-
-Paste a `curl` command line, get a request buffer; the reverse for sharing.
-Every API's documentation and every browser's "copy as cURL" produces
-exactly this, so import is the higher-value half by a lot.
 
 ### 2.5 Response assertions
 

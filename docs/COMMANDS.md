@@ -301,6 +301,59 @@ environment doesn't define, is a clear `vim.notify` error naming exactly
 which variable is missing — never a silent `{{name}}` sent to a real server
 as a literal string.
 
+## `:RA import` and `:RA export`
+
+`docs/ROADMAP.md` §2.3: paste a `curl` command line, get a request buffer;
+the reverse for sharing. Both are built on
+[`lua/runtime-analysis/curl.lua`](../lua/runtime-analysis/curl.lua) — a
+real (if bounded) `curl`-argument parser, not string templating.
+
+```vim
+:RA import
+```
+
+Reads the system clipboard (falling back to the unnamed register if empty)
+and parses it as a `curl` command line — "paste a curl command," taken
+literally, matching what a browser's own "copy as cURL" or an API's own
+docs already put on your clipboard. Invoked with a real range instead
+(`'<,'>RA import`, e.g. after visually selecting a `curl` snippet already
+sitting in some buffer), reads the selected lines instead of the
+clipboard. Parses into a fresh request buffer via `M.open_request` — the
+same integration surface documentation.nvim's own Endpoints mode already
+uses — rather than mutating the current one.
+
+Recognizes `-X`/`--request`, `-H`/`--header` (repeatable),
+`-d`/`--data`/`--data-raw`/`--data-binary` (repeatable, joined with `&`,
+curl's own behavior for repeats), `-u`/`--user` (→ a real base64-encoded
+`Authorization: Basic` header), `-b`/`--cookie`, `-A`/`--user-agent`,
+`-e`/`--referer`, `--url`, and drops flags with no meaning for a request
+this plugin sends itself (`-s`, `-v`, `-L`, `-o`, `--compressed`, timeouts,
+TLS material, …) without ever mistaking one's value for the URL. Any
+`-d`/`--data` present with no explicit `-X` implies `POST`, mirroring
+real curl's own default rather than leaving a `GET` with a body for the
+reader to notice was wrong.
+
+```vim
+:RA export
+```
+
+The reverse: parses whichever `###` block the cursor is in (the identical
+resolution `:RA send` uses) and yanks a shareable `curl` command line to
+the unnamed register — the same register convention `:RA yank` already
+uses for a response body. Multi-line, headers sorted, single quotes
+escaped with the standard POSIX `'\''` trick (deliberately not
+`vim.fn.shellescape`, which would escape for Neovim's own `&shell` —
+cmd.exe/PowerShell syntax on Windows — the wrong grammar for a `curl`
+command meant to be pasted into any real shell or shared verbatim in a
+doc).
+
+**`:RA export` never resolves `{{var}}` placeholders** — the identical
+trap `:RA env`'s own section above names, closed the identical way. It is
+handed the raw, unresolved request straight from `runtime-analysis.parse`,
+the same one `:RA history` and the "sending ..." placeholder already keep
+unresolved. Exporting is sharing, and a `{{token}}` must render as
+`{{token}}` there too, never the value it would resolve to.
+
 ### Why `:RARequest`/`:RASend` exist as separate flat commands, not only `:RA request`/`:RA send`
 
 `:RA`, built via `lib.nvim.usercmd.composer`, is the verb-first shape

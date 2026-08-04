@@ -131,6 +131,19 @@ handed to curl — request history and the "sending ..." placeholder both
 keep the literal `{{token}}`, never the value it resolved to. Full
 reasoning: [`docs/COMMANDS.md`](docs/COMMANDS.md).
 
+```vim
+:RA import
+:RA export
+```
+
+`:RA import` parses a `curl` command line — the system clipboard by
+default, or a visual/line-range selection's own lines — into a new
+request buffer; every API's own docs and every browser's "copy as cURL"
+already produce exactly this shape. `:RA export` is the reverse: yanks the
+`###` block under the cursor as a shareable `curl` command to the unnamed
+register. Neither resolves `{{var}}` placeholders — the identical trap
+`:RA env` closes applies to sharing too.
+
 ## Setup
 
 ```lua
