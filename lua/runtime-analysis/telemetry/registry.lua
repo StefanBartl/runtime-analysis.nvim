@@ -275,4 +275,26 @@ function M.is_wrapped(container, field)
   return site ~= nil and container[field] == site.wrapper
 end
 
+---Which telemetry instance(s), if any, currently wrap `container[field]` —
+---docs/ROADMAP.md §5.2. Precise, unlike anything about a *non*-telemetry
+---wrapper this plugin might sit next to: this registry is the one shared
+---wrap layer every telemetry instance goes through (see the module
+---doc-comment on why), so it genuinely knows every subscriber by name.
+---@param container table
+---@param field string
+---@return { wrapped: boolean, namespaces: string[] }
+function M.info(container, field)
+  local by_field = sites[container]
+  local site = by_field and by_field[field]
+  if not site or container[field] ~= site.wrapper then
+    return { wrapped = false, namespaces = {} }
+  end
+  local namespaces = {}
+  for i = 1, #site.subs do
+    namespaces[#namespaces + 1] = site.subs[i].inst.namespace
+  end
+  table.sort(namespaces)
+  return { wrapped = true, namespaces = namespaces }
+end
+
 return M

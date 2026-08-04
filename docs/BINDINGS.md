@@ -24,6 +24,7 @@ All four are registered unconditionally by `require("runtime-analysis").setup()`
 | `:RA env [name]` | environment name, optional, `<Tab>`-completed | With `name`, selects it as the active environment `{{var}}` placeholders resolve against; with none, `vim.ui.select` over every name the project's env files define. See `docs/COMMANDS.md` for the file format. |
 | `:RA import` | none (or a range, e.g. `'<,'>RA import`) | Parses a `curl` command line — from the system clipboard, or the given range's lines — into a new request buffer. |
 | `:RA export` | none | Yanks the `###` block under the cursor as a shareable `curl` command line to the unnamed register. |
+| `:RA provenance <path>` | dotted path, e.g. `vim.notify` | Who wrapped this function right now — exact for this plugin's own telemetry wraps, best-effort (a `debug.getinfo` source location) for anyone else's. See `docs/COMMANDS.md`. |
 | `:RARequest` | none | Flat alias for `:RA request` — see below for why both exist. |
 | `:RASend` | none | Flat alias for `:RA send`. |
 | `:RATelemetry [args]` | see below | Opt-in call counting and usage statistics for any plugin. Full reference: [`lua/runtime-analysis/telemetry/README.md`](../lua/runtime-analysis/telemetry/README.md). |
@@ -31,9 +32,9 @@ All four are registered unconditionally by `require("runtime-analysis").setup()`
 Built via [`lib.nvim.usercmd.composer`](https://github.com/StefanBartl/lib.nvim/blob/main/lua/lib/nvim/usercmd/composer/README.md)
 — the same verb-first shape `:DocMap`, `:MDView` and `:Replace` already use
 (`<Tab>` after `:RA ` completes `request`/`send`/`yank`/`cancel`/`history`/
-`env`/`import`/`export`; `:RA history <Tab>` completes `clear`, `:RA env
-<Tab>` completes whatever names this project's env files currently
-define). `:RATelemetry` stays a
+`env`/`import`/`export`/`provenance`; `:RA history <Tab>` completes
+`clear`, `:RA env <Tab>` completes whatever names this project's env files
+currently define). `:RATelemetry` stays a
 second, separate compound command rather than folding under `:RA telemetry
 ...`, the same split documentation.nvim draws between `:DocMap`
 (writes/verifies) and `:DocBrowse` (only reads) — here between "runs a
@@ -93,6 +94,15 @@ formats the `###` block under the cursor as a shareable command line,
 yanked to the unnamed register. Neither resolves `{{var}}` placeholders —
 see `docs/COMMANDS.md` for the full reasoning, the same trap `:RA env`'s
 own section states.
+
+### Wrapper provenance (`:RA provenance <path>`)
+
+"Who wrapped this function," exact for this plugin's own telemetry wraps
+(`telemetry.registry.info`, the same shared wrap layer every instance goes
+through), best-effort for anyone else's (a `debug.getinfo` source
+location). New top-level module:
+[`lua/runtime-analysis/provenance.lua`](../lua/runtime-analysis/provenance.lua).
+See `docs/COMMANDS.md` for the full reasoning.
 
 ### `:RATelemetry` subcommands
 

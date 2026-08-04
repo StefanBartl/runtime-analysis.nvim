@@ -60,6 +60,7 @@ local specs = {
   "telemetry_spec.lua",
   "startup_spec.lua",
   "cost_vs_use_spec.lua",
+  "provenance_spec.lua",
   "lazy_spec.lua",
 }
 

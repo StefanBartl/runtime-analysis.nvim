@@ -327,11 +327,15 @@ Not a feature seam so much as a discipline one, but two items are real.
 ### 4.1 `proc_trace` and `:RAInspect` are the same technique twice
 
 `lib.nvim.system.proc_trace` wraps `vim.fn.system`; telemetry's registry wraps
-arbitrary table fields; `ROADMAP.md` §5.2 wants "who wrapped this function".
-Three instances of one pattern, in two repositories, and only one of them keeps
-a record of what it did. A shared, minimal **wrapper registry convention** — an
+arbitrary table fields; `runtime-analysis.provenance` (`ROADMAP.md` §5.2,
+shipped) answers "who wrapped this function" — but only exactly for its own
+telemetry wraps; anything else (`proc_trace`, any third-party monkey-patch)
+falls back to a `debug.getinfo` source-location guess, stated as best-effort
+in its own doc-comment rather than pretended otherwise. Three instances of
+one pattern, in two repositories, and only one of them keeps a record of
+what it did. A shared, minimal **wrapper registry convention** — an
 identifiable marker on an installed wrapper — would make provenance answerable
-instead of best-effort. Small, and it has to be lib.nvim's, because the
+for all three instead of one. Small, and it has to be lib.nvim's, because the
 alternative is this plugin knowing about a module in a library it depends on.
 
 ### 4.2 Push work down only when a second consumer exists

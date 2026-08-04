@@ -150,6 +150,16 @@ already produce exactly this shape. `:RA export` is the reverse: yanks the
 register. Neither resolves `{{var}}` placeholders — the identical trap
 `:RA env` closes applies to sharing too.
 
+```vim
+:RA provenance vim.notify
+```
+
+"Who wrapped this function," right now — exact for this plugin's own
+telemetry wraps (named by namespace), best-effort for anyone else's (any
+number of plugins monkey-patch `vim.notify`): a `debug.getinfo` source
+location, honestly labeled as an inference rather than a certainty. Full
+reasoning: [`docs/COMMANDS.md`](docs/COMMANDS.md).
+
 ## Setup
 
 ```lua

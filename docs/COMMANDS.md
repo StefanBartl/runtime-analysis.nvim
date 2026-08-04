@@ -379,6 +379,39 @@ the same one `:RA history` and the "sending ..." placeholder already keep
 unresolved. Exporting is sharing, and a `{{token}}` must render as
 `{{token}}` there too, never the value it would resolve to.
 
+## `:RA provenance <path>`
+
+`docs/ROADMAP.md` §5.2: "who wrapped this function," the narrow slice of
+the still-unbuilt `:RAInspect` (§5.1 — three open design questions
+inherited from lib.nvim's own rejection of that exact idea, still
+unanswered) worth shipping on its own first.
+
+```vim
+:RA provenance vim.notify
+:RA provenance lib.nvim.notify.create
+```
+
+`path` is a dotted string — a `:RA`-style command can only ever take a
+string, never a live table reference. Resolution tries a global-table walk
+first (the `vim.*` shape), then `require()` of the whole prefix (the
+`lib.nvim`-style module-field shape), and stops there: it does not guess
+where a module boundary sits inside a longer path, the same "a wrong guess
+is worse than no answer" stance `:RA import`'s own unrecognized-`curl`-flag
+handling already takes.
+
+Two different answers, and the output is explicit about which one it is
+giving:
+
+- **This plugin's own telemetry wrapper: exact.** `runtime-analysis.telemetry
+  .registry` is the one shared wrap layer every instance goes through, so
+  it genuinely knows every subscribing namespace by name.
+- **Anyone else's wrapper — `lib.nvim.system.proc_trace`, any of the many
+  plugins that monkey-patch `vim.notify` — best-effort.** There is no
+  registry for a third-party wrap, so the only honest signal is
+  `debug.getinfo`'s own source location: *where* the function currently
+  resolving there was actually defined, not *who* put it there or *when*.
+  The output says so explicitly whenever it falls back to this.
+
 ### Why `:RARequest`/`:RASend` exist as separate flat commands, not only `:RA request`/`:RA send`
 
 `:RA`, built via `lib.nvim.usercmd.composer`, is the verb-first shape

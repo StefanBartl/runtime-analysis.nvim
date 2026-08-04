@@ -465,6 +465,24 @@ local function do_export()
   vim.notify("runtime-analysis: curl command yanked to the unnamed register")
 end
 
+---`:RA provenance <path>` (docs/ROADMAP.md §5.2) — "who wrapped this
+---function", the narrow slice of the still-unbuilt `:RAInspect` §5.1
+---names as worth shipping first. `path` is a dotted string like
+---`"vim.notify"` or `"lib.nvim.notify.create"`; see
+---`runtime-analysis.provenance`'s own doc-comment for exactly how it
+---resolves and what "best-effort" means for anything this plugin's own
+---telemetry did not wrap itself.
+---@param path string
+local function do_provenance(path)
+  local provenance = require("runtime-analysis.provenance")
+  local info, err = provenance.inspect(path)
+  if not info then
+    vim.notify("runtime-analysis: " .. err, vim.log.levels.ERROR)
+    return
+  end
+  vim.notify(table.concat(provenance.lines(info), "\n"))
+end
+
 ---@param ra RA The plugin's own module table — read for `ra.opts` and called
 ---back into for `ra.open_request` so every command stays in sync with a
 ---`setup()` that has already run.
@@ -536,6 +554,14 @@ function M.setup(ra)
         desc = "Export the request under the cursor as a curl command, yanked to the unnamed register",
         run = function()
           do_export()
+        end,
+      },
+      {
+        path = { "provenance" },
+        desc = "Who wrapped a function right now — e.g. :RA provenance vim.notify",
+        args = { { name = "path", type = "STRING" } },
+        run = function(ctx)
+          do_provenance(ctx.args.path)
         end,
       },
     },

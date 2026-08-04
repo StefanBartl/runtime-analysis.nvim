@@ -25,3 +25,14 @@
 ---@field status integer? HTTP status, or `nil` when the request errored or was cancelled
 ---@field note string? Set only when `status` is `nil` — `"cancelled"`, or the transport error text
 ---@field at integer `os.time()` when this was recorded
+
+---`runtime-analysis.provenance.inspect`'s own result — docs/ROADMAP.md
+---§5.2. `source` is `nil` only when `debug.getinfo` itself failed (never
+---observed in practice, still not assumed).
+---@class RA.Provenance.Info
+---@field path string the dotted path as given, e.g. `"vim.notify"`
+---@field container_path string everything before the final `.`
+---@field container_kind "global"|"module" how `container_path` resolved
+---@field field string the final path segment
+---@field telemetry { wrapped: boolean, namespaces: string[] } exact — this plugin's own registry
+---@field source { what: string, short_src: string, linedefined: integer }? best-effort — where the function currently there was actually defined
