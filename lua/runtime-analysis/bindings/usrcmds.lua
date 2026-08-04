@@ -181,6 +181,63 @@ local function check_assertion(expect, expect_line, source_bufnr, actual)
   )
 end
 
+---This buffer's own directory, for resolving a multipart `< ./path`
+---reference — the request buffer's real file directory when it has one
+---(a committed `.http`/`.rest` file), the cwd otherwise (an ad-hoc `:RA
+---request` scratch buffer has no file of its own to be relative to).
+---@param source_bufnr integer
+---@return string
+local function request_base_dir(source_bufnr)
+  local name = vim.api.nvim_buf_get_name(source_bufnr)
+  if name ~= "" then
+    return vim.fn.fnamemodify(name, ":h")
+  end
+  return vim.fn.getcwd()
+end
+
+---docs/ROADMAP.md §2.6: GraphQL and multipart both transform a resolved
+---request's own *shape* rather than a placeholder inside it — a
+---GraphQL-shorthand query+variables body becomes the real JSON payload a
+---server expects; a multipart body's `< ./path` references become the
+---real file bytes. Neither applies to an ordinary request, which passes
+---through unchanged. Mutually exclusive by construction (a request is
+---marked as one or the other via a different header), so at most one
+---branch below ever actually runs.
+---@param request { method: string, url: string, headers: table<string, string>, body: string? }
+---@param source_bufnr integer
+---@return { method: string, url: string, headers: table<string, string>, body: string? }? request
+---@return string? err
+local function resolve_request_shape(request, source_bufnr)
+  local graphql = require("runtime-analysis.graphql")
+  if graphql.is_graphql(request.headers) then
+    return graphql.resolve(request)
+  end
+
+  local multipart = require("runtime-analysis.multipart")
+  if multipart.is_multipart(request.headers) and request.body then
+    local content_type
+    for name, value in pairs(request.headers) do
+      if name:lower() == "content-type" then
+        content_type = value
+      end
+    end
+    local resolved_body, merr =
+      multipart.resolve(request.body, content_type or "", request_base_dir(source_bufnr))
+    if not resolved_body then
+      return nil, merr
+    end
+    return {
+      method = request.method,
+      url = request.url,
+      headers = request.headers,
+      body = resolved_body,
+    },
+      nil
+  end
+
+  return request, nil
+end
+
 ---Parse the current buffer as a request and send it asynchronously,
 ---showing the response in the split `view.lua` manages once it arrives.
 ---
@@ -237,6 +294,19 @@ local function send_current_buffer(ra)
   local resolved_request, resolve_err = require("runtime-analysis.env").resolve(request)
   if not resolved_request then
     vim.notify("runtime-analysis: " .. resolve_err, vim.log.levels.ERROR)
+    return
+  end
+
+  -- docs/ROADMAP.md §2.6: GraphQL and multipart both transform the
+  -- request's own shape (query+variables -> real JSON body; `< ./file`
+  -- references -> real bytes) *after* {{var}} resolution above, so a
+  -- placeholder used inside either — a token in the variables block, in
+  -- a literal form field, even in a file path — resolves the ordinary
+  -- way first and is indistinguishable from one typed there directly.
+  local resolve_shape_err
+  resolved_request, resolve_shape_err = resolve_request_shape(resolved_request, source_bufnr)
+  if not resolved_request then
+    vim.notify("runtime-analysis: " .. resolve_shape_err, vim.log.levels.ERROR)
     return
   end
 
@@ -481,14 +551,32 @@ local function do_export()
     return
   end
 
+  -- GraphQL only (docs/ROADMAP.md §2.6): turns the query+variables
+  -- shorthand into the real JSON body a `curl` command actually needs to
+  -- send, same as `send_current_buffer`'s own pipeline. Deliberately NOT
+  -- `resolve_request_shape` (which also handles multipart) -- a
+  -- multipart request's `< ./file` references must stay literal here;
+  -- `curl.lua`'s own `M.format` reads them straight out of the body to
+  -- build real `-F` flags, the same "never bake in this machine's own
+  -- resolution" reasoning `{{var}}` already gets for export.
+  local graphql = require("runtime-analysis.graphql")
+  if graphql.is_graphql(request.headers) then
+    local resolved, gerr = graphql.resolve(request)
+    if not resolved then
+      vim.notify("runtime-analysis: " .. gerr, vim.log.levels.ERROR)
+      return
+    end
+    request = resolved
+  end
+
   local cmd = require("runtime-analysis.curl").format(request)
   vim.fn.setreg('"', cmd)
   vim.notify("runtime-analysis: curl command yanked to the unnamed register")
 end
 
 ---`:RA provenance <path>` (docs/ROADMAP.md §5.2) — "who wrapped this
----function", the narrow slice of the still-unbuilt `:RAInspect` §5.1
----names as worth shipping first. `path` is a dotted string like
+---function", the narrow slice of `:RA inspect` (§5.1) the roadmap entry
+---itself named as worth shipping first. `path` is a dotted string like
 ---`"vim.notify"` or `"lib.nvim.notify.create"`; see
 ---`runtime-analysis.provenance`'s own doc-comment for exactly how it
 ---resolves and what "best-effort" means for anything this plugin's own

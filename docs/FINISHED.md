@@ -26,6 +26,52 @@ Newest first, by date; original document order within a date.
 
 ## 2026-08-04
 
+### §2.6 GraphQL / multipart / file upload
+
+Named "for completeness," deliberately deprioritized ("neither is a
+priority without a concrete need") until now. Two request-body shapes
+beyond plain JSON/text, both VS Code REST Client's own conventions —
+matched, not invented, the same posture the whole request-buffer grammar
+has kept since its first version.
+
+**GraphQL**, the cheap half the roadmap entry itself predicted: new
+top-level module
+[`lua/runtime-analysis/graphql.lua`](../lua/runtime-analysis/graphql.lua).
+`X-Request-Type: GraphQL` marks a body as query text, optionally followed
+by a blank-line-separated JSON variables block (REST Client's own rule);
+`M.resolve` turns it into the real `{"query": ..., "variables": {...}}`
+payload and strips the directive header, the identical "shorthand
+resolves away" pattern `parse.lua`'s own `Auth:` already establishes.
+Runs after `{{var}}` resolution (§2.1), not before, so a placeholder
+inside the query or variables resolves the ordinary way first. `:RA
+export` applies the same transform, never `{{var}}` resolution — "export
+is sharing" holds for GraphQL requests too.
+
+**Multipart/form-data**, the real argument-construction problem the entry
+named: new top-level module
+[`lua/runtime-analysis/multipart.lua`](../lua/runtime-analysis/multipart.lua).
+A part whose entire content is a bare `< ./path` line means "read this
+local file's real bytes", resolved relative to the request buffer's own
+directory when it has one, the cwd otherwise. Two genuinely different
+outputs from the same parsed parts, kept as two functions rather than
+one: `M.resolve` (sending) needs the real bytes right now, since Lua
+strings are byte arrays and safe to carry either way; `M.to_curl_flags`
+(`:RA export`) must never inline them — a binary file's raw bytes are not
+safe shell-embeddable text — so it emits curl's own `-F "field=@path"`
+shape instead, letting curl read the file itself when the exported
+command actually runs, path kept exactly as written rather than resolved
+to this machine's own absolute path. `curl.lua`'s own `M.format` gained
+the branch that reaches for this instead of `--data-raw` whenever a
+request is multipart; a malformed body (no `boundary=`) falls back to
+`--data-raw` with the literal text rather than dropping the body.
+
+**The one stated limit:** both directions only ever join with `\n`, not
+RFC 2046's required CRLF — every server actually tested against accepts
+it, but a hypothetical strict one is not handled.
+
+Full writeup: `docs/COMMANDS.md`'s own "GraphQL and multipart request
+bodies" section.
+
 ### §5.1 `:RA inspect <module>`
 
 "Runtime inspection — a second pillar," and the most on-thesis idea in

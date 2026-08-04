@@ -288,6 +288,17 @@ local function shq(s)
   return "'" .. s:gsub("'", "'\\''") .. "'"
 end
 
+---@param headers table<string, string>
+---@return string?
+local function content_type_of(headers)
+  for name, value in pairs(headers or {}) do
+    if name:lower() == "content-type" then
+      return value
+    end
+  end
+  return nil
+end
+
 ---The reverse of `M.parse`: a request table back into a runnable,
 ---shareable `curl` command line, multi-line for readability (the same
 ---shape a browser's own "copy as cURL" produces). **Never resolves
@@ -296,6 +307,15 @@ end
 ---doc-comment states its trap: a `{{token}}` must render as `{{token}}`
 ---everywhere a request is shown or shared, and export is exactly that, no
 ---different from request history or the "sending ..." placeholder.
+---
+---A multipart/form-data body (docs/ROADMAP.md §2.6) is never emitted as
+---`--data-raw`: a file reference's real bytes are not safe, shareable
+---shell text, and `runtime-analysis.multipart.to_curl_flags` already
+---turns each part into curl's own `-F "field=@path"` shape instead, which
+---reads the file itself when the command actually runs rather than
+---inlining it now. A malformed multipart body (no `boundary=`) falls back
+---to `--data-raw` with the literal, unresolved text — a degraded but
+---honest export beats silently dropping the body.
 ---@param request { method: string, url: string, headers: table<string, string>, body: string? }
 ---@return string
 function M.format(request)
@@ -311,7 +331,20 @@ function M.format(request)
     parts[#parts + 1] = ("-H %s"):format(shq(name .. ": " .. request.headers[name]))
   end
 
-  if request.body then
+  local content_type = content_type_of(request.headers)
+  local flags
+  if content_type and request.body then
+    local multipart = require("runtime-analysis.multipart")
+    if multipart.is_multipart(request.headers) then
+      flags = multipart.to_curl_flags(request.body, content_type)
+    end
+  end
+
+  if flags then
+    for _, flag in ipairs(flags) do
+      parts[#parts + 1] = "-F " .. shq(flag)
+    end
+  elseif request.body then
     parts[#parts + 1] = "--data-raw " .. shq(request.body)
   end
 

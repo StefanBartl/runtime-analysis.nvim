@@ -45,15 +45,14 @@ same kind of overlay `docs/IDEAS.md` §6 uses for its own five-item shortlist.
 | **Medium** | Multi-day. Either a real decision has to be made first (a schema, a security trade-off, an open question the section names explicitly), or it touches several files or a small state machine — but the shape and the cost are both known. |
 | **Long-term** | Blocked on something this document itself already says is unmeasured or unresolved: an unmeasured `debug.getinfo` cost, several open design questions, another repository's half of the work, or a section the document itself calls speculative. |
 
-Thirty items have shipped out of this section since it was first written —
-see [`docs/FINISHED.md`](FINISHED.md) for the full record of each. Every
-remaining open item is Long-term/speculative:
+Thirty-one items have shipped out of this section since it was first
+written — see [`docs/FINISHED.md`](FINISHED.md) for the full record of
+each. Every remaining open item is Long-term/speculative:
 
 ### Long-term / speculative
 
 | Item | Note |
 | --- | --- |
-| §2.6 GraphQL / multipart / file upload | "Neither is a priority without a concrete need" |
 | §4.3 Standard trace formats | §3.1 (call trees) shipped, so this is no longer *meaningless* — but a real trace format needs nested call stacks and timing spans, not the flat one-level caller histogram §3.1 actually built; still separate, unbuilt work |
 | §4.4 A real dashboard rather than a report | Revisited 2026-08-04 and deliberately left open — no evidence yet that the Markdown report actually feels limiting, this section's own stated precondition |
 | §7.3 LSP request latency | Explicitly low priority; territory other tools already cover well |
@@ -73,15 +72,12 @@ number for reuse.
 
 ## 2. Request ergonomics
 
-Everything here is "the runner is used daily now" work. Do none of it until
-§1 is done and the thing is actually being used.
-
-### 2.6 GraphQL / multipart / file upload
-
-Named for completeness. GraphQL is mostly "a POST with a specific body
-shape" and is cheap now that §2.1 (see `docs/FINISHED.md`) exists;
-multipart file upload is a real `curl` argument-construction problem and
-much less so. Neither is a priority without a concrete need.
+§2.1–2.6 have all shipped — see [`docs/FINISHED.md`](FINISHED.md) for the
+full record of each. This section is intentionally left empty rather than
+deleted, the same reasoning §1's own empty section states: the number
+itself (`§2.x`) is still cited in `docs/FINISHED.md`, and removing the
+section would orphan those references without actually freeing the
+number for reuse.
 
 ---
 

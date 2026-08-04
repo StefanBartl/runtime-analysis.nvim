@@ -62,6 +62,21 @@ existed. A real, committed `.http`/`.rest` file works identically once
 opened with `:e` — `*.http` resolves to filetype `http` natively in
 Neovim, `*.rest` via this plugin's own [`ftdetect/runtime-analysis.lua`](../ftdetect/runtime-analysis.lua).
 
+### GraphQL and multipart bodies
+
+Two request-body shapes `:RA send`/`:RA export` both understand beyond
+plain JSON/text — docs/ROADMAP.md §2.6, VS Code REST Client's own
+conventions. `X-Request-Type: GraphQL` marks a body as query text (+
+optional blank-line-separated JSON variables), turned into the real
+`{"query": ..., "variables": {...}}` payload
+([`lua/runtime-analysis/graphql.lua`](../lua/runtime-analysis/graphql.lua)).
+A `Content-Type: multipart/form-data; boundary=...` body with `< ./path`
+part references gets those paths resolved to real file bytes when sent,
+or turned into curl's own `-F "field=@path"` flags on export — never
+inlined as shell text
+([`lua/runtime-analysis/multipart.lua`](../lua/runtime-analysis/multipart.lua)).
+Full reasoning: `docs/COMMANDS.md`.
+
 ### Request history
 
 `runtime-analysis.history` records method/url/status/timestamp for every

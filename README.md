@@ -169,6 +169,48 @@ failure) replaces the quickfix list with one entry, never auto-opened; a
 match is a plain notify. Deliberately narrow: one directive, one thing it
 checks, not a general assertion language.
 
+Two request-body shapes beyond a plain JSON/text body, both VS Code REST
+Client's own conventions:
+
+```http
+POST https://api.example.com/graphql
+X-Request-Type: GraphQL
+Content-Type: application/json
+
+query GetUser($id: ID!) {
+  user(id: $id) { name }
+}
+
+{"id": "42"}
+```
+
+**GraphQL** — `X-Request-Type: GraphQL` (consumed, never sent to the
+server) marks the body as query text, optionally followed by a blank line
+and a JSON variables object; `:RA send` builds the real
+`{"query": ..., "variables": {...}}` payload before it goes out.
+
+```http
+POST https://api.example.com/upload
+Content-Type: multipart/form-data; boundary=----X
+
+------X
+Content-Disposition: form-data; name="title"
+
+My title
+------X
+Content-Disposition: form-data; name="file"; filename="1.png"
+Content-Type: image/png
+
+< ./1.png
+------X--
+```
+
+**Multipart/form-data** — a `< ./relative/path` line as a part's own
+content means "read this local file's real bytes", resolved relative to
+the request buffer's own directory (or the cwd, for an ad-hoc `:RA
+request` scratch buffer). Full reasoning for both, including `:RA
+export`'s own handling: [`docs/COMMANDS.md`](docs/COMMANDS.md).
+
 Built via [`lib.nvim.usercmd.composer`](https://github.com/StefanBartl/lib.nvim) —
 `:RA` is one compound verb, `<Tab>`-completed, the same shape `:DocMap` and
 `:MDView` already use. `:RARequest`/`:RASend` also still work, unchanged, as
