@@ -38,6 +38,7 @@ local SUBCOMMANDS = {
   "coverage",
   "export",
   "open",
+  "compare",
 }
 
 ---@return RA.Telemetry
@@ -93,6 +94,46 @@ local function report_lines(opts, namespace)
       out[#out + 1] = ""
     end
     vim.list_extend(out, inst.lines(opts))
+  end
+  return out
+end
+
+---`:RATelemetry compare [namespace] [days]` — docs/ROADMAP.md §4.2. Same
+---"every instance, or just one" shape `report_lines` above already uses;
+---`days` (default 7, `inst.compare`'s own) applies to every instance shown,
+---not per-instance.
+---@param namespace string|nil
+---@param days integer|nil
+---@return string[]
+local function compare_lines(namespace, days)
+  local mod = telemetry()
+  local out = {}
+
+  local list = mod.instances()
+  if namespace then
+    local inst = mod.get(namespace)
+    list = inst and { inst } or {}
+    if #list == 0 then
+      return { ("no telemetry instance for namespace %q"):format(namespace) }
+    end
+  end
+
+  if #list == 0 then
+    return {
+      "no telemetry instances.",
+      "",
+      'Create one with require("runtime-analysis.telemetry").new({ namespace = "…" }).',
+    }
+  end
+
+  for i, inst in ipairs(list) do
+    if i > 1 then
+      out[#out + 1] = ""
+      out[#out + 1] = ("─"):rep(60)
+      out[#out + 1] = ""
+    end
+    out[#out + 1] = inst.namespace .. ":"
+    vim.list_extend(out, inst.compare_lines({ days = days }))
   end
   return out
 end
@@ -293,6 +334,15 @@ function M.setup()
       end
     elseif first == "open" then
       open_report(rest)
+    elseif first == "compare" then
+      -- `rest` is a namespace exactly the way every other subcommand's
+      -- second slot already is; a third token, if numeric, overrides
+      -- inst.compare()'s own default window (7 days) — deliberately not
+      -- validated beyond `tonumber` (a non-numeric third token is simply
+      -- ignored, same posture `report`'s own bare-namespace fallthrough
+      -- takes on anything it does not specifically recognize).
+      local days = tonumber(args.fargs[3])
+      show(compare_lines(rest, days), "runtime-analysis.telemetry — compare")
     else
       -- "report" (explicit or implied) — a bare namespace is the common case.
       local namespace = first
@@ -303,12 +353,14 @@ function M.setup()
     end
   end, {
     nargs = "*",
-    desc = "runtime-analysis.telemetry: report|start|stop|reset|disable|enable|disabled|coverage|export|open [namespace]",
+    desc = "runtime-analysis.telemetry: report|start|stop|reset|disable|enable|disabled|coverage|export|open|compare [namespace] [days]",
     complete = function(arg_lead, cmd_line)
-      -- Second token of `start`/`stop`/`reset`/`open` is always a namespace,
-      -- never another subcommand — narrow completion there instead of
-      -- offering "start"/"stop"/... again as if it were a third grammar
-      -- position.
+      -- Second token of `start`/`stop`/`reset`/`open`/`compare` is always a
+      -- namespace, never another subcommand — narrow completion there
+      -- instead of offering "start"/"stop"/... again as if it were a third
+      -- grammar position. `compare`'s own third token (a day count) has no
+      -- useful completion list, so it is simply left uncompleted rather
+      -- than offering namespaces there too.
       local before = cmd_line:sub(1, #cmd_line - #arg_lead)
       local sub = before:match("^%S+%s+(%S+)%s+%S*$")
 
@@ -318,6 +370,7 @@ function M.setup()
         or sub == "disable"
         or sub == "enable"
         or sub == "open"
+        or sub == "compare"
 
       local out = {}
       if takes_namespace then

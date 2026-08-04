@@ -42,7 +42,7 @@ same kind of overlay `docs/IDEAS.md` §6 uses for its own five-item shortlist.
 | **Medium** | Multi-day. Either a real decision has to be made first (a schema, a security trade-off, an open question the section names explicitly), or it touches several files or a small state machine — but the shape and the cost are both known. |
 | **Long-term** | Blocked on something this document itself already says is unmeasured or unresolved: an unmeasured `debug.getinfo` cost, several open design questions, another repository's half of the work, or a section the document itself calls speculative. |
 
-Sixteen items have shipped out of this section since it was first written —
+Seventeen items have shipped out of this section since it was first written —
 see [`docs/FINISHED.md`](FINISHED.md) for the full record of each. What
 remains open:
 
@@ -58,7 +58,6 @@ remains open:
 | --- | --- |
 | §3.2 Sampling | Mechanically straightforward; the honest-limits wording ("a sampled count is an estimate") has to ship in the same commit |
 | §3.3 Startup attribution | The lazy adapter already knows exactly when each plugin loads — half the mechanism exists |
-| §4.2 Comparison across time windows | Day buckets are already stored; this is a report mode, not a collection change |
 | §5.2 Wrapper provenance | The narrow, high-value slice of §5.1 worth shipping first; the telemetry registry already knows its own wrappers |
 | §6.2 Endpoint coverage | Request history (§1.3) now exists and needs no changes; what remains is a real route-pattern-to-URL matching strategy, not just a join key |
 | §6.3 Documentation priority by real usage | Needs §6.1's mechanism to exist first |
@@ -162,13 +161,6 @@ needs a real profiler is to point at the real profiler.
 ---
 
 ## 4. Telemetry — reading it
-
-### 4.2 Comparison across time windows
-
-`report({ since = "7d" })` exists; "this week versus last week" does not.
-Day buckets are already stored, so the data is there — this is a report
-mode, not a collection change. The interesting output is *what changed*:
-newly-hot functions, functions that went cold, not two tables side by side.
 
 ### 4.3 Standard trace formats
 

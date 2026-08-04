@@ -416,12 +416,16 @@ require("runtime-analysis.telemetry.command").setup()
 :RATelemetry coverage
 :RATelemetry export [path]   " JSON, or Markdown if path ends .md
 :RATelemetry open [ns]       " render + open externally — see "Browser report" below
+:RATelemetry compare [ns] [days]   " "this week vs last week" — see below
 ```
 
-`start`/`stop`/`reset`/`open` take an optional namespace — `:RATelemetry stop
-markdown.nvim` steers just that instance, leaving every other one running.
-Omit it to act on every instance at once. `<Tab>` after `start `/`stop `/
-`reset `/`open ` completes namespaces only (not the subcommand list again).
+`start`/`stop`/`reset`/`open`/`compare` take an optional namespace —
+`:RATelemetry stop markdown.nvim` steers just that instance, leaving every
+other one running. Omit it to act on every instance at once. `<Tab>` after
+`start `/`stop `/`reset `/`open `/`compare ` completes namespaces only
+(not the subcommand list again). `compare`'s own third, purely positional
+token overrides the default 7-day window — `:RATelemetry compare
+markdown.nvim 14`.
 
 `export`'s format is inferred from the target path's own extension rather
 than a separate flag — this command's argument parsing stays positional
@@ -600,6 +604,47 @@ turns on counting-only error tracking. Nothing changes for a caller who only
 ever reads `entry.errors` — `entry.error_fp` is additive, `nil` whenever no
 error has actually been fingerprinted yet (including every function that
 never opted into `errors` at all).
+
+## Comparison across time windows
+
+`report({ since = "7d" })` answers "how much, in the last week"; `compare()`
+(docs/ROADMAP.md §4.2) answers "what changed since the week before that" —
+day buckets were already stored for the first, so the second is a report
+mode over the same data, not a new collection mechanism:
+
+```lua
+local cmp = t.compare({ days = 7 })   -- default 7
+vim.print(t.compare_lines({ days = 14 }))
+```
+
+```
+last 7d vs the 7d before that  —  4 200 calls vs 3 100 calls
+
+  newly hot:
+    + parse.block_at                           340 calls (silent before)
+
+  went cold:
+    - legacy.migrate                           was 90 calls, silent now
+
+  changed:
+    ↑ net.fetch                                800 -> 1 200 calls (+50 %)
+    ↓ cache.lookup                              600 -> 400 calls (-33 %)
+```
+
+Every key seen in either window lands in exactly one bucket: **newly hot**
+(silent before, called now), **went cold** (the reverse), or **changed**
+(called in both — sorted by the size of the change, not alphabetically,
+since that is the actual point of asking). A changed entry's percentage is
+relative to its own previous count; a newly-hot or gone-cold entry gets no
+percentage at all, since dividing by zero previous calls is not one.
+
+**Honest limit, surfaced rather than silently wrong.** The previous window
+is exactly as complete as `retention_days` allows — comparing two 7-day
+windows needs 14 days of history, comparing two 20-day windows needs 40.
+When `2 × days` exceeds `retention_days` (30 by default), older buckets in
+the previous window may already be pruned, and both `compare_lines` and
+`compare_markdown` render a visible warning line rather than a comparison
+that quietly under-reports what the previous window actually held.
 
 ## Lifecycle reminder
 

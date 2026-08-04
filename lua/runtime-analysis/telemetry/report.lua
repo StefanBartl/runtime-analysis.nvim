@@ -415,6 +415,202 @@ function M.markdown_all(reports)
   return out
 end
 
+-- ---------------------------------------------------------------------------
+-- Comparison across time windows (docs/ROADMAP.md §4.2)
+-- ---------------------------------------------------------------------------
+
+---@param key string
+---@param current integer
+---@param previous integer
+---@return RA.Telemetry.Comparison.Entry
+local function comparison_entry(key, current, previous)
+  local e = { key = key, current = current, previous = previous, delta = current - previous }
+  if previous > 0 then
+    e.delta_pct = (current - previous) / previous
+  end
+  return e
+end
+
+---Build a "this window vs the one before it" comparison — day buckets are
+---already stored, so this is a report mode over existing data, not a
+---collection change. Answers *what changed*, not just two totals side by
+---side: which functions are newly hot (silent in the previous window,
+---called in this one), which went cold (the reverse), and which simply
+---moved (called in both, by how much).
+---@param data RA.Telemetry.Data
+---@param opts? { days?: integer, retention_days?: integer } `days` default 7;
+---`retention_days` — when given, and `2 * days` exceeds it, the previous
+---window may already be missing pruned buckets, and the result says so
+---(`incomplete_previous_window`) rather than silently reporting a window
+---that is actually shorter than `days`.
+---@return RA.Telemetry.Comparison
+function M.compare(data, opts)
+  opts = opts or {}
+  local days = opts.days or 7
+
+  local current, current_total = store.since(data, days)
+  local previous, previous_total = store.previous_window(data, days)
+
+  local keys = {}
+  for key in pairs(current) do
+    keys[key] = true
+  end
+  for key in pairs(previous) do
+    keys[key] = true
+  end
+
+  local new_functions, cold_functions, changed = {}, {}, {}
+  for key in pairs(keys) do
+    local c, p = current[key] or 0, previous[key] or 0
+    if p == 0 then
+      -- c must be > 0 here: a key with both counts 0 is never in `keys`.
+      new_functions[#new_functions + 1] = comparison_entry(key, c, p)
+    elseif c == 0 then
+      cold_functions[#cold_functions + 1] = comparison_entry(key, c, p)
+    else
+      changed[#changed + 1] = comparison_entry(key, c, p)
+    end
+  end
+
+  table.sort(new_functions, function(a, b)
+    return a.current > b.current
+  end)
+  table.sort(cold_functions, function(a, b)
+    return a.previous > b.previous
+  end)
+  table.sort(changed, function(a, b)
+    return math.abs(a.delta) > math.abs(b.delta)
+  end)
+
+  return {
+    days = days,
+    current_total = current_total,
+    previous_total = previous_total,
+    new_functions = new_functions,
+    cold_functions = cold_functions,
+    changed = changed,
+    incomplete_previous_window = opts.retention_days ~= nil and (days * 2) > opts.retention_days,
+  }
+end
+
+---@param cmp RA.Telemetry.Comparison
+---@return string[]
+function M.compare_lines(cmp)
+  local out = {}
+  out[#out + 1] = ("last %dd vs the %dd before that  —  %s calls vs %s calls"):format(
+    cmp.days,
+    cmp.days,
+    num(cmp.current_total),
+    num(cmp.previous_total)
+  )
+  if cmp.incomplete_previous_window then
+    out[#out + 1] =
+      "  ⚠ retention_days is shorter than 2× this window — the previous window may already be missing pruned data"
+  end
+  out[#out + 1] = ""
+
+  if #cmp.new_functions == 0 and #cmp.cold_functions == 0 and #cmp.changed == 0 then
+    out[#out + 1] = "  (no calls recorded in either window)"
+    return out
+  end
+
+  if #cmp.new_functions > 0 then
+    out[#out + 1] = "  newly hot:"
+    for _, e in ipairs(cmp.new_functions) do
+      out[#out + 1] = ("    + %-40s %s calls (silent before)"):format(e.key, num(e.current))
+    end
+    out[#out + 1] = ""
+  end
+
+  if #cmp.cold_functions > 0 then
+    out[#out + 1] = "  went cold:"
+    for _, e in ipairs(cmp.cold_functions) do
+      out[#out + 1] = ("    - %-40s was %s calls, silent now"):format(e.key, num(e.previous))
+    end
+    out[#out + 1] = ""
+  end
+
+  if #cmp.changed > 0 then
+    out[#out + 1] = "  changed:"
+    for _, e in ipairs(cmp.changed) do
+      local arrow = e.delta >= 0 and "↑" or "↓"
+      local sign = e.delta >= 0 and "+" or ""
+      out[#out + 1] = ("    %s %-40s %s -> %s calls (%s%.0f %%)"):format(
+        arrow,
+        e.key,
+        num(e.previous),
+        num(e.current),
+        sign,
+        e.delta_pct * 100
+      )
+    end
+  end
+
+  return out
+end
+
+---@param cmp RA.Telemetry.Comparison
+---@return string[]
+function M.compare_markdown(cmp)
+  local out = {
+    ("# last %dd vs the %dd before that"):format(cmp.days, cmp.days),
+    "",
+    ("**%s calls** vs **%s calls**"):format(num(cmp.current_total), num(cmp.previous_total)),
+  }
+  if cmp.incomplete_previous_window then
+    out[#out + 1] = ""
+    out[#out + 1] =
+      "> ⚠ `retention_days` is shorter than 2× this window — the previous window may already be missing pruned data."
+  end
+  out[#out + 1] = ""
+
+  if #cmp.new_functions == 0 and #cmp.cold_functions == 0 and #cmp.changed == 0 then
+    out[#out + 1] = "_(no calls recorded in either window)_"
+    return out
+  end
+
+  if #cmp.new_functions > 0 then
+    out[#out + 1] = "## Newly hot"
+    out[#out + 1] = ""
+    out[#out + 1] = "| Function | Calls |"
+    out[#out + 1] = "| --- | ---: |"
+    for _, e in ipairs(cmp.new_functions) do
+      out[#out + 1] = ("| `%s` | %s |"):format(e.key, num(e.current))
+    end
+    out[#out + 1] = ""
+  end
+
+  if #cmp.cold_functions > 0 then
+    out[#out + 1] = "## Went cold"
+    out[#out + 1] = ""
+    out[#out + 1] = "| Function | Was |"
+    out[#out + 1] = "| --- | ---: |"
+    for _, e in ipairs(cmp.cold_functions) do
+      out[#out + 1] = ("| `%s` | %s |"):format(e.key, num(e.previous))
+    end
+    out[#out + 1] = ""
+  end
+
+  if #cmp.changed > 0 then
+    out[#out + 1] = "## Changed"
+    out[#out + 1] = ""
+    out[#out + 1] = "| Function | Before | After | Change |"
+    out[#out + 1] = "| --- | ---: | ---: | ---: |"
+    for _, e in ipairs(cmp.changed) do
+      local sign = e.delta >= 0 and "+" or ""
+      out[#out + 1] = ("| `%s` | %s | %s | %s%.0f %% |"):format(
+        e.key,
+        num(e.previous),
+        num(e.current),
+        sign,
+        e.delta_pct * 100
+      )
+    end
+  end
+
+  return out
+end
+
 M.DOMINANT_SHARE = DOMINANT_SHARE
 M.DOMINANT_MIN_CALLS = DOMINANT_MIN_CALLS
 M.num = num

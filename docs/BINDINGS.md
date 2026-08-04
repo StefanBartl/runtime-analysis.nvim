@@ -109,8 +109,11 @@ own section states.
 | `:RATelemetry coverage` | which wrapped functions were never called |
 | `:RATelemetry export [path]` | JSON, or Markdown if `path` ends `.md` |
 | `:RATelemetry open [ns]` | render + open externally (`report_style`: `auto`/`kit`/`mdview`/`file`) |
+| `:RATelemetry compare [ns] [days]` | "this window vs the one before it" (default 7 days) — newly-hot/gone-cold/changed functions |
 
-`<Tab>` after `start `/`stop `/`reset `/`open ` completes namespaces only.
+`<Tab>` after `start `/`stop `/`reset `/`open `/`compare ` completes
+namespaces only; `compare`'s own third token (a day count) is not
+completed.
 
 ## Keymaps
 
