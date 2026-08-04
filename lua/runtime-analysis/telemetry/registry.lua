@@ -85,7 +85,13 @@ local function dispatch(site, fp, dur, errored, err_fp)
   local subs = site.subs
   for i = 1, #subs do
     local s = subs[i]
-    s.inst._record(s.key, s.args and fp or nil, s.time and dur or nil, errored, s.errors and err_fp or nil)
+    s.inst._record(
+      s.key,
+      s.args and fp or nil,
+      s.time and dur or nil,
+      errored,
+      s.errors and err_fp or nil
+    )
   end
 end
 

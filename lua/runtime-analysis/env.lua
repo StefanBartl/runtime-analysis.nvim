@@ -182,11 +182,9 @@ end
 ---@param vars table<string, any>
 ---@return string
 local function substitute(str, vars)
-  return (
-    str:gsub("{{%s*([%w_.%-]+)%s*}}", function(name)
-      return tostring(vars[name])
-    end)
-  )
+  return (str:gsub("{{%s*([%w_.%-]+)%s*}}", function(name)
+    return tostring(vars[name])
+  end))
 end
 
 ---Resolve every `{{name}}` placeholder in `request`'s url, header values and

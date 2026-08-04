@@ -43,7 +43,10 @@ return function(H)
     local found, err =
       assertions.extract({ "# @expect status 200", "GET https://x", "# @expect status 404" })
     eq(found, nil, "extract: nil result when more than one directive is present")
-    ok(err and err:find("1", 1, true) and err:find("3", 1, true), "extract: error names both line numbers")
+    ok(
+      err and err:find("1", 1, true) and err:find("3", 1, true),
+      "extract: error names both line numbers"
+    )
   end
 
   -- A line that merely mentions "@expect" without the exact shape is not

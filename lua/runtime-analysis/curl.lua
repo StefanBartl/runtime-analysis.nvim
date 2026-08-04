@@ -148,11 +148,31 @@ local VALUE_FLAGS = {
 ---@type table<string, true>
 local BOOL_FLAGS = {}
 for _, f in ipairs({
-  "-s", "--silent", "-S", "--show-error", "-v", "--verbose",
-  "-k", "--insecure", "-L", "--location", "--compressed",
-  "-i", "--include", "-f", "--fail", "-G", "--get",
-  "-#", "--progress-bar", "-4", "--ipv4", "-6", "--ipv6",
-  "--http1.1", "--http2",
+  "-s",
+  "--silent",
+  "-S",
+  "--show-error",
+  "-v",
+  "--verbose",
+  "-k",
+  "--insecure",
+  "-L",
+  "--location",
+  "--compressed",
+  "-i",
+  "--include",
+  "-f",
+  "--fail",
+  "-G",
+  "--get",
+  "-#",
+  "--progress-bar",
+  "-4",
+  "--ipv4",
+  "-6",
+  "--ipv6",
+  "--http1.1",
+  "--http2",
 }) do
   BOOL_FLAGS[f] = true
 end

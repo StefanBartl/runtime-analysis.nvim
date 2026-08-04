@@ -26,9 +26,21 @@ return function(H)
     )
     eq(entry.namespace, "markdown.nvim", "build: namespace passed through")
     eq(entry.startup_ms, 12.5, "build: startup_ms is the matched root's own self time")
-    eq(#entry.matched_roots, 1, "build: exactly one root matched (both keys resolve to the same root)")
-    eq(entry.matched_roots[1], "markdown", "build: the matched root is the real module root, not the namespace")
-    eq(entry.resolved_root_count, 1, "build: one distinct real module root known for this namespace")
+    eq(
+      #entry.matched_roots,
+      1,
+      "build: exactly one root matched (both keys resolve to the same root)"
+    )
+    eq(
+      entry.matched_roots[1],
+      "markdown",
+      "build: the matched root is the real module root, not the namespace"
+    )
+    eq(
+      entry.resolved_root_count,
+      1,
+      "build: one distinct real module root known for this namespace"
+    )
     eq(entry.calls_per_ms, 1000 / 12.5, "build: calls_per_ms is total_calls / startup_ms")
     eq(entry.reason, nil, "build: no reason needed when startup_ms is known")
   end
@@ -56,7 +68,11 @@ return function(H)
       42,
       startup_report({ { root = "unrelated", self_ms = 5 } })
     )
-    eq(entry.startup_ms, nil, "build: a resolved root with no matching startup entry is still unknown")
+    eq(
+      entry.startup_ms,
+      nil,
+      "build: a resolved root with no matching startup entry is still unknown"
+    )
     eq(entry.resolved_root_count, 1, "build: the module root itself IS known")
     ok(
       entry.reason:find("none appear", 1, true) ~= nil,
@@ -81,15 +97,27 @@ return function(H)
   -- underused) first, unknowns last regardless of their own call count,
   -- and never crashes on an empty instance list.
   do
-    eq(#cost_vs_use.build_all({}, startup_report({})), 0, "build_all: empty instance list — empty result")
+    eq(
+      #cost_vs_use.build_all({}, startup_report({})),
+      0,
+      "build_all: empty instance list — empty result"
+    )
 
     local report = startup_report({
       { root = "cheap_heavy", self_ms = 1 },
       { root = "expensive_light", self_ms = 100 },
     })
     local entries = cost_vs_use.build_all({
-      { namespace = "expensive_light.nvim", resolved_modules = { f = "expensive_light.x" }, total_calls = 10 },
-      { namespace = "cheap_heavy.nvim", resolved_modules = { f = "cheap_heavy.x" }, total_calls = 10000 },
+      {
+        namespace = "expensive_light.nvim",
+        resolved_modules = { f = "expensive_light.x" },
+        total_calls = 10,
+      },
+      {
+        namespace = "cheap_heavy.nvim",
+        resolved_modules = { f = "cheap_heavy.x" },
+        total_calls = 10000,
+      },
       { namespace = "unknown.nvim", resolved_modules = {}, total_calls = 5 },
     }, report)
 
@@ -99,7 +127,11 @@ return function(H)
       "expensive_light.nvim",
       "build_all: worst calls/ms (expensive, underused) sorts first"
     )
-    eq(entries[2].namespace, "cheap_heavy.nvim", "build_all: cheap-and-heavily-used sorts after the worst offender")
+    eq(
+      entries[2].namespace,
+      "cheap_heavy.nvim",
+      "build_all: cheap-and-heavily-used sorts after the worst offender"
+    )
     eq(entries[3].namespace, "unknown.nvim", "build_all: unknown-cost entries always sort last")
   end
 
@@ -128,6 +160,9 @@ return function(H)
     )
 
     ok(#cost_vs_use.lines({}) > 0, "lines: an empty entry list still produces output, not an error")
-    ok(#cost_vs_use.markdown({}) > 0, "markdown: an empty entry list still produces output, not an error")
+    ok(
+      #cost_vs_use.markdown({}) > 0,
+      "markdown: an empty entry list still produces output, not an error"
+    )
   end
 end

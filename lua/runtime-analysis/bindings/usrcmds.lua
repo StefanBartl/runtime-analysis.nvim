@@ -153,7 +153,10 @@ local function check_assertion(expect, expect_line, source_bufnr, actual)
     },
   })
   vim.notify(
-    ("runtime-analysis: ✗ expect status %d, got %s — see :copen"):format(expect.status, actual_str),
+    ("runtime-analysis: ✗ expect status %d, got %s — see :copen"):format(
+      expect.status,
+      actual_str
+    ),
     vim.log.levels.ERROR
   )
 end
@@ -367,9 +370,7 @@ local function select_environment(name)
   end
 
   vim.ui.select(names, {
-    prompt = ("runtime-analysis: select environment (current: %s)"):format(
-      env.current() or "none"
-    ),
+    prompt = ("runtime-analysis: select environment (current: %s)"):format(env.current() or "none"),
   }, function(choice)
     if not choice then
       return

@@ -161,9 +161,14 @@ function M.lines(entries)
         num(e.total_calls),
         e.calls_per_ms
       )
-      out[#out + 1] = ("      matched module root(s): %s"):format(table.concat(e.matched_roots, ", "))
+      out[#out + 1] = ("      matched module root(s): %s"):format(
+        table.concat(e.matched_roots, ", ")
+      )
     else
-      out[#out + 1] = ("  %-30s %10s calls  — startup cost unknown"):format(e.namespace, num(e.total_calls))
+      out[#out + 1] = ("  %-30s %10s calls  — startup cost unknown"):format(
+        e.namespace,
+        num(e.total_calls)
+      )
       out[#out + 1] = ("      %s"):format(e.reason)
     end
   end

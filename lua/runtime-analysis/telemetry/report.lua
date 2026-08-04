@@ -128,7 +128,12 @@ function M.build(namespace, data, meta, opts)
         -- fingerprinted total the share itself does, for the identical
         -- sampling-honesty reason.
         local first = list[1]
-        if first and first.fingerprint ~= "()" and args_total >= DOMINANT_MIN_CALLS and first.share >= DOMINANT_SHARE then
+        if
+          first
+          and first.fingerprint ~= "()"
+          and args_total >= DOMINANT_MIN_CALLS
+          and first.share >= DOMINANT_SHARE
+        then
           entry.hint = ("%.0f %% of calls share one argument — candidate for %s"):format(
             first.share * 100,
             "memoization (lib.lua.memo.memo / .lru)"
@@ -142,7 +147,8 @@ function M.build(namespace, data, meta, opts)
         -- the readable claim, and the fingerprint bucket's own total is
         -- what keeps it honest under §3.2 sampling too, same reasoning as
         -- the argument-profile block above.
-        local list, other, distinct = top_fingerprints(stats.error_fp, fingerprint_total(stats.error_fp))
+        local list, other, distinct =
+          top_fingerprints(stats.error_fp, fingerprint_total(stats.error_fp))
         entry.error_fp, entry.error_other, entry.error_distinct = list, other, distinct
       end
 

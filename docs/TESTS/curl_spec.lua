@@ -118,7 +118,10 @@ curl 'https://api.example.com/users' \
       headers = {},
       body = "it's a test",
     })
-    ok(cmd:find("it'\\''s a test", 1, true) ~= nil, "format: embedded single quote is shell-escaped")
+    ok(
+      cmd:find("it'\\''s a test", 1, true) ~= nil,
+      "format: embedded single quote is shell-escaped"
+    )
   end
 
   -- Round-trip: parse -> format -> parse again yields the same request —
