@@ -153,16 +153,13 @@ was not an accident, and this is the consumer it was built for.
 
 ### 1.6 `doc-references-missing`, in the other direction
 
-documentation.nvim reads prose and asks whether the entity it names still
-exists. The mirror question needs runtime: **is anything documented that is
-never used, and is anything used constantly that no doc mentions?** The second
-half is `ROADMAP.md` §6.3 (documentation priority by usage). The first half is
-new here and is a *docs* deletion signal: a documented, exported, never-called
-function is a maintenance cost being actively paid.
-
-`t.coverage()` already answers the runtime half ("which registered functions
-were called zero times"), and `ir.docs` already answers the prose half. Nothing
-joins them.
+**Both halves shipped 2026-08-04** — see [`docs/FINISHED.md`](FINISHED.md)'s
+§6.1 entry. documentation.nvim reads prose and asks whether the entity it
+names still exists; the mirror question needed runtime: is anything
+documented that is never used, and is anything used constantly that no doc
+mentions? Both are now the two aggregate lines `documentation.core.
+telemetry_join.doc_usage_summary` prints alongside `:DocMap`'s own doc-
+coverage line.
 
 ### 1.7 Endpoint inventory × request history × response shape
 

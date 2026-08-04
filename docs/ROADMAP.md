@@ -42,22 +42,15 @@ same kind of overlay `docs/IDEAS.md` §6 uses for its own five-item shortlist.
 | **Medium** | Multi-day. Either a real decision has to be made first (a schema, a security trade-off, an open question the section names explicitly), or it touches several files or a small state machine — but the shape and the cost are both known. |
 | **Long-term** | Blocked on something this document itself already says is unmeasured or unresolved: an unmeasured `debug.getinfo` cost, several open design questions, another repository's half of the work, or a section the document itself calls speculative. |
 
-Twenty-four items have shipped out of this section since it was first written —
+Twenty-six items have shipped out of this section since it was first written —
 see [`docs/FINISHED.md`](FINISHED.md) for the full record of each. What
 remains open:
-
-### Quick wins
-
-| Item | Note |
-| --- | --- |
-| §6.1 Mode 8 — telemetry in `:DocBrowse` | Both halves this repo owns (`telemetry.load()`, `Data.modules`, `resolved_modules()`) already ship; what remains is documentation.nvim's entry builder, not work here |
 
 ### Medium
 
 | Item | Note |
 | --- | --- |
 | §6.2 Endpoint coverage | Request history (§1.3) now exists and needs no changes; what remains is a real route-pattern-to-URL matching strategy, not just a join key |
-| §6.3 Documentation priority by real usage | Needs §6.1's mechanism to exist first |
 
 ### Long-term / speculative
 
@@ -202,22 +195,6 @@ lazy?), loaded but not declared (generated? wrapped? a typo'd key?).
 The reason two plugins exist. `documentation.nvim/docs/ECOSYSTEM.md` §7 has
 the full argument; these are the concrete pieces.
 
-### 6.1 Mode 8 — telemetry in `:DocBrowse`
-
-**The one genuinely-next item in this document.** Already designed, in
-detail, in
-[`lib.nvim/docs/ROADMAP/telemetry-documentation-bridge.md`](https://github.com/StefanBartl/lib.nvim/blob/main/docs/ROADMAP/telemetry-documentation-bridge.md):
-cross static "no caller found" against runtime "actually called", and the
-four cells of that table are each a different, actionable claim. The
-`dead-function` false-positive suppression is the half that pays for
-itself immediately.
-
-Both halves of the contract already ship: `telemetry.load()` reads a
-namespace with no live instance, and `Data.modules`/`resolved_modules()`
-answer "which key is which real module". What is left is entirely on
-documentation.nvim's side — an entry builder and a branch, per its own
-`MODES` architecture.
-
 ### 6.2 Endpoint coverage
 
 documentation.nvim knows every route the source declares (`core/endpoints.lua`);
@@ -229,13 +206,6 @@ this — what remains is entirely the join itself: reading
 documentation.nvim's declared-route list and matching it against this
 plugin's recorded URLs, which still needs a real matching strategy (a route
 like `/users/:id` is not a literal string a recorded URL will ever equal).
-
-### 6.3 Documentation priority by real usage
-
-Weight documentation.nvim's undocumented-function list by call count.
-"Undocumented, alphabetically" is a list nobody works through;
-"undocumented and called 4 000 times this week" is a queue. Named in the
-bridge document as one of its two aggregate lines and still unbuilt.
 
 ---
 

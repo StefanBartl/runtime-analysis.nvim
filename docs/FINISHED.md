@@ -26,6 +26,50 @@ Newest first, by date; original document order within a date.
 
 ## 2026-08-04
 
+### §6.1 Mode 8 — telemetry in `:DocBrowse` (§6.3 folded in)
+
+The reason two plugins exist, per `docs/ECOSYSTEM.md`'s own framing —
+shipped as the design doc specified, cross-repo. This repository's own
+half (`telemetry.load()`, `Data.modules`, `resolved_modules()`) had
+already shipped earlier; what landed today is entirely on
+[documentation.nvim](https://github.com/StefanBartl/documentation.nvim)'s
+side: a new `documentation.core.telemetry_join` module joining
+`documentation.core.check.used_keys(ir)` (extracted from
+`check_dead_functions`'s own body, so the check and the mode can never
+quietly disagree about "has a static caller") against a
+`runtime-analysis.telemetry` namespace, plus a new `telemetry` mode in
+`:DocBrowse` at position 8 (not 7 — the design doc predates Endpoints
+claiming position 7 first). §6.3 ("documentation priority by real usage")
+turned out to be the exact same piece of work as one of this join's own
+two aggregate lines, not a separate follow-on — folded into this entry
+rather than getting its own.
+
+**What actually shipped, concretely, all in documentation.nvim:**
+`opts.telemetry_namespace` (new, defaults to `opts.title` — every
+telemetry instance in this ecosystem is already namespaced by the
+plugin's own display name); a `telemetry` browse mode badging each
+function ✕/`!`/○/blank by which cell of the design doc's 2×2 table it
+falls in, undecorated with a plain note for a function with no telemetry
+data at all — absence of data is never rendered as if it were evidence,
+here or anywhere else this join appears; `dead-function` suppression
+(never escalation — the design doc's own "a prompt to look, never a
+delete list" instruction applies to what silences the check too) once
+telemetry proves the exact function alive; and the two aggregate lines
+printed by `:DocMap`'s own CLI — documented-but-never-called (a
+maintenance-cost set) and undocumented-but-called (a documentation
+backlog prioritized by evidence of real use, the line the design doc
+itself calls "the most immediately useful number in this whole
+document").
+
+Verified in documentation.nvim's `TESTS/browse_telemetry_spec.lua`
+against a real telemetry instance when `runtime-analysis.nvim` is
+reachable on the rtp — a real wrap, real calls, a real flush to disk,
+read back through `telemetry.load()` with no live instance, the same
+path a fresh `:DocMap check` run actually takes. Full writeup:
+documentation.nvim's own `docs/ECOSYSTEM.md` step 8; the original
+lib.nvim-side design and its now-fully-`**done**` status table:
+[`lib.nvim/docs/ROADMAP/telemetry-documentation-bridge.md`](https://github.com/StefanBartl/lib.nvim/blob/main/docs/ROADMAP/telemetry-documentation-bridge.md).
+
 ### Housekeeping — `scripts/gen_map.lua` + documentation.nvim as a dev dependency
 
 `NEW_PROJECT.md` §4's last unchecked box: adopt documentation.nvim's own
