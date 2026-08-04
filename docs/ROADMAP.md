@@ -132,6 +132,15 @@ kind of thing that should be *stolen* from documentation.nvim's renderer
 rather than written twice. Worth doing only if the Markdown report is
 actually being read often enough to feel limiting.
 
+**Revisited 2026-08-04, deliberately left open.** `docs/IDEAS.md` §3.1
+poses the three-way choice (steal documentation.nvim's renderer, ride
+mdview's relay, or stay in Markdown) and explicitly says this document
+should not answer it unilaterally — asked directly, and the answer was
+"not yet": no evidence exists that the Markdown report is actually
+feeling limiting, which is this very section's own stated precondition
+for building anything at all. Recorded so the same question does not get
+re-litigated from a blank slate before that evidence exists.
+
 ---
 
 ## 5. Runtime inspection — a second pillar
