@@ -45,7 +45,7 @@ same kind of overlay `docs/IDEAS.md` §6 uses for its own five-item shortlist.
 | **Medium** | Multi-day. Either a real decision has to be made first (a schema, a security trade-off, an open question the section names explicitly), or it touches several files or a small state machine — but the shape and the cost are both known. |
 | **Long-term** | Blocked on something this document itself already says is unmeasured or unresolved: an unmeasured `debug.getinfo` cost, several open design questions, another repository's half of the work, or a section the document itself calls speculative. |
 
-Thirty-one items have shipped out of this section since it was first
+Thirty-two items have shipped out of this section since it was first
 written — see [`docs/FINISHED.md`](FINISHED.md) for the full record of
 each. Every remaining open item is Long-term/speculative:
 
@@ -54,7 +54,6 @@ each. Every remaining open item is Long-term/speculative:
 | Item | Note |
 | --- | --- |
 | §4.3 Standard trace formats | §3.1 (call trees) shipped, so this is no longer *meaningless* — but a real trace format needs nested call stacks and timing spans, not the flat one-level caller histogram §3.1 actually built; still separate, unbuilt work |
-| §4.4 A real dashboard rather than a report | Revisited 2026-08-04 and deliberately left open — no evidence yet that the Markdown report actually feels limiting, this section's own stated precondition |
 | §7.3 LSP request latency | Explicitly low priority; territory other tools already cover well |
 
 
@@ -110,23 +109,10 @@ viewer actually expects. Still nothing a trace format could faithfully
 render; the Markdown report's own `← 61 % lua/fs/init.lua:42` line already
 covers what the current data can honestly show.
 
-### 4.4 A real dashboard rather than a report
-
-The mdview bridge renders a Markdown document that happens to update. A
-purpose-built HTML view (sortable, filterable, the way
-documentation.nvim's Analysis tab is) would be better — and is exactly the
-kind of thing that should be *stolen* from documentation.nvim's renderer
-rather than written twice. Worth doing only if the Markdown report is
-actually being read often enough to feel limiting.
-
-**Revisited 2026-08-04, deliberately left open.** `docs/IDEAS.md` §3.1
-poses the three-way choice (steal documentation.nvim's renderer, ride
-mdview's relay, or stay in Markdown) and explicitly says this document
-should not answer it unilaterally — asked directly, and the answer was
-"not yet": no evidence exists that the Markdown report is actually
-feeling limiting, which is this very section's own stated precondition
-for building anything at all. Recorded so the same question does not get
-re-litigated from a blank slate before that evidence exists.
+§4.4 (a real dashboard) has shipped — see [`docs/FINISHED.md`](FINISHED.md)
+for the full record, including the browser-tier decision `docs/IDEAS.md`
+§3.1 said this document should not answer unilaterally, since asked
+directly on 2026-08-04.
 
 ---
 

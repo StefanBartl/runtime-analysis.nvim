@@ -26,6 +26,69 @@ Newest first, by date; original document order within a date.
 
 ## 2026-08-04
 
+### §4.4 A real dashboard rather than a report
+
+"Worth doing only if the Markdown report is actually being read often
+enough to feel limiting" — revisited the same day it was first written,
+and answered "not yet" the first time it was asked (see §4.4's own
+history in this file's earlier revision, and `docs/ROADMAP.md`'s git
+history). Asked again directly, the answer changed: build it, and use
+option (a) of `docs/IDEAS.md` §3.1's three-way choice — steal
+documentation.nvim's renderer's *design*, not its code.
+
+**What "steal the renderer" turned out to mean, concretely.**
+documentation.nvim's `core/render/html.lua` is roughly 4,500 lines, of
+which roughly 3,850 are one embedded JavaScript single-page application
+tightly coupled to its own IR (module nodes, require/call edges,
+findings). Genuinely reusing it for telemetry's own, completely
+different data shape (call counts, argument/error/caller fingerprints,
+timing) would have meant either a real extraction project in that
+repository first, or bolting foreign data onto machinery built for a
+tree — neither scoped for what this section actually asked for.
+Investigated and decided against a full extraction in favor of a new,
+small, self-contained page reusing the same *design tokens* (CSS custom
+properties — colors, spacing, light/dark via `prefers-color-scheme` and
+`data-theme`) and visual language (badges, section labels, the toolbar
+search input), written fresh for telemetry's own data. New module:
+[`lua/runtime-analysis/telemetry/renderers/html.lua`](../lua/runtime-analysis/telemetry/renderers/html.lua)
+— a few hundred lines, not a few thousand, and no dependency from this
+plugin's own report onto documentation.nvim's internal, IR-specific
+module.
+
+**One flat, sortable, filterable table** — one row per (namespace,
+function): calls, errors, mean timing when `timing` is on, the single
+most-called argument fingerprint and its share, the single most-common
+immediate caller and its share. Click a row for the full breakdown
+(every kept fingerprint, the memoization hint, error fingerprints,
+callers), using the identical `└`/`✗`/`←`/`ⓘ` symbols the terminal
+report already uses. New `report_style = "html"` (alongside
+`"auto"`/`"kit"`/`"mdview"`/`"file"`), reachable via `:RATelemetry open
+[ns]` — written to disk and opened with
+`lib.nvim.fs.open.url.system_opener`, the same cross-platform opener
+`:DocMap open` already uses.
+
+**A real bug found writing the tests, not guessed at.** Data is embedded
+as a JSON blob inside a `<script>` tag, rendered client-side by a small
+vanilla-JS table with no framework and nothing fetched over the network.
+Two escaping passes exist for two different reasons, and the first draft
+had neither: a literal `</script` inside the JSON blob (a namespace or
+key could contain one) would close the page's own script tag early — the
+HTML parser has no notion of "this text is inside a JSON string" — fixed
+by escaping it to `<\/script` (invisible to JSON parsing, not to the
+HTML parser). Separately, the client-side script itself concatenated
+real text — a function key, an argument fingerprint, which is built from
+a real argument *value* — directly into `innerHTML` with no escaping at
+all; a string argument containing `<img onerror=...>` would have been
+interpreted as markup. Both caught by a real test asserting the page's
+actual output rather than trusting the code, fixed with a small
+`escHtml()` helper applied at every insertion point that carries
+untrusted text (fingerprint lists were already safe — HTML-escaped
+server-side in Lua, since they render as pre-built fragments rather than
+being assembled client-side).
+
+Full writeup: `lua/runtime-analysis/telemetry/README.md`'s own "HTML
+dashboard" section.
+
 ### §2.6 GraphQL / multipart / file upload
 
 Named "for completeness," deliberately deprioritized ("neither is a

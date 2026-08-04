@@ -262,20 +262,25 @@ file that can be attached to an issue. Worth copying the *shape*, not the code.
 
 ## 3. Three-way — where all of them meet
 
-### 3.1 Two browser tiers already exist, and that is the real open question
+### 3.1 Two browser tiers already exist — decided, 2026-08-04
 
 documentation.nvim emits a self-contained interactive HTML page (no CDN, no
 build step). mdview ships a Go relay plus a prebuilt web client. Both are
 "Markdown/code → browser" pipelines, built independently, and **nothing
 crosses between them** — the one empty seam noted in §0.
 
-The question this document can pose but should not answer: when
-runtime-analysis wants a real dashboard (`ROADMAP.md` §4.4), does it (a) steal
-documentation.nvim's renderer, (b) ride mdview's relay, or (c) stay in
-Markdown? Each is defensible, and the wrong move is to start writing HTML here
-before deciding, because that produces a *third* pipeline. **Decide before
-building, and record the decision the way `ECOSYSTEM.md` §6 recorded the
-Electron one.**
+The question this document posed but did not answer itself: when
+runtime-analysis wanted a real dashboard (`ROADMAP.md` §4.4, shipped —
+see `docs/FINISHED.md`), would it (a) steal documentation.nvim's renderer,
+(b) ride mdview's relay, or (c) stay in Markdown? Asked directly, decided
+**(a)** — but not a literal code dependency on documentation.nvim's own
+4,500-line renderer, which is tightly coupled to its own IR: the *design*
+(CSS custom properties, visual language) reused in a new, small,
+self-contained page written for telemetry's own data. No third pipeline
+resulted — `renderers/html.lua` is telemetry's own report renderer, the
+same category `report.lua`'s Markdown output and `renderers/mdview.lua`'s
+browser bridge already occupy, not a new independent HTML generator
+competing with documentation.nvim's or mdview's own.
 
 ### 3.2 A Runtime tab in the served artifact
 

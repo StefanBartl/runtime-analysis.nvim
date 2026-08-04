@@ -16,7 +16,7 @@
 ---   :RATelemetry disabled        list namespaces currently disabled
 ---   :RATelemetry coverage        which wrapped functions were never called
 ---   :RATelemetry export [path]   write a snapshot (JSON, or Markdown if path ends .md)
----   :RATelemetry open [ns]       render + open externally (report_style: auto/kit/mdview/file)
+---   :RATelemetry open [ns]       render + open externally (report_style: auto/kit/mdview/file/html)
 ---   :RATelemetry compare [ns] [days]  this window vs the one before it (default 7d)
 ---   :RATelemetry startup [top]   which module a plugin's startup cost sits in
 ---   :RATelemetry cost            startup cost vs. call count, worst first
@@ -27,6 +27,7 @@ local report_file = require("runtime-analysis.telemetry.report_file")
 local resolve_report_style = require("runtime-analysis.telemetry.report_style")
 local telemetry_config = require("runtime-analysis.telemetry.config")
 local mdview_renderer = require("runtime-analysis.telemetry.renderers.mdview")
+local html_renderer = require("runtime-analysis.telemetry.renderers.html")
 
 local M = {}
 
@@ -195,7 +196,9 @@ local function open_report(namespace)
   ---@param path string
   ---@param kit_lines string[]
   ---@param title string
-  local function dispatch(lines, path, kit_lines, title)
+  ---@param reports RA.Telemetry.Report[] docs/ROADMAP.md §4.4 — only the "html" branch reads this; every other branch already has what it needs in `lines`/`kit_lines`.
+  ---@param html_path string
+  local function dispatch(lines, path, kit_lines, title, reports, html_path)
     if style == "mdview" then
       local ok, err = mdview_renderer.open(lines, path)
       if not ok then
@@ -208,6 +211,21 @@ local function open_report(namespace)
         notify.info("wrote " .. path)
       else
         notify.error("failed to write report: " .. tostring(err))
+      end
+    elseif style == "html" then
+      local html = html_renderer.render(reports)
+      local ok, err = report_file.write(html_path, { html })
+      if not ok then
+        notify.error("failed to write dashboard: " .. tostring(err))
+        return
+      end
+      local ok_open = pcall(function()
+        require("lib.nvim.fs.open.url.system_opener").open(html_path)
+      end)
+      if ok_open then
+        notify.info("wrote and opened " .. html_path)
+      else
+        notify.info("wrote " .. html_path .. " — open it yourself, no system opener available")
       end
     else -- "kit"
       show(kit_lines, title)
@@ -225,7 +243,9 @@ local function open_report(namespace)
       inst.markdown(),
       report_file.namespace_path(namespace, inst._cache_opts),
       inst.lines(),
-      ("runtime-analysis.telemetry — %s"):format(namespace)
+      ("runtime-analysis.telemetry — %s"):format(namespace),
+      { inst.report() },
+      report_file.namespace_html_path(namespace, inst._cache_opts)
     )
     return
   end
@@ -240,7 +260,9 @@ local function open_report(namespace)
     mod.markdown_all({ sort = "calls", top = 40 }),
     report_file.combined_path(),
     report_lines({ sort = "calls", top = 40 }, nil),
-    "runtime-analysis.telemetry"
+    "runtime-analysis.telemetry",
+    mod.report_all({ sort = "calls", top = 40 }),
+    report_file.combined_html_path()
   )
 end
 

@@ -164,7 +164,7 @@ See `docs/COMMANDS.md` for the honest limits (only mappings set after
 | `:RATelemetry disabled` | list namespaces currently disabled |
 | `:RATelemetry coverage` | which wrapped functions were never called |
 | `:RATelemetry export [path]` | JSON, or Markdown if `path` ends `.md` |
-| `:RATelemetry open [ns]` | render + open externally (`report_style`: `auto`/`kit`/`mdview`/`file`) |
+| `:RATelemetry open [ns]` | render + open externally (`report_style`: `auto`/`kit`/`mdview`/`file`/`html`) |
 | `:RATelemetry compare [ns] [days]` | "this window vs the one before it" (default 7 days) — newly-hot/gone-cold/changed functions |
 | `:RATelemetry startup [top]` | which module a plugin's startup cost sits in, as a waterfall. Opt-in via `autostart()` from this plugin's own lazy.nvim `init` hook — see the telemetry README for why `init` and not `init.lua`. |
 | `:RATelemetry cost` | startup cost vs. call count per namespace, worst (expensive, underused) first — joins `startup` and every live instance's own `resolved_modules()` on real module paths, never a name guess. |

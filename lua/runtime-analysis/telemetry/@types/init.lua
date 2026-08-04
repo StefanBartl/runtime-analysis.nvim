@@ -24,7 +24,7 @@
 
 --- "auto" (default) prefers mdview if loadable, else the kit float — same
 --- degrade-silently discipline as `lib.nvim.progress`'s style resolution.
----@alias RA.Telemetry.ReportStyle "auto"|"kit"|"mdview"|"file"
+---@alias RA.Telemetry.ReportStyle "auto"|"kit"|"mdview"|"file"|"html"
 
 --- Scoping options for `wrap()`. `only` and `except` are exact names, never
 --- patterns — `filter` is the single escape hatch for anything else.

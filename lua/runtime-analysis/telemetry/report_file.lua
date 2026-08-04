@@ -27,6 +27,18 @@ function M.namespace_path(namespace, opts)
   return M.dir(opts) .. "/" .. store.sanitize(namespace) .. ".md"
 end
 
+---The HTML dashboard's own path (docs/ROADMAP.md §4.4) — a sibling of
+---`M.namespace_path`, `.html` rather than `.md`, same directory. A
+---separate extension rather than a separate directory: both are
+---disposable per-namespace snapshots of the same underlying report, not
+---two different kinds of data.
+---@param namespace string
+---@param opts? Lib.Cache.Opts
+---@return string
+function M.namespace_html_path(namespace, opts)
+  return M.dir(opts) .. "/" .. store.sanitize(namespace) .. ".html"
+end
+
 ---The combined, all-instances document `:RATelemetry open` (no namespace)
 ---renders — a snapshot at invocation time, not self-updating like a
 ---per-namespace file can be. See the "Browser report" section of this
@@ -36,6 +48,13 @@ end
 ---@return string
 function M.combined_path(opts)
   return M.dir(opts) .. "/report.md"
+end
+
+---The combined HTML dashboard's own path — see `M.namespace_html_path`.
+---@param opts? Lib.Cache.Opts
+---@return string
+function M.combined_html_path(opts)
+  return M.dir(opts) .. "/report.html"
 end
 
 ---Best-effort: never raises. A report file is a convenience artifact, not
