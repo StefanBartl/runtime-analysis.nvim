@@ -396,6 +396,184 @@ return function(H)
   end
 
   -- -------------------------------------------------------------------------
+  -- call trees (docs/ROADMAP.md §3.1) — the immediate caller, one frame of
+  -- debug.getinfo, reusing the identical bounded-cardinality bucket
+  -- argument profiling already uses.
+  -- -------------------------------------------------------------------------
+  do
+    local mod = {
+      find = function(path)
+        return path
+      end,
+    }
+    local t = telemetry.new({ namespace = ns("call_tree"), persist = false })
+    t.wrap(mod, "fs", { call_tree = true })
+    t.start()
+
+    -- Two distinct call sites, each on its own line -- real line numbers,
+    -- not fabricated ones, so this exercises the real debug.getinfo call
+    -- rather than a stand-in for it.
+    local function caller_a()
+      mod.find("/repo/a") -- line X
+    end
+    local function caller_b()
+      mod.find("/repo/b") -- line Y
+    end
+    for _ = 1, 7 do
+      caller_a()
+    end
+    for _ = 1, 3 do
+      caller_b()
+    end
+
+    local entry = t.report().entries[1]
+    H.eq(entry.calls, 10, "all calls counted regardless of caller")
+    H.ok(entry.callers ~= nil, "callers bucket present once call_tree is on")
+    H.eq(#entry.callers, 2, "exactly two distinct call sites")
+    H.eq(entry.callers[1].count, 7, "the busier call site sorts first")
+    H.ok(
+      entry.callers[1].fingerprint:find("telemetry_spec%.lua:%d+$") ~= nil,
+      "fingerprint is a real short_src:line, not a placeholder: got "
+        .. entry.callers[1].fingerprint
+    )
+    H.ok(
+      entry.callers[1].fingerprint ~= entry.callers[2].fingerprint,
+      "the two call sites are genuinely distinct lines"
+    )
+    H.eq(entry.callers[1].share, 0.7, "share is of calls, 7/10")
+
+    t.stop()
+    t.unwrap()
+  end
+
+  -- opt-in via start_opts, same predicate/list/true shapes profile_args
+  -- already supports, resolved through the identical `selected()` helper.
+  do
+    local mod = {
+      find = function() end,
+      quiet = function() end,
+    }
+    local t = telemetry.new({ namespace = ns("call_tree_predicate"), persist = false })
+    t.wrap(mod, "fs")
+    t.start({
+      call_tree = function(key)
+        return key == "fs.find"
+      end,
+    })
+
+    local function somewhere()
+      mod.find()
+      mod.quiet()
+    end
+    somewhere()
+
+    local by_key = {}
+    for _, e in ipairs(t.report().entries) do
+      by_key[e.key] = e
+    end
+    H.ok(by_key["fs.find"].callers ~= nil, "the selected key gets a callers bucket")
+    H.eq(by_key["fs.quiet"].callers, nil, "a key the predicate rejected has no callers bucket")
+
+    t.stop()
+    t.unwrap()
+  end
+
+  -- bounded cardinality: reuses `accumulate()`, but confirmed end to end
+  -- through the real call_tree path rather than assumed from the args test
+  -- above sharing the same function.
+  do
+    local mod = {
+      f = function() end,
+    }
+    local t = telemetry.new({
+      namespace = ns("call_tree_bounded"),
+      persist = false,
+      max_arg_values = 3,
+    })
+    t.wrap(mod, nil, { call_tree = true })
+    t.start()
+
+    -- Five distinct call sites, each its own line, so the caller keys are
+    -- genuinely five different fingerprints rather than one repeated five
+    -- times.
+    local function site1()
+      mod.f()
+    end
+    local function site2()
+      mod.f()
+    end
+    local function site3()
+      mod.f()
+    end
+    local function site4()
+      mod.f()
+    end
+    local function site5()
+      mod.f()
+    end
+    site1()
+    site2()
+    site3()
+    site4()
+    site5()
+
+    local entry = t.report().entries[1]
+    H.eq(entry.calls, 5, "all five calls counted")
+    H.eq(#entry.callers, 3, "kept exactly max_arg_values distinct call sites")
+    H.eq(entry.callers_other, 2, "the rest landed in the other bucket")
+    H.eq(entry.callers_distinct, 5, "distinct count still reported honestly")
+
+    t.stop()
+    t.unwrap()
+  end
+
+  -- sampling (docs/ROADMAP.md §3.2) applies to call_tree exactly as it
+  -- already does to args/time/errors — only every Nth call pays for it.
+  do
+    local mod = {
+      f = function() end,
+    }
+    local t = telemetry.new({ namespace = ns("call_tree_sample"), persist = false })
+    t.wrap(mod, nil, { call_tree = true, sample = 5 })
+    t.start()
+    for _ = 1, 20 do
+      mod.f()
+    end
+    local entry = t.report().entries[1]
+    H.eq(entry.calls, 20, "calls itself is always exact, sampled or not")
+    local sampled_total = 0
+    for _, c in ipairs(entry.callers) do
+      sampled_total = sampled_total + c.count
+    end
+    H.eq(sampled_total, 4, "only 1-in-5 calls paid for the caller lookup")
+    t.stop()
+    t.unwrap()
+  end
+
+  -- markdown rendering
+  do
+    local namespace = ns("call_tree_markdown")
+    local mod = {
+      find = function() end,
+    }
+    local t = telemetry.new({ namespace = namespace, persist = false })
+    t.wrap(mod, "fs", { call_tree = true })
+    t.start()
+    mod.find()
+    mod.find()
+
+    local text = table.concat(t.markdown(), "\n")
+    H.ok(
+      text:find("### `fs.find` — callers", 1, true) ~= nil,
+      "callers subsection for a call_tree-enabled function"
+    )
+    H.ok(text:find("| Share | Call site |", 1, true) ~= nil, "callers table header present")
+
+    t.stop()
+    t.unwrap()
+  end
+
+  -- -------------------------------------------------------------------------
   -- timing and error counting
   -- -------------------------------------------------------------------------
   do

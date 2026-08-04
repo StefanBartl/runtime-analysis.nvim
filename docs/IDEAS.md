@@ -121,9 +121,14 @@ is where they **disagree**:
   a callback, or a table the static pass cannot follow — precisely the class
   `calls.lua`'s `confidence` field exists to admit uncertainty about.
 
-**Strictly gated on §3.1 of `ROADMAP.md` shipping**, and that entry is itself
-gated on measuring what `debug.getinfo` costs. Written down here because it is
-the payoff that justifies paying that cost, not as an independent item.
+**Was strictly gated on §3.1 of `ROADMAP.md` shipping — it now has, 2026-08-04**
+(see `docs/FINISHED.md`, `call_tree` opt-in via `debug.getinfo(2, "Sl")`).
+Written down here because it was the payoff that justified paying that
+cost, not because it is ready to build on its own: this idea is still the
+cross-repo join itself (documentation.nvim's static require graph against
+this module's now-real runtime caller data), unbuilt, and belongs in
+whichever repo's roadmap picks it up next — most naturally documentation.nvim's,
+since `:DocMap why` is its command.
 
 ### 1.5 Runtime evidence as a *check input*, not just a view
 

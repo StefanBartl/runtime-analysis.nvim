@@ -152,6 +152,16 @@ function M.build(namespace, data, meta, opts)
         entry.error_fp, entry.error_other, entry.error_distinct = list, other, distinct
       end
 
+      if stats.callers then
+        -- docs/ROADMAP.md §3.1 — a caller site is a fingerprint exactly
+        -- like an argument, just derived from `debug.getinfo` instead of
+        -- the call's own arguments, so it reuses the identical bucket and
+        -- the identical sampling-honest share calculation.
+        local list, other, distinct =
+          top_fingerprints(stats.callers, fingerprint_total(stats.callers))
+        entry.callers, entry.callers_other, entry.callers_distinct = list, other, distinct
+      end
+
       entries[#entries + 1] = entry
       total = total + calls
     end
@@ -205,6 +215,9 @@ function M.lines(report)
   end
   if report.modes.errors then
     modes[#modes + 1] = "errors"
+  end
+  if report.modes.call_tree then
+    modes[#modes + 1] = "call_tree"
   end
   local mode_str = #modes > 0 and ("counting + " .. table.concat(modes, " + ")) or "counting"
 
@@ -286,6 +299,23 @@ function M.lines(report)
         )
       end
     end
+
+    if e.callers then
+      local shown = 0
+      for _, a in ipairs(e.callers) do
+        shown = shown + 1
+        if shown > ARGS_SHOWN then
+          break
+        end
+        out[#out + 1] = ("      ← %3.0f %%  %s"):format(a.share * 100, a.fingerprint)
+      end
+      if (e.callers_other or 0) > 0 then
+        out[#out + 1] = ("      ← %3.0f %%  <other: %d distinct>"):format(
+          e.calls > 0 and (e.callers_other / e.calls * 100) or 0,
+          e.callers_distinct or 0
+        )
+      end
+    end
   end
 
   return out
@@ -311,6 +341,9 @@ function M.markdown(report)
   end
   if report.modes.errors then
     modes[#modes + 1] = "errors"
+  end
+  if report.modes.call_tree then
+    modes[#modes + 1] = "call_tree"
   end
   local mode_str = #modes > 0 and ("counting + " .. table.concat(modes, " + ")) or "counting"
 
@@ -407,6 +440,33 @@ function M.markdown(report)
         out[#out + 1] = ("| %.0f %% | `<other: %d distinct>` |"):format(
           e.errors > 0 and (e.error_other / e.errors * 100) or 0,
           e.error_distinct or 0
+        )
+      end
+    end
+  end
+
+  -- Call-tree subsections (docs/ROADMAP.md §3.1) — the identical shape
+  -- again, a separate loop for the same reason the error-profile one is.
+  for _, e in ipairs(report.entries) do
+    if e.callers then
+      out[#out + 1] = ""
+      out[#out + 1] = ("### `%s` — callers"):format(e.key)
+      out[#out + 1] = ""
+      out[#out + 1] = "| Share | Call site |"
+      out[#out + 1] = "| ---: | --- |"
+
+      local shown = 0
+      for _, a in ipairs(e.callers) do
+        shown = shown + 1
+        if shown > ARGS_SHOWN then
+          break
+        end
+        out[#out + 1] = ("| %.0f %% | `%s` |"):format(a.share * 100, a.fingerprint)
+      end
+      if (e.callers_other or 0) > 0 then
+        out[#out + 1] = ("| %.0f %% | `<other: %d distinct>` |"):format(
+          e.calls > 0 and (e.callers_other / e.calls * 100) or 0,
+          e.callers_distinct or 0
         )
       end
     end

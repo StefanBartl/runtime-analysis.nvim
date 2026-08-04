@@ -36,6 +36,7 @@ When it *is* on:
 | Counting | one table index + one integer add | **0.014 µs** |
 | + timing | two `vim.uv.hrtime()` reads | 0.394 µs |
 | + argument profiling | one fingerprint computation | 0.619 µs |
+| + `call_tree` (docs/ROADMAP.md §3.1) | one `debug.getinfo(2, "Sl")` call | ~0.32 µs total (counting + this) |
 | `errors` / `outermost_only` | one `pcall` (the call must return through us even when it raises) | — |
 | `errors`, on an actual raise | + one fingerprint of the error value (docs/ROADMAP.md §3.4) | — (only paid on the already-rare, already-`pcall`'d failure path; the success path above is unaffected) |
 | `sample = N` (docs/ROADMAP.md §3.2) | the branches above run on only 1 in `N` calls; every other call takes the counting-only path | — (a caller controls the trade-off directly via `N`) |
@@ -49,6 +50,39 @@ global switch, and why `profile_args` accepts a predicate:
 ```lua
 t.start({ profile_args = function(key) return key:match("^bindings%.") ~= nil end })
 ```
+
+### Call trees — "who called this" (docs/ROADMAP.md §3.1)
+
+A flat count answers "`fs.read` was called 4 812 times"; it cannot answer
+the question that usually follows, "by whom". `call_tree` records the
+immediate caller — one frame of `debug.getinfo(2, "Sl")`, source file +
+line — as a bounded-cardinality bucket, the identical shape and identical
+`max_arg_values` bound `profile_args` already uses for arguments:
+
+```lua
+t.wrap(mod, "fs", { call_tree = true })
+-- or, opt-in per key at start() time, same predicate/list/true shapes
+-- profile_args already accepts:
+t.start({ call_tree = function(key) return key == "fs.read" end })
+```
+
+```
+fs.read  —  4 812 calls
+    ← 61 %  lua/lib/nvim/fs/init.lua:42
+    ← 23 %  lua/documentation/core/scan.lua:118
+    ← 16 %  <other: 9 distinct>
+```
+
+**Source + line, not a resolved caller name.** `debug.getinfo(2, "Sln")`
+(name resolution added) measured ~0.51 µs against `"Sl"`'s ~0.32 µs —
+`~60 %` more expensive for information a call site's own source location
+already narrows down unambiguously, and it is the identical join key
+`documentation.nvim`'s own static `calls` extraction already uses (a call
+edge's line number, not a resolved caller name) — see `docs/ECOSYSTEM.md`
+step 8 for that join in practice. `sample = N` applies to `call_tree`
+exactly as it already does to `profile_args`/`time`/`errors`: only every
+Nth call pays for the `debug.getinfo` lookup, `calls` itself stays exact
+regardless.
 
 ## API
 

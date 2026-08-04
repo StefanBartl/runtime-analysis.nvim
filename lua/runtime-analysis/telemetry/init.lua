@@ -338,7 +338,13 @@ function M.new(opts)
   ---@param err_fp string|nil docs/ROADMAP.md §2.5 — set only when `errored`
   ---and the subscribing instance opted into `errors`; fingerprinted the
   ---same way an argument is, via the identical bounded-cardinality bucket.
-  function inst._record(key, fp, dur, errored, err_fp)
+  ---@param caller_key string|nil docs/ROADMAP.md §3.1 — `"short_src:line"` of
+  ---the immediate caller, set only when the subscribing instance opted into
+  ---`call_tree`. Accumulated through the identical bounded-cardinality
+  ---bucket `args`/`error_fp` already use — a caller site is a fingerprint
+  ---like any other, just derived from `debug.getinfo` instead of the call's
+  ---own arguments.
+  function inst._record(key, fp, dur, errored, err_fp, caller_key)
     local fns = pending.functions
     local s = fns[key]
     if not s then
@@ -380,6 +386,10 @@ function M.new(opts)
     if fp then
       s.args = accumulate(s.args, fp, cfg.max_arg_values)
     end
+
+    if caller_key then
+      s.callers = accumulate(s.callers, caller_key, cfg.max_arg_values)
+    end
   end
 
   -- -------------------------------------------------------------------------
@@ -420,6 +430,7 @@ function M.new(opts)
         time = target_opts.time or false,
         errors = target_opts.errors or false,
         outermost_only = target_opts.outermost_only or false,
+        callers = target_opts.call_tree or false,
         sample = (target_opts.sample and target_opts.sample > 1) and target_opts.sample or nil,
       },
     }
@@ -629,6 +640,7 @@ function M.new(opts)
       tgt.wants.args = tgt.wants.args or selected(start_opts.profile_args, tgt.key)
       tgt.wants.time = tgt.wants.time or selected(start_opts.time, tgt.key)
       tgt.wants.errors = tgt.wants.errors or selected(start_opts.errors, tgt.key)
+      tgt.wants.callers = tgt.wants.callers or selected(start_opts.call_tree, tgt.key)
     end
 
     -- Unconditional: `attach` is idempotent per (container, field, instance)
@@ -727,11 +739,13 @@ function M.new(opts)
   ---@param report_opts? RA.Telemetry.ReportOpts
   ---@return RA.Telemetry.Report
   function inst.report(report_opts)
-    local modes = { counting = true, args = false, timing = false, errors = false }
+    local modes =
+      { counting = true, args = false, timing = false, errors = false, call_tree = false }
     for _, tgt in ipairs(targets) do
       modes.args = modes.args or tgt.wants.args
       modes.timing = modes.timing or tgt.wants.time
       modes.errors = modes.errors or tgt.wants.errors
+      modes.call_tree = modes.call_tree or tgt.wants.callers
     end
 
     return report_mod.build(namespace, merged(), {

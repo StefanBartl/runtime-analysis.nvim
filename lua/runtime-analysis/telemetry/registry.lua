@@ -42,7 +42,7 @@ local sites = setmetatable({}, { __mode = "k" })
 ---subscriber set or an instance's mode changes — never per call.
 ---@param site table
 local function refresh(site)
-  local args, time, errors, outermost = false, false, false, false
+  local args, time, errors, outermost, callers = false, false, false, false, false
   local sample_rate, sample_blocked = nil, false
   local subs = site.subs
   for i = 1, #subs do
@@ -51,6 +51,7 @@ local function refresh(site)
     time = time or s.time
     errors = errors or s.errors
     outermost = outermost or s.outermost_only
+    callers = callers or s.callers
 
     -- docs/ROADMAP.md §3.2: sampling is the MINIMUM (most eager) rate any
     -- subscriber that actually wants expensive work asks for -- so the
@@ -59,7 +60,7 @@ local function refresh(site)
     -- its own needs every call in full, which makes sampling unsafe for
     -- this site at all: `sample_blocked` overrides any rate collected
     -- from other subscribers rather than the two silently coexisting.
-    if s.args or s.time or s.errors or s.outermost_only then
+    if s.args or s.time or s.errors or s.outermost_only or s.callers then
       if s.sample then
         if not sample_rate or s.sample < sample_rate then
           sample_rate = s.sample
@@ -73,6 +74,7 @@ local function refresh(site)
   site.needs_time = time
   site.needs_errors = errors
   site.needs_depth = outermost
+  site.needs_callers = callers
   site.sample_rate = (not sample_blocked) and sample_rate or nil
 end
 
@@ -81,7 +83,8 @@ end
 ---@param dur number|nil
 ---@param errored boolean
 ---@param err_fp string|nil
-local function dispatch(site, fp, dur, errored, err_fp)
+---@param caller_key string|nil docs/ROADMAP.md §3.1 -- `"short_src:currentline"` of the immediate caller, or nil when nobody wants it or `debug.getinfo` returned nothing (a C caller, e.g. `vim.schedule`'s own dispatch)
+local function dispatch(site, fp, dur, errored, err_fp, caller_key)
   local subs = site.subs
   for i = 1, #subs do
     local s = subs[i]
@@ -90,7 +93,8 @@ local function dispatch(site, fp, dur, errored, err_fp)
       s.args and fp or nil,
       s.time and dur or nil,
       errored,
-      s.errors and err_fp or nil
+      s.errors and err_fp or nil,
+      s.callers and caller_key or nil
     )
   end
 end
@@ -108,7 +112,15 @@ local function make_wrapper(site)
     -- Cheapest path, and the one that must stay cheap: counting only.
     -- Tail-called, so the wrapper adds no frame to the callee's stack and
     -- multiple return values pass through untouched.
-    if not (site.needs_args or site.needs_time or site.needs_errors or site.needs_depth) then
+    if
+      not (
+        site.needs_args
+        or site.needs_time
+        or site.needs_errors
+        or site.needs_depth
+        or site.needs_callers
+      )
+    then
       dispatch(site, nil, nil, false)
       return original(...)
     end
@@ -117,10 +129,10 @@ local function make_wrapper(site)
     -- call pays for the expensive path below at all, or takes the same
     -- cheap counting-only path the branch above already uses. `calls`
     -- stays exact regardless — it was already free — only args/timing/
-    -- errors/depth become an estimate from the sampled subset, which is
-    -- exactly what makes them affordable on a hot surface in the first
-    -- place (README.md's own "Sampling" section states the honest limit
-    -- this creates).
+    -- errors/depth/callers become an estimate from the sampled subset,
+    -- which is exactly what makes them affordable on a hot surface in the
+    -- first place (README.md's own "Sampling" section states the honest
+    -- limit this creates).
     if site.sample_rate then
       site.sample_tick = (site.sample_tick or 0) + 1
       if site.sample_tick % site.sample_rate ~= 0 then
@@ -132,6 +144,26 @@ local function make_wrapper(site)
     local fp
     if site.needs_args then
       fp = fingerprint.of(select("#", ...), ...)
+    end
+
+    -- docs/ROADMAP.md §3.1: one frame of `debug.getinfo`, at the cheapest
+    -- field set that still names a real call site — `"Sl"` (source +
+    -- current line), not `"Sln"` (+ name resolution), which measured
+    -- ~1.5x more expensive for a caller *name* this already has a cheaper,
+    -- unambiguous substitute for: a source:line pair identifies the exact
+    -- call site, which is the same join key `documentation.nvim`'s own
+    -- static `calls` extraction already uses (a call edge's `line`, not a
+    -- resolved caller name). Level 2 from inside this wrapper is the
+    -- wrapper's own caller — the immediate caller of the wrapped function,
+    -- exactly what "by whom" asks. `nil` when the caller has no Lua frame
+    -- to report (a C caller, e.g. `vim.schedule`'s own dispatch) rather
+    -- than a placeholder string a report would have to special-case.
+    local caller_key
+    if site.needs_callers then
+      local info = debug.getinfo(2, "Sl")
+      if info and info.short_src then
+        caller_key = info.short_src .. ":" .. (info.currentline or 0)
+      end
     end
 
     -- Depth tracking and error counting both need the call to return through
@@ -154,7 +186,7 @@ local function make_wrapper(site)
         -- error actually happened, so the success-path cost this module's
         -- whole premise rests on is untouched either way.
         local err_fp = (not res[1] and site.needs_errors) and fingerprint.value(res[2]) or nil
-        dispatch(site, fp, dur, not res[1], err_fp)
+        dispatch(site, fp, dur, not res[1], err_fp, caller_key)
       end
 
       if not res[1] then
@@ -166,11 +198,11 @@ local function make_wrapper(site)
     if site.needs_time then
       local t0 = uv.hrtime()
       local res = pack(original(...))
-      dispatch(site, fp, (uv.hrtime() - t0) / 1e6, false)
+      dispatch(site, fp, (uv.hrtime() - t0) / 1e6, false, nil, caller_key)
       return unpack_(res, 1, res.n)
     end
 
-    dispatch(site, fp, nil, false)
+    dispatch(site, fp, nil, false, nil, caller_key)
     return original(...)
   end
 end
@@ -185,7 +217,7 @@ end
 ---@param field string
 ---@param key string            # the label reported for this instance
 ---@param inst table            # must expose `_record(key, fp, dur_ms, errored, err_fp)`
----@param wants table           # { args, time, errors, outermost_only, sample }
+---@param wants table           # { args, time, errors, outermost_only, callers, sample }
 ---@return boolean ok
 function M.attach(container, field, key, inst, wants)
   local original = rawget(container, field)
@@ -219,6 +251,7 @@ function M.attach(container, field, key, inst, wants)
       local s = site.subs[i]
       s.key, s.args, s.time = key, wants.args, wants.time
       s.errors, s.outermost_only = wants.errors, wants.outermost_only
+      s.callers = wants.callers
       s.sample = wants.sample
       refresh(site)
       return true
@@ -232,6 +265,7 @@ function M.attach(container, field, key, inst, wants)
     time = wants.time or false,
     errors = wants.errors or false,
     outermost_only = wants.outermost_only or false,
+    callers = wants.callers or false,
     sample = wants.sample,
   }
   refresh(site)

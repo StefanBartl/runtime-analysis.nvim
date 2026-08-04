@@ -26,6 +26,54 @@ Newest first, by date; original document order within a date.
 
 ## 2026-08-04
 
+### §3.1 Call trees, not just counts
+
+The single biggest capability gap in the whole document, gated on one
+explicit precondition: measure `debug.getinfo`'s real cost before building
+anything on top of it. Measured, through the real telemetry wrap
+mechanism (200k calls, best-of-3, the same methodology the existing cost
+table already uses) rather than a synthetic microbenchmark that would not
+be comparable to it: counting alone reproduced the committed 0.014 µs
+baseline, `debug.getinfo(2, "S")` (source only) added ~0.31 µs,
+`debug.getinfo(2, "Sl")` (+ current line) ~0.32 µs, `debug.getinfo(2,
+"Sln")` (+ name resolution) ~0.51 µs — name resolution costs ~60% more
+for information a source:line pair already makes unambiguous, and it is
+the identical join key documentation.nvim's own static `calls` extraction
+already uses (a call edge's line number, not a resolved caller name). Shipped
+with `"Sl"`, landing cheaper than the already-shipped `+ timing` tier
+(0.394 µs).
+
+**Mechanically:** a new `call_tree` opt (`WrapOpts`/`StartOpts`, the
+identical `boolean|string[]|fun(key):boolean` shape `profile_args`/`time`/
+`errors` already accept) that records the immediate caller — one frame of
+`debug.getinfo(2, "Sl")`, captured up front in `registry.lua`'s wrapper
+before the call itself, the same place argument fingerprinting already
+happens — into `s.callers`, a bucket that reuses the *exact* bounded-
+cardinality shape (`RA.Telemetry.ArgStats`) and the identical `accumulate()`
+function `args`/`error_fp` already use: a caller site is a fingerprint like
+any other, just derived from `debug.getinfo` instead of the call's own
+arguments. `sample = N` applies uniformly, the same way it already gates
+every other expensive mode. Rendered in both `M.lines` (`← 61 %
+lua/fs/init.lua:42`) and `M.markdown` (a `### callers` table), mirroring
+the argument-profile and error-profile sections exactly.
+
+**What this deliberately is not.** A one-level caller histogram, not a
+full call stack — matching the roadmap entry's own scope ("one frame of
+`debug.getinfo`"), not a general profiler (§3.5's own rejection already
+covers why this module does not become one). §4.3 (standard trace
+formats) is not unblocked by this in the way it sounds: a real trace-
+format viewer expects nested call stacks with timing spans, which this
+data structurally is not — see that entry's own updated note.
+
+Verified in `docs/TESTS/telemetry_spec.lua`: real, distinct call sites
+(not fabricated line numbers) producing genuinely different fingerprints;
+the busier site sorting first with the correct share; opt-in via both
+`wrap()`-time and `start()`-time predicate, mirroring `profile_args`'s own
+test coverage; bounded cardinality through the real `call_tree` path, not
+assumed from the args test sharing the same `accumulate()` function;
+sampling only paying for the lookup on the sampled subset, `calls` itself
+staying exact; and markdown rendering.
+
 ### §6.1 Mode 8 — telemetry in `:DocBrowse` (§6.3 folded in)
 
 The reason two plugins exist, per `docs/ECOSYSTEM.md`'s own framing —

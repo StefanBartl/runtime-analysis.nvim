@@ -36,7 +36,8 @@
 ---@field time? boolean                        # measure duration for these functions
 ---@field errors? boolean                      # count raised errors for these functions
 ---@field outermost_only? boolean              # recursive calls count once (costs a pcall)
----@field sample? integer                      # docs/ROADMAP.md §3.2 — only every Nth call pays for args/time/errors/outermost_only; `calls` itself is always exact. Structural, like `outermost_only`: set at wrap()-time, not toggleable via StartOpts.
+---@field call_tree? boolean                   # docs/ROADMAP.md §3.1 — record the immediate caller's `short_src:line` (`debug.getinfo(2, "Sl")`, ~0.32µs measured total vs ~0.014µs for counting alone)
+---@field sample? integer                      # docs/ROADMAP.md §3.2 — only every Nth call pays for args/time/errors/outermost_only/call_tree; `calls` itself is always exact. Structural, like `outermost_only`: set at wrap()-time, not toggleable via StartOpts.
 ---@field module_id? string                    # the real Lua module path `container` came from, if known (set automatically by wrap_loaded()). Enables a consumer to resolve a wrapped key back to source; omit when the wrap prefix is not a real module path.
 
 --- Scoping for `wrap_loaded()`: the per-function `only`/`except`/`filter`
@@ -53,6 +54,7 @@
 ---@field profile_args? string[]|true|fun(key: string): boolean  # argument fingerprinting
 ---@field time? string[]|true|fun(key: string): boolean          # duration measurement
 ---@field errors? string[]|true|fun(key: string): boolean        # count raised errors
+---@field call_tree? string[]|true|fun(key: string): boolean     # docs/ROADMAP.md §3.1 — immediate-caller recording
 
 ---@class RA.Telemetry.ReportOpts
 ---@field sort? "calls"|"name"|"time"  # default "calls"
@@ -98,6 +100,7 @@
 ---@field timing? RA.Telemetry.Timing
 ---@field args? RA.Telemetry.ArgStats
 ---@field error_fp? RA.Telemetry.ArgStats  # docs/ROADMAP.md §2.5 — same shape as `args`, fingerprinting the raised error instead of the call's arguments
+---@field callers? RA.Telemetry.ArgStats   # docs/ROADMAP.md §3.1 — same shape as `args`, fingerprinting the immediate caller's `short_src:line` instead of the call's arguments
 
 ---@class RA.Telemetry.Data
 ---@field version integer
@@ -123,12 +126,15 @@
 ---@field error_fp? { fingerprint: string, count: number, share: number }[]  # docs/ROADMAP.md §2.5 — share is of `errors`, not `calls`
 ---@field error_other? integer
 ---@field error_distinct? integer
+---@field callers? { fingerprint: string, count: number, share: number }[]  # docs/ROADMAP.md §3.1 — `fingerprint` is a `short_src:line` call site; share is of `calls`
+---@field callers_other? integer
+---@field callers_distinct? integer
 
 ---@class RA.Telemetry.Report
 ---@field namespace string
 ---@field running boolean
 ---@field disabled boolean
----@field modes { counting: boolean, args: boolean, timing: boolean, errors: boolean }
+---@field modes { counting: boolean, args: boolean, timing: boolean, errors: boolean, call_tree: boolean }
 ---@field started_at integer
 ---@field sessions integer
 ---@field total_calls integer

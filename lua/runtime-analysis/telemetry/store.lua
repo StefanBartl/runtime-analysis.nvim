@@ -222,6 +222,10 @@ function M.merge(base, delta, max_values)
       dst.error_fp = dst.error_fp or {}
       merge_fingerprints(dst.error_fp, src.error_fp, max_values)
     end
+    if src.callers then
+      dst.callers = dst.callers or {}
+      merge_fingerprints(dst.callers, src.callers, max_values)
+    end
   end
 
   for day, keys in pairs(delta.days or {}) do
