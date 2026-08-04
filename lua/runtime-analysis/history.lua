@@ -45,6 +45,7 @@ local MAX_ENTRIES = 200
 --- unrelated module's internal helper is worse than repeating it.
 local SAFE = "[^%w%-%._]"
 
+---@internal
 ---@param key string
 ---@return string
 local function sanitize(key)
@@ -56,6 +57,7 @@ local function sanitize(key)
   return s
 end
 
+---@internal
 ---@param root? string Absolute repository root — see `M.list`'s own
 ---doc-comment for why a reader (unlike a recorder) sometimes needs one
 ---other than cwd.

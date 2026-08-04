@@ -39,18 +39,21 @@ local PRIVATE_FILE = "http-client.private.env.json"
 
 local finder = find_root({ markers = { ".git" } })
 
+---@internal
 ---@return string
 local function default_root()
   local from = (vim.uv or vim.loop).cwd() or vim.fn.getcwd()
   return finder.find(from) or from
 end
 
+---@internal
 ---@param opts? { root: string? }
 ---@return string
 local function resolve_root(opts)
   return (opts and opts.root) or default_root()
 end
 
+---@internal
 ---@param path string
 ---@return table<string, table<string, any>>
 local function read_env_file(path)
@@ -164,6 +167,7 @@ function M.set_current(name, opts)
 end
 
 ---Every `{{name}}` placeholder in `str`, deduplicated, first-seen order.
+---@internal
 ---@param str string
 ---@return string[]
 local function find_placeholders(str)
@@ -178,6 +182,7 @@ local function find_placeholders(str)
   return out
 end
 
+---@internal
 ---@param str string
 ---@param vars table<string, any>
 ---@return string

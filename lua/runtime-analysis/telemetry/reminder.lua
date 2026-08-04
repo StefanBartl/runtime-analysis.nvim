@@ -25,6 +25,7 @@ M.DEFAULTS = { days = 7, calls = 50000 }
 --- Multiple of the configured duration at which the single follow-up fires.
 local ESCALATE_FACTOR = 4
 
+---@internal
 ---@param data RA.Telemetry.Data
 ---@return integer
 local function total_calls(data)
@@ -35,12 +36,14 @@ local function total_calls(data)
   return n
 end
 
+---@internal
 ---@param data RA.Telemetry.Data
 ---@return integer
 local function days_collected(data)
   return math.floor((os.time() - (data.started_at or os.time())) / 86400)
 end
 
+---@internal
 ---@param data RA.Telemetry.Data
 ---@return integer
 local function fn_count(data)

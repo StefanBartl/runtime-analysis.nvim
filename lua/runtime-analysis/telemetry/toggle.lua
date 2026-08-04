@@ -40,6 +40,7 @@ local DEFAULT_DIR = vim.fn.stdpath("cache") .. "/runtime-analysis.nvim/cache"
 ---@type table<string, boolean>|nil
 local disabled = nil
 
+---@internal
 ---@param opts? Lib.Cache.Opts
 ---@return table<string, boolean>
 local function load(opts)
@@ -63,6 +64,7 @@ local function load(opts)
   return disabled
 end
 
+---@internal
 ---@param d table<string, boolean>
 ---@param opts? Lib.Cache.Opts
 local function persist(d, opts)

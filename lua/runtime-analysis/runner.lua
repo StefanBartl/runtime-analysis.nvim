@@ -16,6 +16,7 @@ local json_encode = require("lib.lua.json.encode")
 
 local M = {}
 
+---@internal
 ---@param body string
 ---@return string[]
 local function body_lines(body)
@@ -27,6 +28,7 @@ end
 ---charset=utf-8`, `application/vnd.api+json`, …) rather than an exact
 ---match, since real APIs vary the parameters and the `+json` suffix
 ---convention (RFC 6839) is common enough to be worth catching.
+---@internal
 ---@param headers table<string, string>
 ---@return boolean
 local function is_json_response(headers)
@@ -51,6 +53,7 @@ end
 ---misconfigured server can send that header over a body that is not
 ---actually valid JSON, and showing the reader the real (if compact)
 ---response is strictly better than an error where a response used to be.
+---@internal
 ---@param body string
 ---@return string[]? pretty_lines
 local function try_pretty_json(body)
@@ -68,6 +71,7 @@ end
 ---Turn a raw `Lib.Net.Curl.RawResponse` into lines ready for `view.lua`,
 ---shared by the blocking and async paths below so neither can drift from
 ---the other's formatting.
+---@internal
 ---@param resp Lib.Net.Curl.RawResponse
 ---@return string[] lines
 ---@return { status: integer, body_start: integer, is_json: boolean } meta

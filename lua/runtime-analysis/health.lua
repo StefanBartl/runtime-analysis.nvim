@@ -38,6 +38,7 @@ local DEPS = {
   "lib.nvim.autocmd",
 }
 
+---@internal
 ---@return boolean
 local function version_ok()
   local v = vim.version()

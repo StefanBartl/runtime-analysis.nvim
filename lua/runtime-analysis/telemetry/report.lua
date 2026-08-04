@@ -21,6 +21,7 @@ local DOMINANT_MIN_CALLS = 20
 --- Distinct fingerprints kept per entry in the rendered report.
 local ARGS_SHOWN = 3
 
+---@internal
 ---@param n number
 ---@return string
 local function num(n)
@@ -33,6 +34,7 @@ end
 ---shared by `M.lines` and `M.markdown` so the two never disagree on key
 ---order. `nil` when there is nothing to show, so callers can skip the line
 ---entirely rather than rendering an empty one.
+---@internal
 ---@param info table<string, string>
 ---@return string?
 local function format_info(info)
@@ -58,6 +60,7 @@ end
 ---the true call count would silently deflate every share — "62 % of the
 ---calls actually examined shared this value" stays an honest claim either
 ---way, "6 % of all calls" would not (most of them were never looked at).
+---@internal
 ---@param stats RA.Telemetry.ArgStats
 ---@return integer
 local function fingerprint_total(stats)
@@ -68,6 +71,7 @@ local function fingerprint_total(stats)
   return total
 end
 
+---@internal
 ---@param stats RA.Telemetry.ArgStats
 ---@param total integer the fingerprint bucket's own total — see `fingerprint_total`
 ---@return { fingerprint: string, count: integer, share: number }[] top, integer other, integer distinct
@@ -506,6 +510,7 @@ end
 -- Comparison across time windows (docs/ROADMAP.md §4.2)
 -- ---------------------------------------------------------------------------
 
+---@internal
 ---@param key string
 ---@param current integer
 ---@param previous integer

@@ -152,6 +152,7 @@ end
 ---without needing to resolve a real path or ask a plugin manager: a
 ---dependency-free grouping this module can compute on its own, and the same
 ---one a reader already thinks in.
+---@internal
 ---@param modname string
 ---@return string
 local function root_of(modname)

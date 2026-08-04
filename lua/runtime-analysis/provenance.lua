@@ -36,6 +36,7 @@ local M = {}
 ---the kind of wrong guess `runtime-analysis.curl`'s own unrecognized-flag
 ---handling and `cost_vs_use`'s own module-root join both already refuse to
 ---make elsewhere in this plugin.
+---@internal
 ---@param container_path string
 ---@return table? container
 ---@return "global"|"module"|nil kind

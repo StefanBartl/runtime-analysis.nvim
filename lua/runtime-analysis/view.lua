@@ -18,6 +18,7 @@ local BUFNAME = "runtime-analysis://response"
 ---`:bwipeout` or a fresh `:source` of this file during development does not
 ---leave a stale, invalid bufnr behind — `vim.fn.bufnr` always answers
 ---against what Neovim itself currently has.
+---@internal
 ---@return integer bufnr
 local function ensure_buffer()
   local bufnr = vim.fn.bufnr(BUFNAME)
@@ -34,6 +35,7 @@ local function ensure_buffer()
 end
 
 ---The window currently showing the response buffer, or `nil`.
+---@internal
 ---@param bufnr integer
 ---@return integer? winid
 local function find_window(bufnr)

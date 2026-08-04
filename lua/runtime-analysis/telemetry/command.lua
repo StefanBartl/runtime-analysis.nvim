@@ -47,11 +47,13 @@ local SUBCOMMANDS = {
   "cost",
 }
 
+---@internal
 ---@return RA.Telemetry
 local function telemetry()
   return require("runtime-analysis.telemetry")
 end
 
+---@internal
 ---@param lines string[]
 ---@param title string
 local function show(lines, title)
@@ -69,6 +71,7 @@ local function show(lines, title)
   notify.info(table.concat(lines, "\n"))
 end
 
+---@internal
 ---@param opts RA.Telemetry.ReportOpts
 ---@param namespace string|nil
 ---@return string[]
@@ -108,6 +111,7 @@ end
 ---"every instance, or just one" shape `report_lines` above already uses;
 ---`days` (default 7, `inst.compare`'s own) applies to every instance shown,
 ---not per-instance.
+---@internal
 ---@param namespace string|nil
 ---@param days integer|nil
 ---@return string[]
@@ -144,6 +148,7 @@ local function compare_lines(namespace, days)
   return out
 end
 
+---@internal
 ---@param path string|nil
 ---@return string|nil written
 local function export(path)
@@ -187,6 +192,7 @@ end
 ---note in the roadmap doc is explicit that the browser shows the *last*
 ---flush, and `open` is the one moment that promise should hold as tightly as
 ---possible.
+---@internal
 ---@param namespace string|nil
 local function open_report(namespace)
   local mod = telemetry()

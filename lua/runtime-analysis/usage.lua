@@ -55,12 +55,14 @@ local original_keymap_set = nil
 local wrapped_commands = {}
 local augroup = nil
 
+---@internal
 ---@param mode string|string[]
 ---@return string
 local function mode_key(mode)
   return type(mode) == "table" and table.concat(mode, ",") or mode
 end
 
+---@internal
 ---@param mode string|string[]
 ---@param lhs string
 ---@param rhs string|function
@@ -78,6 +80,7 @@ end
 ---keypress would leak one site per press instead of counting through a
 ---single stable one, the same "wrap once, call many times" discipline a
 ---real keymap callback already gets for free.
+---@internal
 ---@param name string
 local function record_command(name)
   local record = wrapped_commands[name]
@@ -93,6 +96,7 @@ end
 ---by construction (word characters stop before it), so `:w!` and `:w`
 ---share one key — a bang is a modifier on the same command, not a
 ---different one.
+---@internal
 ---@param line string
 ---@return string?
 local function command_name(line)

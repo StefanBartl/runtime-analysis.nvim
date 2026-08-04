@@ -110,12 +110,14 @@ local pending_handle = nil
 ---@type { method: string, url: string }?
 local pending_request = nil
 
+---@internal
 ---@param my_token integer
 ---@return boolean
 local function is_current(my_token)
   return in_flight and my_token == pending_token
 end
 
+---@internal
 ---@param ra RA
 local function cancel_pending(ra)
   if not in_flight then
@@ -153,6 +155,7 @@ end
 ---@param expect_line integer? absolute buffer line, for the quickfix entry
 ---@param source_bufnr integer
 ---@param actual integer? the real HTTP status, or `nil` on transport failure
+---@internal
 local function check_assertion(expect, expect_line, source_bufnr, actual)
   if not expect then
     return
@@ -185,6 +188,7 @@ end
 ---reference — the request buffer's real file directory when it has one
 ---(a committed `.http`/`.rest` file), the cwd otherwise (an ad-hoc `:RA
 ---request` scratch buffer has no file of its own to be relative to).
+---@internal
 ---@param source_bufnr integer
 ---@return string
 local function request_base_dir(source_bufnr)
@@ -207,6 +211,7 @@ end
 ---@param source_bufnr integer
 ---@return { method: string, url: string, headers: table<string, string>, body: string? }? request
 ---@return string? err
+---@internal
 local function resolve_request_shape(request, source_bufnr)
   local graphql = require("runtime-analysis.graphql")
   if graphql.is_graphql(request.headers) then
@@ -253,6 +258,7 @@ end
 ---then either the real response or an error/cancelled message — never
 ---silence while nothing visibly happens.
 ---@param ra RA
+---@internal
 local function send_current_buffer(ra)
   local parse = require("runtime-analysis.parse")
   local source_bufnr = vim.api.nvim_get_current_buf()
@@ -401,6 +407,7 @@ end
 ---(telescope, fzf-lua, snacks, or Neovim's own default) the reader already
 ---has configured rather than this plugin inventing its own.
 ---@param ra RA
+---@internal
 local function browse_history(ra)
   local history = require("runtime-analysis.history")
   local entries = history.list()
@@ -435,6 +442,7 @@ end
 ---same picker `browse_history` above already uses for the identical "pick
 ---exactly one thing" shape.
 ---@param name string?
+---@internal
 local function select_environment(name)
   local env = require("runtime-analysis.env")
 
@@ -484,6 +492,7 @@ end
 ---exactly what that means for a bare invocation with nothing selected.
 ---@param ra RA
 ---@param ctx table composer's handler context — only `ctx.range` is read
+---@internal
 local function do_import(ra, ctx)
   local source
   if ctx.range and ctx.range.range and ctx.range.range > 0 then
@@ -534,6 +543,7 @@ end
 ---placeholder. Exporting is sharing, and `runtime-analysis.env`'s own trap
 ---applies here identically: a `{{token}}` must render as `{{token}}`,
 ---never the value it would resolve to.
+---@internal
 local function do_export()
   local parse = require("runtime-analysis.parse")
   local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
@@ -582,6 +592,7 @@ end
 ---resolves and what "best-effort" means for anything this plugin's own
 ---telemetry did not wrap itself.
 ---@param path string
+---@internal
 local function do_provenance(path)
   local provenance = require("runtime-analysis.provenance")
   local info, err = provenance.inspect(path)
@@ -602,6 +613,7 @@ end
 ---wrapped this one function"; this answers "what does this whole module
 ---actually contain, right now".
 ---@param module_id string
+---@internal
 local function do_inspect(module_id)
   local inspect = require("runtime-analysis.inspect")
   local report, err = inspect.inspect(module_id)
@@ -632,6 +644,7 @@ end
 ---if available, `vim.notify` otherwise, the same soft-dependency fallback
 ---`telemetry.command`'s own `show` helper already uses.
 ---@param sub string?
+---@internal
 local function do_usage(sub)
   local usage = require("runtime-analysis.usage")
 
