@@ -148,6 +148,93 @@ already reads "the current buffer", origin-agnostic — a scratch buffer
 from `:RA request` and a real file opened by hand hit the identical code
 path.
 
+## GraphQL and multipart request bodies
+
+`docs/ROADMAP.md` §2.6, named "for completeness" and shipped once a real
+need existed: two request-body shapes beyond plain JSON/text, both VS
+Code REST Client's own conventions rather than invented here — the same
+"match an existing tool, don't design a third shape" posture the whole
+request-buffer grammar has had since the very first version.
+
+### GraphQL
+
+```http
+POST https://api.example.com/graphql
+X-Request-Type: GraphQL
+Content-Type: application/json
+
+query GetUser($id: ID!) {
+  user(id: $id) { name }
+}
+
+{"id": "42"}
+```
+
+`X-Request-Type: GraphQL` marks the body as GraphQL — the query text,
+optionally followed by a blank line and a JSON variables object (REST
+Client's own rule: "you need to add a blank line between GraphQL query
+and variables if you need it"). `runtime-analysis.graphql.resolve` turns
+this into the real payload a GraphQL server actually expects,
+`{"query": "...", "variables": {...}}`, and strips the
+`X-Request-Type` header — a directive consumed here, never forwarded to
+the server, the identical pattern `parse.lua`'s own `Auth:` shorthand
+already establishes for `Authorization`. No query at all with a
+variables block that is not valid JSON is a real, named error, not a
+silently empty `variables: {}`.
+
+Runs **after** `{{var}}` resolution (docs/ROADMAP.md §2.1), not before —
+so a placeholder inside the query or the variables block resolves the
+ordinary way first, indistinguishable from a token typed there directly.
+`:RA export` applies the same transform (a shared curl command should
+still be valid GraphQL POST syntax) but never `{{var}}` resolution, the
+same "exporting is sharing" rule every other export path already keeps.
+
+### Multipart/form-data
+
+```http
+POST https://api.example.com/upload
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="title"
+
+My title
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="1.png"
+Content-Type: image/png
+
+< ./1.png
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+```
+
+A `Content-Type: multipart/form-data; boundary=...` header plus a body
+shaped like this — one `Content-Disposition: form-data; name="..."` part
+per field, boundary-delimited. A part whose entire content is a single
+`< ./relative/path` line means "read this local file's real bytes as the
+part body", resolved relative to the request buffer's own directory when
+it has one (a real, committed `.http`/`.rest` file), or the cwd otherwise
+(an ad-hoc `:RA request` scratch buffer has no file to be relative to).
+`runtime-analysis.multipart.resolve` reads the file and substitutes its
+bytes in place of the `< path` line — the boundary structure itself is
+left exactly as written, only file references are ever touched.
+
+**`:RA export` never inlines file bytes.** A binary file's raw content is
+not safe, shareable shell text (a stray `'`, a null byte — anything), so
+`runtime-analysis.multipart.to_curl_flags` turns each part into curl's
+own `-F "field=@path"` shape instead: curl reads the file itself when the
+exported command actually runs, and the path is kept exactly as written
+rather than resolved to this machine's own absolute path — a shared
+command is portable precisely because it does not bake that in. A
+malformed multipart body (`Content-Type` with no `boundary=`) falls back
+to `--data-raw` with the literal, unresolved text on export — degraded,
+but an honest export beats a silently dropped body.
+
+**The one stated limit:** line endings. Both directions only ever join
+with `\n`, the request buffer's own line ending, not RFC 2046's required
+CRLF. Every server actually tested against accepts bare `\n` in
+practice — real multipart parsers are lenient about it — but a
+hypothetical strict one is not handled.
+
 ## `:RA yank`
 
 Yanks just the response **body** — not the status line or headers above it

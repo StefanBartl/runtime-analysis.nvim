@@ -338,6 +338,120 @@ return function(H)
     return fixed_port, fixed_server
   end
 
+  ---A server that records the *full* raw bytes of every request it
+  ---accepts (headers and body, not just the request line — `start_server`
+  ---above only needs the line), so a test can inspect what
+  ---`resolve_request_shape` actually put on the wire.
+  ---@return integer port
+  ---@return uv_tcp_t server
+  ---@return string[] raw_requests
+  local function start_capturing_server()
+    local raw_requests = {}
+    local capture_server = uv.new_tcp()
+    assert(capture_server:bind("127.0.0.1", 0))
+    local capture_port = capture_server:getsockname().port
+    capture_server:listen(128, function(listen_err)
+      assert(not listen_err, listen_err)
+      local client = uv.new_tcp()
+      capture_server:accept(client)
+      client:read_start(function(_, chunk)
+        if chunk then
+          raw_requests[#raw_requests + 1] = chunk
+        end
+        client:write(table.concat({ "HTTP/1.1 200 OK", "", "" }, "\r\n"))
+        client:shutdown(function()
+          client:close()
+        end)
+      end)
+    end)
+    return capture_port, capture_server, raw_requests
+  end
+
+  -- GraphQL (docs/ROADMAP.md §2.6): a real :RA send against the
+  -- X-Request-Type: GraphQL shorthand puts the real {"query":...,
+  -- "variables":...} JSON on the wire, not the shorthand shape.
+  local graphql_buf
+  do
+    local gql_port, gql_server, gql_requests = start_capturing_server()
+    graphql_buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_lines(graphql_buf, 0, -1, false, {
+      ("POST http://127.0.0.1:%d/graphql"):format(gql_port),
+      "X-Request-Type: GraphQL",
+      "Content-Type: application/json",
+      "",
+      "query GetUser($id: ID!) {",
+      "  user(id: $id) { name }",
+      "}",
+      "",
+      '{"id": "42"}',
+    })
+    vim.api.nvim_win_set_buf(winid, graphql_buf)
+    vim.api.nvim_win_set_cursor(winid, { 1, 0 })
+
+    vim.cmd("RA send")
+    vim.wait(1000, function()
+      return #gql_requests > 0
+    end, 10)
+
+    eq(#gql_requests, 1, "usrcmds: :RA send on a GraphQL block made exactly one request")
+    local raw = gql_requests[1]
+    ok(
+      raw:find("X-Request-Type", 1, true) == nil,
+      "usrcmds: the X-Request-Type header never reached the wire"
+    )
+    ok(raw:find('"query":"query GetUser', 1, true) ~= nil, "usrcmds: the real query is in the body")
+    ok(raw:find('"id":"42"', 1, true) ~= nil, "usrcmds: the real variable value is in the body")
+
+    gql_server:close()
+  end
+
+  -- Multipart (docs/ROADMAP.md §2.6): a real :RA send against a
+  -- multipart body with a `< ./path` file reference puts the real file
+  -- bytes on the wire.
+  local multipart_buf
+  do
+    local upload_path = H.tmpfile(".txt")
+    local upload_f = assert(io.open(upload_path, "wb"))
+    upload_f:write("real-file-bytes-for-upload")
+    upload_f:close()
+    local upload_dir = vim.fn.fnamemodify(upload_path, ":h")
+    local upload_name = vim.fn.fnamemodify(upload_path, ":t")
+
+    local mp_port, mp_server, mp_requests = start_capturing_server()
+    local boundary = "----WebKitFormBoundary7MA4YWxkTrZu0gW"
+    multipart_buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_lines(multipart_buf, 0, -1, false, {
+      ("POST http://127.0.0.1:%d/upload"):format(mp_port),
+      "Content-Type: multipart/form-data; boundary=" .. boundary,
+      "",
+      "--" .. boundary,
+      'Content-Disposition: form-data; name="file"; filename="' .. upload_name .. '"',
+      "",
+      "< ./" .. upload_name,
+      "--" .. boundary .. "--",
+    })
+    -- A real file path, not a scratch buffer: `request_base_dir` resolves
+    -- `< ./path` against the buffer's own directory, so this must be a
+    -- real, named buffer for the relative reference above to find it.
+    vim.api.nvim_buf_set_name(multipart_buf, upload_dir .. "/multipart_spec_request.http")
+    vim.api.nvim_win_set_buf(winid, multipart_buf)
+    vim.api.nvim_win_set_cursor(winid, { 1, 0 })
+
+    vim.cmd("RA send")
+    vim.wait(1000, function()
+      return #mp_requests > 0
+    end, 10)
+
+    eq(#mp_requests, 1, "usrcmds: :RA send on a multipart block made exactly one request")
+    ok(
+      mp_requests[1]:find("real-file-bytes-for-upload", 1, true) ~= nil,
+      "usrcmds: the real file's own bytes are in the body, not the < path marker"
+    )
+
+    mp_server:close()
+    os.remove(upload_path)
+  end
+
   -- Response assertions (docs/ROADMAP.md §2.5): a passing `@expect status
   -- N` leaves the quickfix list alone; a mismatch populates it with an
   -- entry pointing back at the directive's own line.
@@ -405,4 +519,6 @@ return function(H)
   vim.api.nvim_buf_delete(cancel_buf, { force = true })
   vim.api.nvim_buf_delete(assert_pass_buf, { force = true })
   vim.api.nvim_buf_delete(assert_fail_buf, { force = true })
+  vim.api.nvim_buf_delete(graphql_buf, { force = true })
+  vim.api.nvim_buf_delete(multipart_buf, { force = true })
 end

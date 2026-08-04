@@ -64,6 +64,8 @@ local specs = {
   "usage_spec.lua",
   "loaded_spec.lua",
   "inspect_spec.lua",
+  "graphql_spec.lua",
+  "multipart_spec.lua",
   "lazy_spec.lua",
 }
 

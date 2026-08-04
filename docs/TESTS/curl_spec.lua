@@ -148,4 +148,52 @@ curl 'https://api.example.com/users' \
       "round-trip: a header with an embedded space survives"
     )
   end
+
+  -- format: a multipart/form-data request emits real -F flags, one per
+  -- part, never --data-raw -- docs/ROADMAP.md §2.6. A file part's own
+  -- bytes are never inlined into the shell text, only the field name and
+  -- path curl's own -F "field=@path" needs to read the file itself.
+  do
+    local boundary = "----WebKitFormBoundary7MA4YWxkTrZu0gW"
+    local body = table.concat({
+      "--" .. boundary,
+      'Content-Disposition: form-data; name="text"',
+      "",
+      "title",
+      "--" .. boundary,
+      'Content-Disposition: form-data; name="image"; filename="1.png"',
+      "Content-Type: image/png",
+      "",
+      "< ./1.png",
+      "--" .. boundary .. "--",
+    }, "\n")
+    local cmd = curl.format({
+      method = "POST",
+      url = "https://api.example.com/upload",
+      headers = { ["Content-Type"] = "multipart/form-data; boundary=" .. boundary },
+      body = body,
+    })
+    ok(not cmd:find("--data-raw", 1, true), "format: multipart never uses --data-raw")
+    ok(cmd:find("-F 'text=title'", 1, true) ~= nil, "format: a literal field becomes -F")
+    ok(
+      cmd:find("-F 'image=@./1.png;filename=1.png;type=image/png'", 1, true) ~= nil,
+      "format: a file reference becomes -F with the path kept exactly as written"
+    )
+  end
+
+  -- format: a malformed multipart body (no boundary= in Content-Type)
+  -- degrades to --data-raw with the literal text -- an honest fallback,
+  -- not a dropped body.
+  do
+    local cmd = curl.format({
+      method = "POST",
+      url = "https://x",
+      headers = { ["Content-Type"] = "multipart/form-data" },
+      body = "whatever was typed",
+    })
+    ok(
+      cmd:find("--data-raw 'whatever was typed'", 1, true) ~= nil,
+      "format: no boundary= falls back to --data-raw rather than dropping the body"
+    )
+  end
 end
