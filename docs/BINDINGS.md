@@ -25,6 +25,7 @@ All four are registered unconditionally by `require("runtime-analysis").setup()`
 | `:RA import` | none (or a range, e.g. `'<,'>RA import`) | Parses a `curl` command line — from the system clipboard, or the given range's lines — into a new request buffer. |
 | `:RA export` | none | Yanks the `###` block under the cursor as a shareable `curl` command line to the unnamed register. |
 | `:RA provenance <path>` | dotted path, e.g. `vim.notify` | Who wrapped this function right now — exact for this plugin's own telemetry wraps, best-effort (a `debug.getinfo` source location) for anyone else's. See `docs/COMMANDS.md`. |
+| `:RA inspect <module>` | a `package.loaded` key, `<Tab>`-completed live | Walks a live module table: functions, tables, metatables, what's shadowed through `__index`. See `docs/COMMANDS.md`. |
 | `:RA usage` | none | Report keymap/command press counts collected since `:RA usage start`. See `docs/COMMANDS.md`. |
 | `:RA usage start` / `:RA usage stop` | none | Start/stop counting — opt-in, local-only, records what you pressed rather than what the code did. |
 | `:RARequest` | none | Flat alias for `:RA request` — see below for why both exist. |
@@ -34,9 +35,11 @@ All four are registered unconditionally by `require("runtime-analysis").setup()`
 Built via [`lib.nvim.usercmd.composer`](https://github.com/StefanBartl/lib.nvim/blob/main/lua/lib/nvim/usercmd/composer/README.md)
 — the same verb-first shape `:DocMap`, `:MDView` and `:Replace` already use
 (`<Tab>` after `:RA ` completes `request`/`send`/`yank`/`cancel`/`history`/
-`env`/`import`/`export`/`provenance`/`usage`; `:RA history <Tab>` completes
-`clear`, `:RA env <Tab>` completes whatever names this project's env files
-currently define, `:RA usage <Tab>` completes `start`/`stop`). `:RATelemetry` stays a
+`env`/`import`/`export`/`provenance`/`inspect`/`usage`; `:RA history <Tab>`
+completes `clear`, `:RA env <Tab>` completes whatever names this project's
+env files currently define, `:RA inspect <Tab>` completes whatever is
+actually in `package.loaded` right now, `:RA usage <Tab>` completes
+`start`/`stop`). `:RATelemetry` stays a
 second, separate compound command rather than folding under `:RA telemetry
 ...`, the same split documentation.nvim draws between `:DocMap`
 (writes/verifies) and `:DocBrowse` (only reads) — here between "runs a
@@ -105,6 +108,18 @@ through), best-effort for anyone else's (a `debug.getinfo` source
 location). New top-level module:
 [`lua/runtime-analysis/provenance.lua`](../lua/runtime-analysis/provenance.lua).
 See `docs/COMMANDS.md` for the full reasoning.
+
+### Live module inspection (`:RA inspect <module>`)
+
+Walks a live `package.loaded[module]` table: functions (upvalue counts,
+source location), nested tables (their own shape, recursed with a
+cycle-safe `seen` set and a cosmetic `max_depth` cap of 3), metatables,
+and which direct keys *shadow* a table `__index`. A metatable's `__index`
+is reported, never called — a pure read, zero side effects on the code
+inspected. lib.nvim's own roadmap turned this idea down as `:LibInspect`
+and named a future tool as the right home; this is that tool. New
+top-level module: [`lua/runtime-analysis/inspect.lua`](../lua/runtime-analysis/inspect.lua).
+See `docs/COMMANDS.md` for the three design questions this resolves.
 
 ### Keymap and command usage (`:RA usage`)
 

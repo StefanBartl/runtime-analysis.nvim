@@ -161,6 +161,19 @@ location, honestly labeled as an inference rather than a certainty. Full
 reasoning: [`docs/COMMANDS.md`](docs/COMMANDS.md).
 
 ```vim
+:RA inspect runtime-analysis.telemetry
+```
+
+Walks a live `package.loaded` table and renders it: functions (with
+upvalue counts and source location), nested tables (their own shape),
+metatables, and what a direct key *shadows* through `__index`. `:RA
+provenance` above answers "who wrapped this one function"; this answers
+"what does this whole module actually contain, right now" — cycle-safe,
+`__index` reported but never called (a pure read, zero side effects on
+the code inspected). `<Tab>`-completes against whatever is actually
+loaded in this session. Full reasoning: [`docs/COMMANDS.md`](docs/COMMANDS.md).
+
+```vim
 :RA usage start
 :RA usage
 :RA usage stop
