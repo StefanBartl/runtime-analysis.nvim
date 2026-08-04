@@ -402,16 +402,24 @@ the rest of this plugin. Command surface: >
   :RATelemetry compare [ns] [days]  "this window vs the one before it"
   :RATelemetry startup [top]   which module a plugin's startup cost sits in
 <
-Startup attribution (|:RATelemetry| `startup`) needs one manual call as the
-very first line of init.lua, before anything else loads — only modules
-required after it are ever seen: >lua
+Startup attribution (|:RATelemetry| `startup`) is opt-in, from this
+plugin's own lazy.nvim spec — `init` runs for every plugin before lazy
+loads any of them, so it is early enough, and it disappears with the spec
+if you ever remove the plugin: >lua
 
-  require("runtime-analysis.telemetry.startup").autostart()
+  {
+    "StefanBartl/runtime-analysis.nvim",
+    init = function()
+      require("runtime-analysis.telemetry.startup").autostart()
+    end,
+  }
 <
 It wraps the global `require`, times every cache miss (a `package.loaded`
 hit is not a load), and reports self-vs-total time per module and per
-module root, then stops itself at `UIEnter`. See the telemetry README for
-the full set of honest limits.
+module root, then stops itself at `UIEnter`. Only modules required after
+it starts are ever seen. See the telemetry README for the full set of
+honest limits, and for why this is an `init` hook rather than a line in
+your own init.lua.
 
 Reading a namespace does not need an editor session at all —
 scripts/telemetry.lua in the repository is a headless CLI counterpart,

@@ -66,12 +66,28 @@ than function calls: no namespace, no persistence, no day buckets, and it
 is over by the time the UI is up — folding it into an instance would put
 four permanently-empty fields on every report that never has startup data.
 And `setup()` is far too late to be useful: by then most of a real config
-is already loaded. The documented entry point is a manual
-`require("runtime-analysis.telemetry.startup").autostart()` as the literal
-first line of `init.lua`, which `autostart()` pairs with a one-shot
-`UIEnter` autocmd that stops it again — startup is over by then, and
-leaving the wrapper installed keeps paying for something with nothing left
-to measure.
+is already loaded.
+
+**The entry point was revised after shipping, and the first version was
+worse.** It was documented as "call `autostart()` as the literal first line
+of `init.lua`" — which works, but is an awkward thing to ask of a reader,
+and invites the obviously-tempting follow-up of having the plugin *write*
+that line itself on install. That idea is worth naming explicitly so it
+does not get re-proposed: **an uninstalled plugin runs no code**, so it
+could never remove the line again; it would outlive the plugin in a
+version-controlled file, and `init.lua` is frequently not even the real
+entry point (a `lua/config/` tree, `init.vim`, a Nix-managed read-only
+file). Checking lazy.nvim's own startup sequence dissolved the problem
+instead of working around it: `loader.M.startup` runs **every** plugin's
+`init` function in one pass (step 1 of 4) *before* it loads a single plugin
+(step 2), so a spec-level `init` hook is both early enough and lives in the
+same block that declares the plugin — removing the plugin removes it, with
+nothing left to error or clean up. The README documents that, and why, in
+its own "Why `init`, and not init.lua" section.
+
+`autostart()` pairs the start with a one-shot `UIEnter` autocmd that stops
+it again — startup is over by then, and leaving the wrapper installed keeps
+paying for something with nothing left to measure.
 
 **One real bug this design has to avoid, and the test that proves it
 doesn't:** a module that *raises* during load must not leave the internal
