@@ -78,6 +78,12 @@ response, edit again. A JSON response is pretty-printed and gets real
 `json` syntax/folding; `:RA yank` copies just the body, headers and status
 left out.
 
+A `# @expect status 200` comment anywhere in a block turns a send into a
+smoke test — checked once the response arrives, a mismatch (or a transport
+failure) replaces the quickfix list with one entry, never auto-opened; a
+match is a plain notify. Deliberately narrow: one directive, one thing it
+checks, not a general assertion language.
+
 Built via [`lib.nvim.usercmd.composer`](https://github.com/StefanBartl/lib.nvim) —
 `:RA` is one compound verb, `<Tab>`-completed, the same shape `:DocMap` and
 `:MDView` already use. `:RARequest`/`:RASend` also still work, unchanged, as

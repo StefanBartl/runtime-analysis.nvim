@@ -56,6 +56,7 @@ local specs = {
   "history_spec.lua",
   "env_spec.lua",
   "curl_spec.lua",
+  "assertions_spec.lua",
   "telemetry_spec.lua",
   "lazy_spec.lua",
 }

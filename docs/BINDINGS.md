@@ -74,6 +74,15 @@ merged per name with the private file's own keys winning on overlap. Full
 reasoning, file format and the "trap" this exists to avoid:
 `docs/COMMANDS.md`'s own section on it.
 
+### Response assertions (`# @expect status N`)
+
+A comment line anywhere in a `###` block (`# @expect status 200` or
+`// @expect status 200`), checked once `:RA send`'s response arrives — see
+`docs/COMMANDS.md` for the full reasoning. A match is a plain notify; a
+mismatch (including a transport failure) replaces the quickfix list with
+one entry, never auto-opened. Module:
+[`lua/runtime-analysis/assertions.lua`](../lua/runtime-analysis/assertions.lua).
+
 ### curl import/export (`:RA import` / `:RA export`)
 
 `:RA import` reads a `curl` command line — from a real range invocation's
