@@ -45,7 +45,7 @@ same kind of overlay `docs/IDEAS.md` §6 uses for its own five-item shortlist.
 | **Medium** | Multi-day. Either a real decision has to be made first (a schema, a security trade-off, an open question the section names explicitly), or it touches several files or a small state machine — but the shape and the cost are both known. |
 | **Long-term** | Blocked on something this document itself already says is unmeasured or unresolved: an unmeasured `debug.getinfo` cost, several open design questions, another repository's half of the work, or a section the document itself calls speculative. |
 
-Twenty-eight items have shipped out of this section since it was first written —
+Twenty-nine items have shipped out of this section since it was first written —
 see [`docs/FINISHED.md`](FINISHED.md) for the full record of each. Every
 remaining open item is Long-term/speculative:
 
@@ -57,7 +57,6 @@ remaining open item is Long-term/speculative:
 | §4.3 Standard trace formats | §3.1 (call trees) shipped, so this is no longer *meaningless* — but a real trace format needs nested call stacks and timing spans, not the flat one-level caller histogram §3.1 actually built; still separate, unbuilt work |
 | §4.4 A real dashboard rather than a report | Gated on the browser-tier decision `docs/IDEAS.md` §3.1 says to make *before* building anything, so a third pipeline does not get built by accident |
 | §5.1 `:RAInspect <module>` | Three open design questions, inherited unanswered from lib.nvim's own rejection of this exact idea |
-| §5.3 Diff loaded-vs-declared | The sharpest join in this document, and it needs both plugins' cooperation, not only this repository's own work |
 | §7.3 LSP request latency | Explicitly low priority; territory other tools already cover well |
 
 ### Rejected outright — not phased
@@ -164,14 +163,6 @@ right ones and are still unanswered:
    (Calling has side effects; reporting is honest but less useful.)
 3. Where the result renders — `lib.nvim.ui.kit` float, a scratch buffer, or
    something else.
-
-### 5.3 Diff loaded-vs-declared
-
-The sharpest form of the static × runtime join, and it needs both plugins:
-documentation.nvim knows every function the source declares; this plugin
-can enumerate what is actually on the loaded table. The difference in
-either direction is interesting — declared but never loaded (dead file? or
-lazy?), loaded but not declared (generated? wrapped? a typo'd key?).
 
 ---
 

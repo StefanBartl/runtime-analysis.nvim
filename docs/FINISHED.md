@@ -26,6 +26,46 @@ Newest first, by date; original document order within a date.
 
 ## 2026-08-04
 
+### §5.3 Diff loaded-vs-declared
+
+"The sharpest form of the static × runtime join" this document names —
+and the one item on this list that genuinely needed new work on *both*
+sides, not just a join module on documentation.nvim's end.
+
+**This repository's own half:** a new `runtime-analysis.loaded` module,
+deliberately thin — `M.functions(module_id)` walks `package.loaded[module_id]`
+one level deep and returns its string-keyed, function-valued fields;
+`M.is_loaded(module_id)` is a plain existence check. No cycle handling, no
+`__index` traversal, none of the three open design questions §5.1's
+`:RAInspect` still carries unanswered — this module answers a much
+narrower question (*is this field a function, right now, on this table*)
+that needs none of them. The one honest limit that shapes everything
+built on top of it: `package.loaded` reflects *this* Neovim process, so
+the module is only meaningful when analyzing the very session doing the
+analysis — the identical caveat the telemetry join (§6.1) and endpoint
+coverage (§6.2) already state for their own "no data" cases.
+
+**Shipped entirely as new work in
+[documentation.nvim](https://github.com/StefanBartl/documentation.nvim)**
+— a new `documentation.core.loaded_diff` module (soft dependency,
+`pcall(require, "runtime-analysis.loaded")`), joined into a new 9th
+`:DocBrowse` mode ("loaded"), spanning the whole tree like
+Telemetry/Endpoints rather than one node's neighborhood. One row per
+discrepancy: `✕` a declared, exported function `package.loaded` does not
+have right now (dead file, or genuinely lazy — never required this
+session), `!` the reverse, a function-valued key present on the module
+table with no matching declaration (generated, wrapped with an extra key,
+a typo'd export). Scope deliberately narrow, "record it, don't guess
+it": only `"<table>.<field>"`-shaped declared names (exactly one dot, no
+colon) are compared — the one shape a single-level `package.loaded` walk
+can ever match as a direct field — so a file-local declaration or a
+colon-declared method on a nested table is excluded outright rather than
+guessed at, the same reasoning `endpoint_coverage.lua`'s route matching
+already states for what it deliberately does not attempt.
+
+Full writeup: documentation.nvim's `lua/documentation/editor/browse/README.md`
+("Loaded mode" section) and `lua/documentation/core/loaded_diff.lua` itself.
+
 ### §6.2 Endpoint coverage
 
 The last non-speculative Medium item. documentation.nvim knows every
