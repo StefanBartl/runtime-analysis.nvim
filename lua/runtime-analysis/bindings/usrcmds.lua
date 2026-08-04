@@ -483,6 +483,59 @@ local function do_provenance(path)
   vim.notify(table.concat(provenance.lines(info), "\n"))
 end
 
+---`:RA usage [start|stop]` (docs/ROADMAP.md §7.1) — keymap/command usage,
+---the one feature in this plugin that records *what the person did* rather
+---than *what the code did* (see `runtime-analysis.usage`'s own doc-comment
+---for the caveat that shapes it). Opt-in like everything else it touches:
+---`start`/`stop` toggle collection explicitly, nothing here runs on
+---`setup()` alone. A bare `:RA usage` reports current counts — a kit float
+---if available, `vim.notify` otherwise, the same soft-dependency fallback
+---`telemetry.command`'s own `show` helper already uses.
+---@param sub string?
+local function do_usage(sub)
+  local usage = require("runtime-analysis.usage")
+
+  if sub == "start" then
+    local started = usage.start()
+    vim.notify(
+      started and "runtime-analysis: usage tracking started"
+        or "runtime-analysis: usage tracking is already running",
+      started and vim.log.levels.INFO or vim.log.levels.WARN
+    )
+    return
+  end
+
+  if sub == "stop" then
+    local stopped = usage.stop()
+    vim.notify(
+      stopped and "runtime-analysis: usage tracking stopped"
+        or "runtime-analysis: usage tracking is not running",
+      stopped and vim.log.levels.INFO or vim.log.levels.WARN
+    )
+    return
+  end
+
+  if not usage.is_running() then
+    vim.notify(
+      "runtime-analysis: usage tracking is not running — :RA usage start first",
+      vim.log.levels.WARN
+    )
+    return
+  end
+
+  local lines = usage.lines({ sort = "calls", top = 60 })
+  local ok_kit, kit = pcall(require, "lib.nvim.ui.kit")
+  if ok_kit then
+    kit.viewer({
+      lines = lines,
+      title = " runtime-analysis: usage ",
+      width = math.min(110, math.max(60, vim.o.columns - 8)),
+    })
+  else
+    vim.notify(table.concat(lines, "\n"))
+  end
+end
+
 ---@param ra RA The plugin's own module table — read for `ra.opts` and called
 ---back into for `ra.open_request` so every command stays in sync with a
 ---`setup()` that has already run.
@@ -562,6 +615,27 @@ function M.setup(ra)
         args = { { name = "path", type = "STRING" } },
         run = function(ctx)
           do_provenance(ctx.args.path)
+        end,
+      },
+      {
+        path = { "usage" },
+        desc = "Report which of your own keymaps/commands you actually press",
+        run = function()
+          do_usage(nil)
+        end,
+      },
+      {
+        path = { "usage", "start" },
+        desc = "Start counting keymap/command presses (opt-in, local only)",
+        run = function()
+          do_usage("start")
+        end,
+      },
+      {
+        path = { "usage", "stop" },
+        desc = "Stop counting keymap/command presses",
+        run = function()
+          do_usage("stop")
         end,
       },
     },

@@ -96,6 +96,63 @@ live, not cached); two instances wrapping the identical function, both
 namespaces present, none dropped; and the `require()`-based module-path
 resolution strategy, not only the global-table one.
 
+### §7.1 Keymap and command usage
+
+Which of your own mappings and commands you actually press — a different
+*product* from everything else in this plugin, per the roadmap section's
+own framing: instrumenting the editor rather than instrumenting code. The
+honest use case is pruning: a config accumulates bindings for years and
+nothing ever tells you which ones went cold.
+
+**The caveat the roadmap entry itself led with, taken at face value.** This
+is the first thing in this plugin that records *what the person did*
+rather than *what the code did*. It ships with exactly the posture that
+caveat demands: opt-in (`:RA usage start` — nothing runs on `setup()`
+alone), local-only (no account, no upload, the same "deliberately not
+building" posture telemetry's own table already states), and it grows no
+"share this" feature.
+
+New module, [`lua/runtime-analysis/usage.lua`](../lua/runtime-analysis/usage.lua),
+built as a thin instrumentation layer over `runtime-analysis.telemetry`
+rather than a second counting mechanism: one real telemetry instance
+underneath, `inst.wrap_fn` wrapping a keymap's callback exactly once — at
+the moment `vim.keymap.set()` is called, not on every press — the
+mechanism's own intended usage rather than a workaround. Commands have no
+function to intercept (`:Telescope find_files` is text typed at a prompt),
+so a `CmdlineLeave` autocmd reads what was actually typed and records it
+through the same instance instead, wrapping a trivial no-op exactly once
+per distinct command name and re-invoking it on every subsequent press —
+never a fresh registry site per keystroke.
+
+**Honest limits, stated up front rather than discovered later.** Only
+`vim.keymap.set` calls made *after* `M.start()` are ever seen, the same
+"only what runs after this starts" limit `telemetry.startup` already
+states for `require`. Only function-callback keymaps are tracked — a
+string-rhs mapping (`vim.keymap.set('n', 'x', ':SomeCommand<CR>')`) has
+nothing to wrap. A keymap's key is `"mode lhs"`, so a buffer-local mapping
+sharing that exact shape with a different mapping elsewhere is combined
+into one count, not tracked per-buffer. A typed command's name is read
+heuristically (a leading range/count and a trailing `!` stripped), which
+can occasionally misparse an unusual range.
+
+New route family under `:RA`: a bare `:RA usage` reports current counts (a
+`lib.nvim.ui.kit` float if available, `vim.notify` otherwise — the same
+soft-dependency fallback `:RATelemetry`'s own `show` helper already uses);
+`:RA usage start`/`:RA usage stop` toggle collection explicitly.
+
+Tested against the real entry points, not stubs, in
+[`docs/TESTS/usage_spec.lua`](../docs/TESTS/usage_spec.lua): a real
+`vim.keymap.set` callback stays callable and gets counted; a real typed
+command line, committed via `nvim_feedkeys`, is counted through a genuine
+`CmdlineLeave`; `stop()` restores the true `vim.keymap.set`. One case is
+explicitly *not* tested and says so in the spec's own comment: reproducing
+a real `<Esc>`-aborted command line through `nvim_feedkeys` in a headless
+instance turned out to execute the command rather than cancel it — a
+property of that combination, confirmed by checking the fed command's own
+side effect rather than assumed — so the shared early-return guard
+(`getcmdtype() ~= ":"`) is exercised directly instead, the same shape a
+real abort would leave `getcmdtype()` in.
+
 ### §7.2 Plugin cost-versus-use
 
 What each plugin costs at startup versus how much it is actually used —

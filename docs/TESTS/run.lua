@@ -61,6 +61,7 @@ local specs = {
   "startup_spec.lua",
   "cost_vs_use_spec.lua",
   "provenance_spec.lua",
+  "usage_spec.lua",
   "lazy_spec.lua",
 }
 

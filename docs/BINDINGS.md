@@ -25,6 +25,8 @@ All four are registered unconditionally by `require("runtime-analysis").setup()`
 | `:RA import` | none (or a range, e.g. `'<,'>RA import`) | Parses a `curl` command line — from the system clipboard, or the given range's lines — into a new request buffer. |
 | `:RA export` | none | Yanks the `###` block under the cursor as a shareable `curl` command line to the unnamed register. |
 | `:RA provenance <path>` | dotted path, e.g. `vim.notify` | Who wrapped this function right now — exact for this plugin's own telemetry wraps, best-effort (a `debug.getinfo` source location) for anyone else's. See `docs/COMMANDS.md`. |
+| `:RA usage` | none | Report keymap/command press counts collected since `:RA usage start`. See `docs/COMMANDS.md`. |
+| `:RA usage start` / `:RA usage stop` | none | Start/stop counting — opt-in, local-only, records what you pressed rather than what the code did. |
 | `:RARequest` | none | Flat alias for `:RA request` — see below for why both exist. |
 | `:RASend` | none | Flat alias for `:RA send`. |
 | `:RATelemetry [args]` | see below | Opt-in call counting and usage statistics for any plugin. Full reference: [`lua/runtime-analysis/telemetry/README.md`](../lua/runtime-analysis/telemetry/README.md). |
@@ -32,9 +34,9 @@ All four are registered unconditionally by `require("runtime-analysis").setup()`
 Built via [`lib.nvim.usercmd.composer`](https://github.com/StefanBartl/lib.nvim/blob/main/lua/lib/nvim/usercmd/composer/README.md)
 — the same verb-first shape `:DocMap`, `:MDView` and `:Replace` already use
 (`<Tab>` after `:RA ` completes `request`/`send`/`yank`/`cancel`/`history`/
-`env`/`import`/`export`/`provenance`; `:RA history <Tab>` completes
+`env`/`import`/`export`/`provenance`/`usage`; `:RA history <Tab>` completes
 `clear`, `:RA env <Tab>` completes whatever names this project's env files
-currently define). `:RATelemetry` stays a
+currently define, `:RA usage <Tab>` completes `start`/`stop`). `:RATelemetry` stays a
 second, separate compound command rather than folding under `:RA telemetry
 ...`, the same split documentation.nvim draws between `:DocMap`
 (writes/verifies) and `:DocBrowse` (only reads) — here between "runs a
@@ -104,6 +106,20 @@ location). New top-level module:
 [`lua/runtime-analysis/provenance.lua`](../lua/runtime-analysis/provenance.lua).
 See `docs/COMMANDS.md` for the full reasoning.
 
+### Keymap and command usage (`:RA usage`)
+
+The one feature here that records *what the person did* rather than *what
+the code did* — a config's own mappings and typed commands, opt-in and
+local-only. `:RA usage start` wraps `vim.keymap.set` so every
+function-callback mapping registered from then on counts its own presses,
+and installs a `CmdlineLeave` hook that counts a typed command once it
+actually commits (an `<Esc>`-aborted line counts nothing). Built on
+`runtime-analysis.telemetry` itself, the same wrap mechanism §7.2's
+cost-vs-use report already reads, pointed at editor input instead of code.
+See `docs/COMMANDS.md` for the honest limits (only mappings set after
+`start`, only function-callback rhs, no per-buffer split). Module:
+[`lua/runtime-analysis/usage.lua`](../lua/runtime-analysis/usage.lua).
+
 ### `:RATelemetry` subcommands
 
 | Invocation | Does |
@@ -148,6 +164,7 @@ triggered directly by a command.
 `:checkhealth runtime-analysis` — see [`lua/runtime-analysis/health.lua`](../lua/runtime-analysis/health.lua)
 for exactly what it reports (Neovim version, `curl`, required lib.nvim
 modules, live telemetry instances, this project's history entry count,
+defined environments, whether keymap/command usage tracking is running,
 cache directory, optional mdview.nvim and lib.nvim.progress).
 
 ## Global-surface collision check
