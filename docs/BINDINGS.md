@@ -72,7 +72,7 @@ dropped first. Full reasoning: `docs/COMMANDS.md`'s own section on it.
 `{{baseUrl}}` in a request buffer's url, header values or body resolves
 against the environment selected by `:RA env <name>` — session-scoped, not
 persisted across restarts. Names and values come from two per-project JSON
-files at the project root (`runtime-analysis.env.SHARED_FILE`/`.PRIVATE_FILE`),
+files at the project root (`SHARED_FILE`/`PRIVATE_FILE` in `runtime-analysis.env`),
 merged per name with the private file's own keys winning on overlap. Full
 reasoning, file format and the "trap" this exists to avoid:
 `docs/COMMANDS.md`'s own section on it.

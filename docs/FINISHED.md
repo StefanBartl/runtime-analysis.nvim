@@ -26,6 +26,68 @@ Newest first, by date; original document order within a date.
 
 ## 2026-08-04
 
+### Housekeeping — `scripts/gen_map.lua` + documentation.nvim as a dev dependency
+
+`NEW_PROJECT.md` §4's last unchecked box: adopt documentation.nvim's own
+module map generator, per its
+[`docs/REUSE.md`](https://github.com/StefanBartl/documentation.nvim/blob/main/docs/REUSE.md)
+— copy two files, edit five lines. `scripts/gen_map.lua` copied verbatim
+except the options table at the bottom (`source = "lua/runtime-analysis"`,
+`title`, `repo_url`); `layers` and the self-rendered `docs/BINDINGS.md`
+block documentation.nvim's own copy carries were deliberately *not*
+copied — `layers` encodes that repository's own core/editor architecture
+boundary, which this plugin has no equivalent of, and this repository's
+`docs/BINDINGS.md` is explicitly hand-maintained rather than generated
+(see that file's own header).
+
+**Real bugs the first run found, not hypothetical ones.** Generating the
+map cold surfaced two genuine, pre-existing documentation defects in one
+pass: a dead link in `lua/runtime-analysis/telemetry/README.md` pointing
+at `../system/README.md` (a path that only ever made sense inside
+lib.nvim, where `lib.nvim.system.proc_trace` actually lives — fixed to an
+absolute GitHub link, the same fix shape an earlier dead-link finding in
+this repo already used), and a `docs/BINDINGS.md` reference to
+`runtime-analysis.env.SHARED_FILE` that the checker read as a missing
+module member. The second one is a real limitation worth recording
+plainly rather than chasing: `doc-references-missing` cross-references
+against `documentation.core.docs`'s own function index
+(`idx.fns_by_module`), built from `vim.treesitter`-extracted function
+definitions — a plain `M.SHARED_FILE = "..."` data-field assignment is
+never in that index no matter what `---@type` annotation sits above it,
+since the checker only ever tracked functions. `env.lua` still gained
+proper `---@type string` annotations on both exported constants (correct
+regardless), but the actual fix was rewording `docs/BINDINGS.md`'s prose
+to stop presenting the constant as a dotted module-member reference.
+
+New `map` job in `.github/workflows/ci.yml`, mirroring
+`docs/REUSE.md`'s own CI template exactly: checks out this repo plus
+`lib.nvim` and `documentation.nvim` into `.deps/`, then
+`nvim --headless -l scripts/gen_map.lua --check` — writes nothing, fails
+loudly on drift or staleness rather than letting a committed
+`docs/map/` quietly rot on `main`. `scripts/hooks/pre-commit` (also
+copied from documentation.nvim, unmodified past its three project-specific
+variables) gives the same check locally, opt-in via
+`git config core.hooksPath scripts/hooks`.
+
+`docs/map/{index.html,module_map.json,overview.md}` committed as a real
+build artifact, the same convention documentation.nvim uses on itself —
+`0 errors, 0 warnings, 3 info` at the moment of committing, `94/170`
+published functions fully documented.
+
+### Housekeeping — test coverage for the request runner's real transport
+
+**Already done, and had been since this plugin's very first commit** —
+this roadmap entry was simply stale. `docs/TESTS/runner_spec.lua` has
+spun up a real hermetic `vim.uv` TCP server and exercised
+`lib.nvim.net.curl.fetch_raw`/`fetch_raw_blocking` underneath
+`runner.run`/`runner.run_async` against it since `02e9a0c` ("in-editor
+HTTP request runner — the plugin's first feature") — real sockets, a real
+`curl` subprocess, no mock standing in for either. Confirmed via
+`git log --follow` against that file plus reading its first committed
+version verbatim, not assumed from the roadmap text. No code change
+needed; this entry exists only so the stale claim stops being repeated
+across future roadmap edits.
+
 ### §5.2 Wrapper provenance
 
 Given a function, say who wrapped it — the narrow, high-value slice of §5.1

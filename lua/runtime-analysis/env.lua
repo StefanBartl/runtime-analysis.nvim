@@ -249,7 +249,12 @@ function M.resolve(request, opts)
     nil
 end
 
+---Shared, safe-to-commit environment file name, relative to the project root.
+---@type string
 M.SHARED_FILE = SHARED_FILE
+
+---Gitignored, per-machine environment file name, relative to the project root.
+---@type string
 M.PRIVATE_FILE = PRIVATE_FILE
 
 ---Test-only: drop the selected environment back to "none". Real callers

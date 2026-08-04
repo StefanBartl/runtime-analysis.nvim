@@ -42,7 +42,7 @@ same kind of overlay `docs/IDEAS.md` §6 uses for its own five-item shortlist.
 | **Medium** | Multi-day. Either a real decision has to be made first (a schema, a security trade-off, an open question the section names explicitly), or it touches several files or a small state machine — but the shape and the cost are both known. |
 | **Long-term** | Blocked on something this document itself already says is unmeasured or unresolved: an unmeasured `debug.getinfo` cost, several open design questions, another repository's half of the work, or a section the document itself calls speculative. |
 
-Twenty-two items have shipped out of this section since it was first written —
+Twenty-four items have shipped out of this section since it was first written —
 see [`docs/FINISHED.md`](FINISHED.md) for the full record of each. What
 remains open:
 
@@ -58,8 +58,6 @@ remains open:
 | --- | --- |
 | §6.2 Endpoint coverage | Request history (§1.3) now exists and needs no changes; what remains is a real route-pattern-to-URL matching strategy, not just a join key |
 | §6.3 Documentation priority by real usage | Needs §6.1's mechanism to exist first |
-| Test coverage for the request runner's real transport | `runner.lua` is only exercised against a real transport at the lib.nvim end today |
-| `scripts/gen_map.lua` + documentation.nvim as a dev dependency | A real CI gate (checkout, generate, byte-compare), not a documentation update — see Housekeeping below for why it was not attempted alongside the smaller items in this pass |
 
 ### Long-term / speculative
 
@@ -258,19 +256,8 @@ Neovim's LSP client internals across releases. Low priority.
 ## 8. Housekeeping
 
 Not features, but the gap between "works on this machine" and "a plugin
-someone else can install". Five items shipped from a `NEW_PROJECT.md`
-checklist pass on 2026-08-03 — moved to
-[`docs/FINISHED.md`](FINISHED.md) — leaving two still open:
-
-- **Test coverage for the request runner's real transport.** `runner.lua`
-  is currently exercised against `lib.nvim.net.curl`'s own hermetic
-  `vim.uv` TCP server test at the lib.nvim end, not here. **Still open** —
-  see the Medium phase above.
-- **`scripts/gen_map.lua` + documentation.nvim as a dev dependency.**
-  `NEW_PROJECT.md` §4 requires this (a byte-comparison `--check` gate in CI,
-  the same one documentation.nvim and mdview.nvim both already run). **Not
-  done** — a real, separate piece of work (a new CI job, a committed
-  artifact, a new gate to keep green), not a documentation update.
+someone else can install". All seven items from a `NEW_PROJECT.md`
+checklist pass have now shipped — moved to [`docs/FINISHED.md`](FINISHED.md).
 
 ---
 
