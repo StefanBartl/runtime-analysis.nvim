@@ -54,7 +54,7 @@ end
 ---@param stats RA.Telemetry.ArgStats
 ---@param calls integer
 ---@return { fingerprint: string, count: integer, share: number }[] top, integer other, integer distinct
-local function top_args(stats, calls)
+local function top_fingerprints(stats, calls)
   local list = {}
   for fp, n in pairs(stats.values or {}) do
     list[#list + 1] = { fingerprint = fp, count = n, share = calls > 0 and n / calls or 0 }
@@ -97,7 +97,7 @@ function M.build(namespace, data, meta, opts)
         -- Argument shares are lifetime shares; the day buckets hold call
         -- counts only. Computing them against a windowed call count would
         -- produce percentages that do not add up, so use the lifetime total.
-        local list, other, distinct = top_args(stats.args, stats.calls or 0)
+        local list, other, distinct = top_fingerprints(stats.args, stats.calls or 0)
         entry.args, entry.other, entry.distinct = list, other, distinct
 
         -- `"()"` is the fingerprint of a zero-argument call. It is always
@@ -115,6 +115,14 @@ function M.build(namespace, data, meta, opts)
             "memoization (lib.lua.memo.memo / .lru)"
           )
         end
+      end
+
+      if stats.error_fp then
+        -- Share is of `errors`, not `calls` — "62 % of errors were this
+        -- one message" is the readable claim; "0.3 % of calls" buries it
+        -- under the (usually large) success count.
+        local list, other, distinct = top_fingerprints(stats.error_fp, stats.errors or 0)
+        entry.error_fp, entry.error_other, entry.error_distinct = list, other, distinct
       end
 
       entries[#entries + 1] = entry
@@ -234,6 +242,23 @@ function M.lines(report)
         out[#out + 1] = ("      ⓘ %s"):format(e.hint)
       end
     end
+
+    if e.error_fp then
+      local shown = 0
+      for _, a in ipairs(e.error_fp) do
+        shown = shown + 1
+        if shown > ARGS_SHOWN then
+          break
+        end
+        out[#out + 1] = ("      ✗ %3.0f %%  %s"):format(a.share * 100, a.fingerprint)
+      end
+      if (e.error_other or 0) > 0 then
+        out[#out + 1] = ("      ✗ %3.0f %%  <other: %d distinct>"):format(
+          e.errors > 0 and (e.error_other / e.errors * 100) or 0,
+          e.error_distinct or 0
+        )
+      end
+    end
   end
 
   return out
@@ -327,6 +352,35 @@ function M.markdown(report)
       if e.hint then
         out[#out + 1] = ""
         out[#out + 1] = ("> **%s**"):format(e.hint)
+      end
+    end
+  end
+
+  -- Error-profile subsections, the identical shape as the argument-profile
+  -- ones just above — a separate loop (not merged into it) so an entry
+  -- with only one of the two profiles still renders exactly one section,
+  -- in the same fixed order every report already has.
+  for _, e in ipairs(report.entries) do
+    if e.error_fp then
+      out[#out + 1] = ""
+      out[#out + 1] = ("### `%s` — error profile"):format(e.key)
+      out[#out + 1] = ""
+      out[#out + 1] = "| Share | Error |"
+      out[#out + 1] = "| ---: | --- |"
+
+      local shown = 0
+      for _, a in ipairs(e.error_fp) do
+        shown = shown + 1
+        if shown > ARGS_SHOWN then
+          break
+        end
+        out[#out + 1] = ("| %.0f %% | `%s` |"):format(a.share * 100, a.fingerprint)
+      end
+      if (e.error_other or 0) > 0 then
+        out[#out + 1] = ("| %.0f %% | `<other: %d distinct>` |"):format(
+          e.errors > 0 and (e.error_other / e.errors * 100) or 0,
+          e.error_distinct or 0
+        )
       end
     end
   end

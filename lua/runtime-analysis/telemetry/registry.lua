@@ -61,11 +61,12 @@ end
 ---@param fp string|nil
 ---@param dur number|nil
 ---@param errored boolean
-local function dispatch(site, fp, dur, errored)
+---@param err_fp string|nil
+local function dispatch(site, fp, dur, errored, err_fp)
   local subs = site.subs
   for i = 1, #subs do
     local s = subs[i]
-    s.inst._record(s.key, s.args and fp or nil, s.time and dur or nil, errored)
+    s.inst._record(s.key, s.args and fp or nil, s.time and dur or nil, errored, s.errors and err_fp or nil)
   end
 end
 
@@ -105,7 +106,14 @@ local function make_wrapper(site)
       site.depth = site.depth - 1
 
       if outermost or not site.needs_depth then
-        dispatch(site, fp, dur, not res[1])
+        -- Fingerprinted the same way an argument would be (§2.5's roadmap
+        -- entry: "reuses the existing argument-fingerprint machinery,
+        -- pointed at errors instead of arguments") -- only computed on the
+        -- branch that already pays for `pcall` and only when a raised
+        -- error actually happened, so the success-path cost this module's
+        -- whole premise rests on is untouched either way.
+        local err_fp = (not res[1] and site.needs_errors) and fingerprint.value(res[2]) or nil
+        dispatch(site, fp, dur, not res[1], err_fp)
       end
 
       if not res[1] then
@@ -135,7 +143,7 @@ end
 ---@param container table
 ---@param field string
 ---@param key string            # the label reported for this instance
----@param inst table            # must expose `_record(key, fp, dur_ms, errored)`
+---@param inst table            # must expose `_record(key, fp, dur_ms, errored, err_fp)`
 ---@param wants table           # { args, time, errors, outermost_only }
 ---@return boolean ok
 function M.attach(container, field, key, inst, wants)

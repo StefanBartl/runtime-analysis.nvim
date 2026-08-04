@@ -79,6 +79,7 @@
 ---@field errors? integer
 ---@field timing? RA.Telemetry.Timing
 ---@field args? RA.Telemetry.ArgStats
+---@field error_fp? RA.Telemetry.ArgStats  # docs/ROADMAP.md §2.5 — same shape as `args`, fingerprinting the raised error instead of the call's arguments
 
 ---@class RA.Telemetry.Data
 ---@field version integer
@@ -101,6 +102,9 @@
 ---@field other? integer
 ---@field distinct? integer
 ---@field hint? string   # e.g. the "dominant argument -> memoize" suggestion
+---@field error_fp? { fingerprint: string, count: number, share: number }[]  # docs/ROADMAP.md §2.5 — share is of `errors`, not `calls`
+---@field error_other? integer
+---@field error_distinct? integer
 
 ---@class RA.Telemetry.Report
 ---@field namespace string
