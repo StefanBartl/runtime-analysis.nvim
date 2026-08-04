@@ -568,6 +568,129 @@ return function(H)
   end
 
   -- -------------------------------------------------------------------------
+  -- sampling (docs/ROADMAP.md §3.2): only every Nth call pays for the
+  -- expensive modes; `calls` itself stays exact regardless.
+  -- -------------------------------------------------------------------------
+  do
+    local mod = {
+      f = function(x)
+        return x
+      end,
+    }
+    local t = telemetry.new({ namespace = ns("sample"), persist = false })
+    t.wrap(mod, nil, { profile_args = true, sample = 4 })
+    t.start()
+
+    for i = 1, 20 do
+      mod.f(i)
+    end
+
+    local entry = t.report().entries[1]
+    H.eq(entry.calls, 20, "sample: calls is exact, sampling never touches the cheap counter")
+    -- Sampled on the 4th, 8th, 12th, 16th, 20th call -- 5 of 20.
+    local args_sum = 0
+    for _, a in ipairs(entry.args) do
+      args_sum = args_sum + a.count
+    end
+    args_sum = args_sum + (entry.other or 0)
+    H.eq(args_sum, 5, "sample: only 1-in-4 calls were actually fingerprinted")
+
+    t.stop()
+    t.unwrap()
+  end
+
+  -- sampling: errors are subject to the same rate as args/time -- both
+  -- ride the same site-level decision, since both cost a pcall/fingerprint
+  -- only on the sampled subset.
+  do
+    local mod = {
+      boom = function()
+        error("x", 0)
+      end,
+    }
+    local t = telemetry.new({ namespace = ns("sample_errors"), persist = false })
+    t.wrap(mod, nil, { errors = true, sample = 5 })
+    t.start()
+
+    for _ = 1, 20 do
+      pcall(mod.boom)
+    end
+
+    local entry = t.report().entries[1]
+    H.eq(entry.calls, 20, "sample+errors: calls still exact")
+    H.eq(entry.errors, 4, "sample+errors: only the sampled 1-in-5 calls counted as errors")
+
+    t.stop()
+    t.unwrap()
+  end
+
+  -- sampling: a dominant argument fingerprint still triggers the
+  -- memoization hint under sampling -- the share/min-calls guard have to
+  -- be computed against the *fingerprinted* sample, not the true call
+  -- count, or a real dominant pattern would never be visible once sampled.
+  do
+    local mod = {
+      find = function(path)
+        return path
+      end,
+    }
+    local t = telemetry.new({ namespace = ns("sample_dominant"), persist = false })
+    t.wrap(mod, "fs", { profile_args = true, sample = 10 })
+    t.start()
+
+    for i = 1, 500 do
+      -- 1-in-10 sampled = 50 fingerprinted calls, all identical -- well
+      -- past DOMINANT_MIN_CALLS (20) if measured against the *sample*,
+      -- but far short of it against the true 500 calls at a naive
+      -- calls-based threshold divided by the same rate.
+      mod.find("/repo/lib.nvim")
+    end
+
+    local entry = t.report().entries[1]
+    H.eq(entry.calls, 500, "sample_dominant: true call count unaffected")
+    H.ok(entry.args ~= nil, "sample_dominant: fingerprinting happened on the sampled subset")
+    H.eq(entry.args[1].share, 1.0, "sample_dominant: share is 100% of the *sample*, not the true calls")
+    H.ok(entry.hint ~= nil, "sample_dominant: the memoization hint still fires under sampling")
+
+    t.stop()
+    t.unwrap()
+  end
+
+  -- sampling: two subscribers on the identical function, different rates
+  -- -- the site uses the more eager (smaller) of the two, so neither
+  -- subscriber is starved below what it asked for.
+  do
+    local mod = {
+      f = function() end,
+    }
+    local t1 = telemetry.new({ namespace = ns("sample_multi_a"), persist = false })
+    local t2 = telemetry.new({ namespace = ns("sample_multi_b"), persist = false })
+    t1.wrap(mod, nil, { time = true, sample = 2 })
+    t2.wrap(mod, nil, { time = true, sample = 5 })
+    t1.start()
+    t2.start()
+
+    for _ = 1, 10 do
+      mod.f()
+    end
+
+    local e1 = t1.report().entries[1]
+    local e2 = t2.report().entries[1]
+    H.eq(e1.calls, 10, "sample_multi: t1's call count exact")
+    H.eq(e2.calls, 10, "sample_multi: t2's call count exact")
+    -- Combined rate is min(2, 5) = 2 -- 5 sampled calls out of 10, and
+    -- BOTH subscribers see every one of them (dispatch fans the same
+    -- sampled call out to every subscriber, not just the one that asked
+    -- for that particular rate).
+    H.ok(e1.mean_ms ~= nil, "sample_multi: t1 (rate 2) got timing data")
+    H.ok(e2.mean_ms ~= nil, "sample_multi: t2 (rate 5, less eager) still got timing data")
+
+    t1.stop()
+    t2.stop()
+    t1.unwrap()
+  end
+
+  -- -------------------------------------------------------------------------
   -- recursion: every entry by default, outermost only on request
   -- -------------------------------------------------------------------------
   do

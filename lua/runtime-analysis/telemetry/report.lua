@@ -51,13 +51,30 @@ local function format_info(info)
   return table.concat(parts, " · ")
 end
 
+---How many calls this fingerprint bucket actually captured (`values` +
+---`other`) — the correct share denominator, *not* the function's own
+---`calls`/`errors`. Without §3.2 sampling the two are always equal (every
+---call is fingerprinted); under sampling only a subset is, and dividing by
+---the true call count would silently deflate every share — "62 % of the
+---calls actually examined shared this value" stays an honest claim either
+---way, "6 % of all calls" would not (most of them were never looked at).
 ---@param stats RA.Telemetry.ArgStats
----@param calls integer
+---@return integer
+local function fingerprint_total(stats)
+  local total = stats.other or 0
+  for _, n in pairs(stats.values or {}) do
+    total = total + n
+  end
+  return total
+end
+
+---@param stats RA.Telemetry.ArgStats
+---@param total integer the fingerprint bucket's own total — see `fingerprint_total`
 ---@return { fingerprint: string, count: integer, share: number }[] top, integer other, integer distinct
-local function top_fingerprints(stats, calls)
+local function top_fingerprints(stats, total)
   local list = {}
   for fp, n in pairs(stats.values or {}) do
-    list[#list + 1] = { fingerprint = fp, count = n, share = calls > 0 and n / calls or 0 }
+    list[#list + 1] = { fingerprint = fp, count = n, share = total > 0 and n / total or 0 }
   end
   table.sort(list, function(a, b)
     if a.count == b.count then
@@ -96,20 +113,22 @@ function M.build(namespace, data, meta, opts)
       if stats.args then
         -- Argument shares are lifetime shares; the day buckets hold call
         -- counts only. Computing them against a windowed call count would
-        -- produce percentages that do not add up, so use the lifetime total.
-        local list, other, distinct = top_fingerprints(stats.args, stats.calls or 0)
+        -- produce percentages that do not add up, so use the lifetime
+        -- total — specifically the fingerprint bucket's own total, not
+        -- `stats.calls`, so §3.2 sampling (only some calls fingerprinted)
+        -- never silently deflates every share — see `fingerprint_total`.
+        local args_total = fingerprint_total(stats.args)
+        local list, other, distinct = top_fingerprints(stats.args, args_total)
         entry.args, entry.other, entry.distinct = list, other, distinct
 
         -- `"()"` is the fingerprint of a zero-argument call. It is always
         -- 100 % dominant and never actionable — memoizing a function that
-        -- takes no arguments is a different decision entirely.
+        -- takes no arguments is a different decision entirely. The
+        -- min-calls guard against small-sample noise uses the same
+        -- fingerprinted total the share itself does, for the identical
+        -- sampling-honesty reason.
         local first = list[1]
-        if
-          first
-          and first.fingerprint ~= "()"
-          and (stats.calls or 0) >= DOMINANT_MIN_CALLS
-          and first.share >= DOMINANT_SHARE
-        then
+        if first and first.fingerprint ~= "()" and args_total >= DOMINANT_MIN_CALLS and first.share >= DOMINANT_SHARE then
           entry.hint = ("%.0f %% of calls share one argument — candidate for %s"):format(
             first.share * 100,
             "memoization (lib.lua.memo.memo / .lru)"
@@ -118,10 +137,12 @@ function M.build(namespace, data, meta, opts)
       end
 
       if stats.error_fp then
-        -- Share is of `errors`, not `calls` — "62 % of errors were this
-        -- one message" is the readable claim; "0.3 % of calls" buries it
-        -- under the (usually large) success count.
-        local list, other, distinct = top_fingerprints(stats.error_fp, stats.errors or 0)
+        -- Share is of fingerprinted errors, not `errors` (the true error
+        -- count) or `calls` — "62 % of errors were this one message" is
+        -- the readable claim, and the fingerprint bucket's own total is
+        -- what keeps it honest under §3.2 sampling too, same reasoning as
+        -- the argument-profile block above.
+        local list, other, distinct = top_fingerprints(stats.error_fp, fingerprint_total(stats.error_fp))
         entry.error_fp, entry.error_other, entry.error_distinct = list, other, distinct
       end
 

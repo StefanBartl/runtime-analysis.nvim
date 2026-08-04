@@ -37,7 +37,8 @@ When it *is* on:
 | + timing | two `vim.uv.hrtime()` reads | 0.394 µs |
 | + argument profiling | one fingerprint computation | 0.619 µs |
 | `errors` / `outermost_only` | one `pcall` (the call must return through us even when it raises) | — |
-| `errors`, on an actual raise | + one fingerprint of the error value (docs/ROADMAP.md §2.5) | — (only paid on the already-rare, already-`pcall`'d failure path; the success path above is unaffected) |
+| `errors`, on an actual raise | + one fingerprint of the error value (docs/ROADMAP.md §3.4) | — (only paid on the already-rare, already-`pcall`'d failure path; the success path above is unaffected) |
+| `sample = N` (docs/ROADMAP.md §3.2) | the branches above run on only 1 in `N` calls; every other call takes the counting-only path | — (a caller controls the trade-off directly via `N`) |
 
 Counting is genuinely free at editor scale. Argument profiling is **~44×
 counting** — still nothing on a surface driven by keypresses and autocmds
@@ -574,6 +575,34 @@ fs.find_root                12 480 calls
 
 The hint is suppressed below 20 calls and for zero-argument calls (`()` is
 always 100 % dominant and never actionable).
+
+## Sampling
+
+`sample = N` (docs/ROADMAP.md §3.2) makes the expensive modes above —
+timing, argument profiling, error fingerprinting — affordable on a hot
+surface: only every `N`th call pays for them, every other call takes the
+same counting-only path a plain `t.start()` already uses.
+
+```lua
+t.wrap(mod, "hot", { time = true, sample = 20 })   -- 1 in 20 calls timed
+```
+
+**`calls` is always exact, regardless of sampling.** It was already free
+(0.014 µs, the row above) — sampling exists specifically to make the
+*other* modes cheap, not to touch the one that already was. What sampling
+actually estimates: `timing`'s mean/min/max are computed from the sampled
+subset, and an argument or error fingerprint's own share (`91 % of ...`
+above) is computed against that same subset's own total, not the true call
+count — otherwise a real dominant pattern would look artificially rare
+just because most calls were never examined. This is why the memoization
+hint still fires correctly under sampling: the threshold and the share it
+compares against are both measured in the sample's own terms.
+
+**Structural, like `outermost_only`** — set at `wrap()`/`wrap_loaded()`
+time, not toggleable later via `start()`'s own per-key selectors. If two
+different telemetry instances both wrap the identical function with
+different rates, the site uses the more eager (smaller) of the two, so
+neither subscriber ever sees less than it asked for.
 
 ## Error fingerprinting
 

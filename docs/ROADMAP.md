@@ -42,7 +42,7 @@ same kind of overlay `docs/IDEAS.md` §6 uses for its own five-item shortlist.
 | **Medium** | Multi-day. Either a real decision has to be made first (a schema, a security trade-off, an open question the section names explicitly), or it touches several files or a small state machine — but the shape and the cost are both known. |
 | **Long-term** | Blocked on something this document itself already says is unmeasured or unresolved: an unmeasured `debug.getinfo` cost, several open design questions, another repository's half of the work, or a section the document itself calls speculative. |
 
-Seventeen items have shipped out of this section since it was first written —
+Eighteen items have shipped out of this section since it was first written —
 see [`docs/FINISHED.md`](FINISHED.md) for the full record of each. What
 remains open:
 
@@ -56,7 +56,6 @@ remains open:
 
 | Item | Note |
 | --- | --- |
-| §3.2 Sampling | Mechanically straightforward; the honest-limits wording ("a sampled count is an estimate") has to ship in the same commit |
 | §3.3 Startup attribution | The lazy adapter already knows exactly when each plugin loads — half the mechanism exists |
 | §5.2 Wrapper provenance | The narrow, high-value slice of §5.1 worth shipping first; the telemetry registry already knows its own wrappers |
 | §6.2 Endpoint coverage | Request history (§1.3) now exists and needs no changes; what remains is a real route-pattern-to-URL matching strategy, not just a join key |
@@ -132,14 +131,6 @@ guesses at, which makes the join in §6 far stronger.
 this module's headline property is that counting costs 0.014 µs. This has
 to be opt-in per instance, measured before it ships, and honest in the
 README about what it costs — the same treatment `profile_args` already got.
-
-### 3.2 Sampling
-
-The complement to §3.1: instead of recording every call, record every Nth,
-or every call during a sampled window. Makes expensive collection modes
-(timing, argument profiling, call trees) affordable on a hot surface.
-Straightforward to implement, and the honest limits section has to say
-plainly that a sampled count is an estimate.
 
 ### 3.3 Startup attribution
 

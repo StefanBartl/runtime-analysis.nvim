@@ -420,6 +420,7 @@ function M.new(opts)
         time = target_opts.time or false,
         errors = target_opts.errors or false,
         outermost_only = target_opts.outermost_only or false,
+        sample = (target_opts.sample and target_opts.sample > 1) and target_opts.sample or nil,
       },
     }
     if target_opts.module_id then
