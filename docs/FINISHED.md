@@ -26,6 +26,71 @@ Newest first, by date; original document order within a date.
 
 ## 2026-08-04
 
+### §7.2 Plugin cost-versus-use
+
+What each plugin costs at startup versus how much it is actually used —
+"the report that gets plugins deleted," per the roadmap entry's own
+framing. Both halves the entry names (startup attribution, §3.3; per-
+namespace call counts, already collected by any telemetry instance)
+existed once §3.3 shipped earlier the same day; this entry is the join
+between them, which the entry's own revised text was explicit was not
+free.
+
+**The join, and the wrong shortcut it deliberately avoids.** Startup
+attribution groups by module *root* — a plugin's own Lua namespace,
+`"markdown"` for `require("markdown.buffer")`. Telemetry groups by
+*namespace* — a caller-chosen label, almost always the repo name,
+`"markdown.nvim"`. The two are only sometimes the same string, and the
+tempting shortcut (strip `".nvim"`, fuzzy-match the rest) was rejected on
+the same ground `resolved_modules()`'s own doc-comment already states for
+a related case: a wrong guess here would silently attribute one plugin's
+real startup cost to a different plugin on a name collision, which is
+worse than reporting nothing at all. The actual join needs no guessing —
+`inst.resolved_modules()` already maps every function that resolves to a
+real module path (`wrap_loaded()`/explicit `module_id` only) to that real
+path, so reading the module root off each of those and matching it
+against `startup.lua`'s own per-root totals joins on the one thing both
+features already track honestly.
+
+New module,
+[`lua/runtime-analysis/telemetry/cost_vs_use.lua`](../lua/runtime-analysis/telemetry/cost_vs_use.lua):
+`M.build`/`M.build_all` take pre-fetched inputs (a namespace's
+`resolved_modules()`, its `total_calls`, and a `startup.report()`) rather
+than live instances or `startup.lua` itself — a pure join, testable with
+fabricated data and no coupling between the two features it combines.
+`M.build_all` sorts worst-first (lowest calls-per-startup-ms — expensive
+and underused), matching the roadmap entry's own stated purpose directly
+rather than leaving the reader to sort a flat table by hand; entries with
+unknown cost sort last, since there is nothing to judge them against.
+
+**`startup_ms` is `nil`, never `0`, whenever cost genuinely cannot be
+determined** — the identical "unmatched is not zero-calls" discipline
+`resolved_modules()` already states, applied to this join too. Two distinct
+reasons are told apart rather than collapsed into one vague "unknown":
+no real module path resolves for this namespace at all (a `wrap()`-only
+instance, no `wrap_loaded()`/`module_id` ever used), or one does resolve
+but never appears in the startup report (`autostart()` was not running for
+that plugin, or it loaded before `autostart()` started timing). Both
+renderers name the actual reason rather than only marking the row
+"unknown."
+
+New command: `:RATelemetry cost` — no arguments, deliberately: this is
+inherently cross-namespace (a per-namespace `cost` would just repeat
+`report`'s own call count with one extra number, since the join needs
+`startup.report()`'s whole per-root table regardless of which namespace is
+being asked about), and it reads live startup data rather than anything a
+telemetry instance itself persists.
+
+Verified: `cost_vs_use_spec.lua` — a namespace whose resolved modules match
+real startup roots (including summing across more than one matched root);
+both unknown-cost cases with their own distinct, checkable reason text;
+`build_all`'s sort order proven with a deliberately-constructed
+expensive/underused vs. cheap/heavily-used pair; and both renderers on
+mixed known/unknown entries, plus the empty-instance-list case. A manual
+end-to-end pass (a real `require`, a real `wrap_loaded()` instance, real
+calls through it) confirmed the join attributes the correct startup cost
+to the correct namespace outside the test harness too.
+
 ### §3.3 Startup attribution
 
 Which *module* a plugin's startup cost sits in, as a waterfall — lazy.nvim

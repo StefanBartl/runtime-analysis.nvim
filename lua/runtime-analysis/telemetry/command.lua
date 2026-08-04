@@ -19,6 +19,7 @@
 ---   :RATelemetry open [ns]       render + open externally (report_style: auto/kit/mdview/file)
 ---   :RATelemetry compare [ns] [days]  this window vs the one before it (default 7d)
 ---   :RATelemetry startup [top]   which module a plugin's startup cost sits in
+---   :RATelemetry cost            startup cost vs. call count, worst first
 
 local usercmd = require("lib.nvim.usercmd")
 local notify = require("lib.nvim.notify").create("[runtime-analysis.telemetry]")
@@ -42,6 +43,7 @@ local SUBCOMMANDS = {
   "open",
   "compare",
   "startup",
+  "cost",
 }
 
 ---@return RA.Telemetry
@@ -347,6 +349,25 @@ function M.setup()
         startup.lines(startup.report({ top = tonumber(rest) or 40 })),
         "runtime-analysis.telemetry — startup"
       )
+    elseif first == "cost" then
+      -- docs/ROADMAP.md §7.2. No arguments: this is inherently cross-
+      -- namespace (a per-namespace `cost` would just repeat `report`'s own
+      -- call count with one extra number), and it reads live startup data
+      -- rather than anything this instance itself persists.
+      local startup = require("runtime-analysis.telemetry.startup")
+      local cost_vs_use = require("runtime-analysis.telemetry.cost_vs_use")
+      local namespaces = {}
+      for _, inst in ipairs(mod.instances()) do
+        namespaces[#namespaces + 1] = {
+          namespace = inst.namespace,
+          resolved_modules = inst.resolved_modules(),
+          total_calls = inst.report().total_calls,
+        }
+      end
+      show(
+        cost_vs_use.lines(cost_vs_use.build_all(namespaces, startup.report())),
+        "runtime-analysis.telemetry — cost vs use"
+      )
     elseif first == "compare" then
       -- `rest` is a namespace exactly the way every other subcommand's
       -- second slot already is; a third token, if numeric, overrides
@@ -366,7 +387,7 @@ function M.setup()
     end
   end, {
     nargs = "*",
-    desc = "runtime-analysis.telemetry: report|start|stop|reset|disable|enable|disabled|coverage|export|open|compare|startup [namespace] [days]",
+    desc = "runtime-analysis.telemetry: report|start|stop|reset|disable|enable|disabled|coverage|export|open|compare|startup|cost [namespace] [days]",
     complete = function(arg_lead, cmd_line)
       -- Second token of `start`/`stop`/`reset`/`open`/`compare` is always a
       -- namespace, never another subcommand — narrow completion there

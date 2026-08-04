@@ -158,6 +158,23 @@
 ---@field roots { root: string, self_ms: number }[]        # per module-root (a plugin's own Lua namespace) totals, descending
 
 -- ---------------------------------------------------------------------------
+-- Cost vs. use (docs/ROADMAP.md §7.2)
+-- ---------------------------------------------------------------------------
+
+---One namespace's startup-cost-vs-call-count entry. `startup_ms`/
+---`calls_per_ms` are `nil` — not `0` — when no real module path this
+---namespace's own calls resolve to appears anywhere in the startup report;
+---`reason` explains which of the two honest-limit cases that is.
+---@class RA.Telemetry.CostVsUse.Entry
+---@field namespace string
+---@field total_calls integer
+---@field startup_ms? number
+---@field matched_roots string[]         # which of this namespace's own resolved module roots actually had startup data
+---@field resolved_root_count integer    # how many distinct real module roots this namespace's calls resolve to at all, known or not
+---@field calls_per_ms? number           # total_calls / startup_ms; nil whenever startup_ms is
+---@field reason? string                 # set only when startup_ms is nil
+
+-- ---------------------------------------------------------------------------
 -- Instance
 -- ---------------------------------------------------------------------------
 
