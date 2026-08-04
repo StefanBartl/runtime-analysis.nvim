@@ -36,7 +36,9 @@ The request runner. No browser, no server, no CORS, no token — the cheap
 first version `ECOSYSTEM.md` calls for specifically, because none of those
 problems exist for a request Neovim itself sends via `curl`. Full reference:
 [`docs/COMMANDS.md`](docs/COMMANDS.md); every keymap, usercmd and autocmd
-(there are no keymaps or autocmds): [`docs/BINDINGS.md`](docs/BINDINGS.md).
+(there are no keymaps — every entry point is a command; the handful of
+autocmds are opt-in telemetry/usage-tracking plumbing, not user-facing):
+[`docs/BINDINGS.md`](docs/BINDINGS.md).
 
 ```vim
 :RA request
