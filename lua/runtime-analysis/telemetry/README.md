@@ -506,7 +506,7 @@ a subcommand — the same shape `lib.nvim.progress` already uses for its
 
 ```lua
 require("runtime-analysis.telemetry").setup({
-  report_style = "auto",   -- "auto" | "kit" | "mdview" | "file"
+  report_style = "auto",   -- "auto" | "kit" | "mdview" | "file" | "html"
 })
 ```
 
@@ -516,6 +516,7 @@ require("runtime-analysis.telemetry").setup({
 | `"kit"` | the same in-editor float `:RATelemetry <ns>` already renders |
 | `"mdview"` | write the report + `:MDView standalone` it; falls back to `"kit"` if mdview is not loadable |
 | `"file"` | just write the report to disk, no window opened |
+| `"html"` | render the sortable/filterable HTML dashboard (docs/ROADMAP.md §4.4, below) and open it in the system browser |
 
 This is module-level, not per-instance (`telemetry.setup`, not
 `telemetry.new({...})`) — `:RATelemetry open` with no namespace spans every
@@ -531,14 +532,80 @@ Honest limits:
   self-updating.** Only a per-namespace file has one flush cycle that owns
   it; the combined `report.md` has no single instance to keep rewriting it,
   so it is rendered fresh at invocation time and left there.
-- **No HTML of our own.** Markdown out, mdview renders — generating HTML here
-  would duplicate mdview's themes/highlighter and immediately drift from them.
+- **HTML exists now, but as its own explicit style, not folded into
+  `"auto"`.** §4.4 shipped a small, purpose-built dashboard
+  (`renderers/html.lua`) rather than duplicating mdview's Markdown
+  rendering — see "HTML dashboard" below for what it is and, just as
+  importantly, what it deliberately is not. `"auto"` still means
+  mdview-or-kit, unchanged: opening a whole browser tab is a bigger
+  action than a config default should take silently.
 - **mdview.nvim self-installs its relay binary from GitHub Releases on first
   use** (checksum-verified, no Go/Rust toolchain needed) — for *either* of
   its modes, not just standalone. The first `:RATelemetry open` with
   `report_style = "mdview"` may pause briefly for that download; failures
   (no network, no `curl`) are mdview's own to report, and this bridge just
   degrades to `"kit"`.
+
+## HTML dashboard (docs/ROADMAP.md §4.4)
+
+`report_style = "html"` renders a self-contained HTML page — one flat
+table, one row per (namespace, function): calls, errors, mean timing
+(when `timing` is on), the single most-called argument fingerprint and
+its share, the single most-common immediate caller and its share.
+Click a row for the full breakdown — every kept fingerprint, the
+memoization hint, error fingerprints, callers — the same `└`/`✗`/`←`/`ⓘ`
+symbols the terminal report already uses. Sortable by clicking a column
+header; filterable by a plain substring over namespace + function key.
+
+```vim
+:RATelemetry open           " combined dashboard, every live instance
+:RATelemetry open lib.nvim  " one namespace's own dashboard
+```
+
+or via config:
+
+```lua
+require("runtime-analysis.telemetry").setup({ report_style = "html" })
+```
+
+Written to `stdpath("cache")/runtime-analysis.nvim/telemetry/<namespace>.html`
+(or `report.html` for the combined, no-namespace case) and opened with
+`lib.nvim.fs.open.url.system_opener` — the same cross-platform "hand this
+to the OS" mechanism `:DocMap open` already uses.
+
+**Deliberately not documentation.nvim's own renderer, reused wholesale.**
+That module's `core/render/html.lua` is roughly 4,500 lines, of which
+roughly 3,850 are one embedded JavaScript single-page application
+tightly coupled to its own IR (module nodes, require/call edges,
+findings) — genuinely reusing it for telemetry's own, completely
+different data shape would mean either a real extraction project in that
+repository first, or bolting foreign data onto machinery built for a
+tree, neither of which is "worth doing only if the Markdown report is
+actually being read often enough to feel limiting" (§4.4's own stated
+precondition) actually asks for. Decided 2026-08-04: reuse the *design*
+— the same CSS custom properties (colors, spacing, light/dark via
+`prefers-color-scheme` and `data-theme`), the same visual language
+(badges, section labels, the toolbar search input) — in a new, small,
+self-contained page written for this data, not that one.
+[`renderers/html.lua`](renderers/html.lua)'s own doc-comment has the full
+reasoning.
+
+**Client-side data handling, stated plainly because it matters:** every
+row's data is embedded as a JSON blob in a `<script>` tag and rendered
+by a small (~250-line) vanilla-JS table — no framework, no CDN, nothing
+fetched over the network. Two escaping passes exist for two different
+reasons: the JSON blob itself has any literal `</script` sequence
+escaped to `<\/script` (invisible to JSON parsing, but not to the HTML
+parser, which would otherwise treat it as this very page's own closing
+tag) — this guards the page's own structure. Separately, the JS that
+renders each row HTML-escapes every field that is real text from the
+analyzed code (a function name, an argument fingerprint — which is
+built from a real argument *value*, so a string argument containing
+`<`/`>`/`&` is entirely plausible) before it reaches `innerHTML` — this
+guards against that text being interpreted as markup. Fingerprint lists
+(`args`/`error_fp`/`callers`) are HTML-escaped once, server-side in Lua,
+since they are rendered as pre-built HTML fragments rather than
+assembled client-side.
 
 ## Use from another plugin
 
@@ -914,9 +981,10 @@ ways to surprise, notably around `package.loaded` identity. Use explicit
 | `startup.lua` | startup attribution: wraps `require`, times each cache miss, self-vs-total waterfall (standalone — no instance, no namespace, no persistence) |
 | `cost_vs_use.lua` | joins `startup.lua`'s per-root cost against a namespace's own `resolved_modules()`, on real module paths only — never a name guess |
 | `report.lua` | report building + rendering (terminal lines and Markdown), incl. the memoization hint |
-| `report_file.lua` | where a rendered Markdown report lives on disk, and writing one there |
-| `report_style.lua` | resolve `report_style` ("auto"/"kit"/"mdview"/"file") to a concrete destination |
+| `report_file.lua` | where a rendered Markdown *or* HTML report lives on disk, and writing one there |
+| `report_style.lua` | resolve `report_style` ("auto"/"kit"/"mdview"/"file"/"html") to a concrete destination |
 | `renderers/mdview.lua` | bridges a report to a browser tab via mdview.nvim's `:MDView standalone` |
+| `renderers/html.lua` | the sortable/filterable HTML dashboard (§4.4) — a small, self-contained page, not documentation.nvim's own renderer reused |
 | `config.lua` | module-level defaults (`report_style`) via `telemetry.setup()` |
 | `reminder.lua` | the time/volume lifecycle trigger |
 | `toggle.lua` | persistent per-namespace enable/disable, independent of an instance's own data |

@@ -1,6 +1,6 @@
 ---@module 'runtime-analysis.telemetry.report_style'
---- Resolve a `report_style` request ("auto" | "kit" | "mdview" | "file") to
---- a concrete destination `:RATelemetry open` can act on.
+--- Resolve a `report_style` request ("auto" | "kit" | "mdview" | "file" |
+--- "html") to a concrete destination `:RATelemetry open` can act on.
 ---
 --- Mirrors `lib.nvim.progress.resolve_style`: prefer the richer external
 --- integration when it is actually loadable, degrade silently rather than
@@ -14,13 +14,16 @@ require("runtime-analysis.telemetry.@types")
 local mdview = require("runtime-analysis.telemetry.renderers.mdview")
 
 ---@param want RA.Telemetry.ReportStyle|nil
----@return "kit"|"mdview"|"file"
+---@return "kit"|"mdview"|"file"|"html"
 local function resolve(want)
   if want == "kit" then
     return "kit"
   end
   if want == "file" then
     return "file"
+  end
+  if want == "html" then
+    return "html"
   end
 
   -- "mdview" explicitly, or "auto" (default), or unrecognized: prefer

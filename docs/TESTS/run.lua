@@ -66,6 +66,7 @@ local specs = {
   "inspect_spec.lua",
   "graphql_spec.lua",
   "multipart_spec.lua",
+  "telemetry_html_spec.lua",
   "lazy_spec.lua",
 }
 

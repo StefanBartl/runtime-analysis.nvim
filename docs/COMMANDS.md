@@ -595,8 +595,9 @@ see that module's own extensive README
 ([`lua/runtime-analysis/telemetry/README.md`](../lua/runtime-analysis/telemetry/README.md))
 for the full API this command is a thin front-end over: instances, scoping
 (`wrap`/`wrap_loaded`/`wrap_fn`), the lifecycle (`start`/`stop`/`unwrap`),
-persistent enable/disable, argument profiling, report metadata, and the
-mdview browser bridge.
+persistent enable/disable, argument profiling, report metadata, the
+mdview browser bridge, and the sortable/filterable HTML dashboard (§4.4,
+`report_style = "html"`).
 
 Subcommand table: [`docs/BINDINGS.md`](BINDINGS.md#ratelemetry-subcommands).
 
