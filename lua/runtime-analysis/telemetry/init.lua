@@ -926,7 +926,23 @@ end
 ---@param name string
 ---@return boolean
 local function default_module_filter(name)
-  return not name:find("@types", 1, true)
+  if name:find("@types", 1, true) then
+    return false
+  end
+  -- The telemetry engine's own internals must never be wrapped. registry.lua's
+  -- wrapper fingerprints a call's arguments by calling `fingerprint.of` --
+  -- wrap `fingerprint.of` itself (e.g. because a caller's `deep = true`
+  -- instrumentation list includes "runtime-analysis.nvim" without excluding
+  -- it, the way lib.nvim already has to be) and that call recurses into its
+  -- own wrapper without bound: unconditional stack overflow on the very first
+  -- argument-profiled call. `registry`, `fingerprint`, and anything else under
+  -- this prefix are load-bearing for instrumentation itself, so they are
+  -- structurally never a valid wrap target, regardless of which plugin's
+  -- `main` a caller is walking.
+  if name == "runtime-analysis.telemetry" or name:find("^runtime%-analysis%.telemetry%.") then
+    return false
+  end
+  return true
 end
 
 ---Convenience wrapper around `new()` + `wrap()`/`wrap_loaded()` + `start()`
