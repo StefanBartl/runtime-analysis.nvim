@@ -1,0 +1,20 @@
+{
+  "tools": [
+    {
+      "bin": "curl",
+      "required": true,
+      "why": "lib.nvim.net.curl shells out to curl for every request `:RASend` makes — without it, every send fails with a confusing 'request failed' and no obvious cause. Other runtime-analysis features (telemetry counting, coverage, exports) don't need it.",
+      "pkg": {
+        "apt": "curl",
+        "dnf": "curl",
+        "pacman": "curl",
+        "zypper": "curl",
+        "apk": "curl",
+        "brew": "curl",
+        "winget": "cURL.cURL",
+        "scoop": "curl",
+        "choco": "curl"
+      }
+    }
+  ]
+}
