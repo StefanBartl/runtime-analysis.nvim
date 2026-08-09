@@ -47,15 +47,10 @@ same kind of overlay `docs/IDEAS.md` §6 uses for its own five-item shortlist.
 
 Thirty-two items have shipped out of this section since it was first
 written — see [`docs/FINISHED.md`](FINISHED.md) for the full record of
-each. Every remaining open item is Long-term/speculative:
-
-### Long-term / speculative
-
-| Item | Note |
-| --- | --- |
-| §4.3 Standard trace formats | §3.1 (call trees) shipped, so this is no longer *meaningless* — but a real trace format needs nested call stacks and timing spans, not the flat one-level caller histogram §3.1 actually built; still separate, unbuilt work |
-| §7.3 LSP request latency | Explicitly low priority; territory other tools already cover well |
-
+each. Nothing remains in active Long-term/speculative status: the one
+item worth keeping at all (§4.3) moved to the "Deliberately not building"
+table below, and the other (§7.3) was dropped outright — see that
+section's own note.
 
 ## 1. HTTP request runner — the stated gaps
 
@@ -99,20 +94,15 @@ needs a real profiler is to point at the real profiler.
 
 ## 4. Telemetry — reading it
 
-### 4.3 Standard trace formats
-
-Export to a format an existing viewer already opens — speedscope's JSON, or
-the Chrome trace format. §3.1 (call trees, see `docs/FINISHED.md`) shipped
-a flat, one-level caller histogram — real per-function evidence of "by
-whom", but not the nested call stacks with timing spans a trace-format
-viewer actually expects. Still nothing a trace format could faithfully
-render; the Markdown report's own `← 61 % lua/fs/init.lua:42` line already
-covers what the current data can honestly show.
-
 §4.4 (a real dashboard) has shipped — see [`docs/FINISHED.md`](FINISHED.md)
-for the full record, including the browser-tier decision `docs/IDEAS.md`
-§3.1 said this document should not answer unilaterally, since asked
-directly on 2026-08-04.
+for the full record. §4.3 (standard trace formats) was never built and is
+not a live backlog item any more — moved to the "Deliberately not
+building" table below, on 2026-08-04, after a look at what it would
+actually take (see that table's own entry for the reasoning). This section
+is intentionally left empty rather than deleted, the same reasoning §1's
+own empty section states: the numbers themselves (`§4.x`) are still cited
+in `docs/FINISHED.md`, and removing the section would orphan those
+references without actually freeing the numbers for reuse.
 
 ---
 
@@ -139,15 +129,17 @@ this section intentionally empty rather than deleted, the same reasoning
 
 ## 7. Editor and session analytics
 
-Speculative, and grouped separately because it is a different *product*
-than everything above — instrumenting the editor rather than instrumenting
-code.
-
-### 7.3 LSP request latency
-
-Which server is slow, on which request kind. Plausible and useful; also
-squarely in territory other tools cover, and it would mean tracking
-Neovim's LSP client internals across releases. Low priority.
+§7.1 and §7.2 have shipped — see [`docs/FINISHED.md`](FINISHED.md) for the
+full record of each. §7.3 (LSP request latency) was dropped outright, not
+shipped and not deferred — asked directly on 2026-08-04. Two reasons,
+both already in this document's own earlier wording: it means tracking
+Neovim's LSP client internals across releases (a maintenance liability
+this module's whole premise — installed, cheap, left running unattended —
+is a bad fit for), and it is territory other tools, plus Neovim's own
+`vim.lsp.log`, already cover. Unlike §4.3, no "revisit later" case was
+made for it, so it carries no entry in "Deliberately not building" either
+— this section is intentionally left empty rather than deleted, the same
+reasoning §1's own empty section states, for §7.1/§7.2's own numbers.
 
 ---
 
@@ -167,3 +159,4 @@ checklist pass have now shipped — moved to [`docs/FINISHED.md`](FINISHED.md).
 | **Telemetry that leaves the machine** | No account, no upload, no aggregation service. The word "telemetry" carries an expectation this deliberately does not meet, and the README should probably say so more loudly than it does | Never |
 | **Sending requests from documentation.nvim's static HTML page** | A browser page cannot `pcall(require, ...)` a Neovim plugin — this is why step 6 became an editor mode instead. Not a gap, a category error | Never |
 | **Owning the `.http` filetype** | VS Code REST Client's syntax files and IntelliJ's already exist and are what people have; matching their shape (which `parse.lua` deliberately does) beats claiming the filetype | Never |
+| **§4.3 Standard trace formats** (speedscope's JSON / Chrome's trace format) | §3.1 shipped a flat, one-level caller histogram, not nested call stacks with timing spans — what both formats actually expect. Faithfully exporting one needs either real nested-stack tracing (which is §3.5's already-rejected general profiler by another name) or reshaping the flat data into the format anyway, which would invent nesting/timestamps that were never observed and mislead a viewer that implies more precision than exists. Discussed directly on 2026-08-04 — an idea, not a blocked backlog item | After some time — a lightweight, honestly-labeled flame-graph-*shaped* view built into this module's own dashboard (§4.4, already shipped) rather than exported into a format that promises a real trace, or if this module's own data model ever grows real nested call stacks |
