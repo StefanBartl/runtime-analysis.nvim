@@ -74,6 +74,16 @@ function M.setup(opts)
   if opts and opts.telemetry then
     require("runtime-analysis.telemetry.lazy").setup(opts.telemetry)
   end
+
+  -- One-time (persisted across restarts) popup on the first setup() after
+  -- installing this plugin: which CLI tools it wants and why
+  -- (docs/install.json). `:Lib deps show runtime-analysis.nvim` thereafter.
+  -- pcall'd: an older lib.nvim without lib.nvim.deps mustn't break setup()
+  -- over an informational popup.
+  local ok_deps, deps = pcall(require, "lib.nvim.deps")
+  if ok_deps then
+    deps.show_once("runtime-analysis.nvim")
+  end
 end
 
 return M

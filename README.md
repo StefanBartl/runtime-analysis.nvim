@@ -403,7 +403,12 @@ this short list.
   soft dependency: renders a telemetry report as a live browser tab.
 
 Run `:checkhealth runtime-analysis` to verify all of the above on your
-system.
+system. `curl` is additionally declared in
+[`docs/install.json`](docs/install.json), parsed by lib.nvim's
+[`deps` module](https://github.com/StefanBartl/lib.nvim/blob/main/lua/lib/nvim/deps/README.md)
+— a popup explains it's missing (and that only `:RASend` needs it) the
+first time `setup()` runs after installing this plugin; `:Lib deps show
+runtime-analysis.nvim` repeats it any time.
 
 **Dev-only:** [documentation.nvim](https://github.com/StefanBartl/documentation.nvim)
 generates `docs/map/`, this repository's own module map, adopted per that
