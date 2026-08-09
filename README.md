@@ -408,7 +408,10 @@ system. `curl` is additionally declared in
 [`deps` module](https://github.com/StefanBartl/lib.nvim/blob/main/lua/lib/nvim/deps/README.md)
 — a popup explains it's missing (and that only `:RASend` needs it) the
 first time `setup()` runs after installing this plugin; `:Lib deps show
-runtime-analysis.nvim` repeats it any time.
+runtime-analysis.nvim` repeats it any time. Opt out with
+`vim.g.lib_nvim_deps_disable_first_run = true` (every plugin) or
+`vim.g.lib_nvim_deps_disabled_plugins = { "runtime-analysis.nvim" }` (just
+this one), set anywhere in your config.
 
 **Dev-only:** [documentation.nvim](https://github.com/StefanBartl/documentation.nvim)
 generates `docs/map/`, this repository's own module map, adopted per that
