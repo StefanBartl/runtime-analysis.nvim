@@ -31,6 +31,7 @@ local find_root = require("lib.nvim.fs.find_root")
 local is_readable_file = require("lib.nvim.fs.is_readable_file")
 local json = require("lib.nvim.fs.json")
 local read = require("lib.nvim.fs.read")
+local notify = require("lib.nvim.notify").create("[runtime-analysis]")
 
 local M = {}
 
@@ -90,11 +91,8 @@ local function warn_if_not_gitignored(root)
     return
   end
   warned_gitignore = true
-  vim.notify(
-    ("runtime-analysis: %s exists but is not in .gitignore — add it before committing"):format(
-      PRIVATE_FILE
-    ),
-    vim.log.levels.WARN
+  notify.warn(
+    ("%s exists but is not in .gitignore — add it before committing"):format(PRIVATE_FILE)
   )
 end
 

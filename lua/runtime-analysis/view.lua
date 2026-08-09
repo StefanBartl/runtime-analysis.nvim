@@ -9,6 +9,8 @@
 --- again — a float that vanishes the moment you look away from it fights
 --- that instead of serving it.
 
+local notify = require("lib.nvim.notify").create("[runtime-analysis]")
+
 local M = {}
 
 local BUFNAME = "runtime-analysis://response"
@@ -110,19 +112,19 @@ function M.yank_body()
   local bufnr = vim.fn.bufnr(BUFNAME)
   local body_start = bufnr ~= -1 and vim.b[bufnr].runtime_analysis_body_start or nil
   if not body_start then
-    vim.notify("runtime-analysis: no response yet — run :RA send first", vim.log.levels.WARN)
+    notify.warn("no response yet — run :RA send first")
     return
   end
 
   local total = vim.api.nvim_buf_line_count(bufnr)
   if body_start > total then
-    vim.notify("runtime-analysis: the last response had no body", vim.log.levels.WARN)
+    notify.warn("the last response had no body")
     return
   end
 
   local body = vim.api.nvim_buf_get_lines(bufnr, body_start - 1, -1, false)
   vim.fn.setreg('"', table.concat(body, "\n"))
-  vim.notify(("runtime-analysis: yanked %d line(s) of the response body"):format(#body))
+  notify.info(("yanked %d line(s) of the response body"):format(#body))
 end
 
 return M

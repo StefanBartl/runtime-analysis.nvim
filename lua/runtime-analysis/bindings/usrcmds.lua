@@ -50,6 +50,7 @@
 --- placeholder file for either would be scaffolding with nothing to scaffold.
 
 local composer = require("lib.nvim.usercmd.composer")
+local notify = require("lib.nvim.notify").create("[runtime-analysis]")
 
 -- A dynamic completer, registered once: `M.setup` may run more than once in
 -- a session (`:source`-ing config during development), and
@@ -121,7 +122,7 @@ end
 ---@param ra RA
 local function cancel_pending(ra)
   if not in_flight then
-    vim.notify("runtime-analysis: no request in flight", vim.log.levels.WARN)
+    notify.warn("no request in flight")
     return
   end
   if pending_request then
@@ -161,7 +162,7 @@ local function check_assertion(expect, expect_line, source_bufnr, actual)
     return
   end
   if actual == expect.status then
-    vim.notify(("runtime-analysis: ✓ expect status %d"):format(expect.status))
+    notify.info(("✓ expect status %d"):format(expect.status))
     return
   end
   local actual_str = actual and tostring(actual) or "no response"
@@ -175,13 +176,7 @@ local function check_assertion(expect, expect_line, source_bufnr, actual)
       },
     },
   })
-  vim.notify(
-    ("runtime-analysis: ✗ expect status %d, got %s — see :copen"):format(
-      expect.status,
-      actual_str
-    ),
-    vim.log.levels.ERROR
-  )
+  notify.error(("✗ expect status %d, got %s — see :copen"):format(expect.status, actual_str))
 end
 
 ---This buffer's own directory, for resolving a multipart `< ./path`
@@ -280,14 +275,14 @@ local function send_current_buffer(ra)
   local assertions = require("runtime-analysis.assertions")
   local expect, expect_err = assertions.extract(block_lines)
   if expect_err then
-    vim.notify("runtime-analysis: " .. expect_err, vim.log.levels.ERROR)
+    notify.error(expect_err)
     return
   end
   local expect_line = expect and (block_first - 1 + expect.line)
 
   local request, err = parse.parse(assertions.strip(block_lines))
   if not request then
-    vim.notify("runtime-analysis: " .. err, vim.log.levels.ERROR)
+    notify.error(err)
     return
   end
 
@@ -299,7 +294,7 @@ local function send_current_buffer(ra)
   -- everywhere except inside the one real outgoing request.
   local resolved_request, resolve_err = require("runtime-analysis.env").resolve(request)
   if not resolved_request then
-    vim.notify("runtime-analysis: " .. resolve_err, vim.log.levels.ERROR)
+    notify.error(resolve_err)
     return
   end
 
@@ -312,7 +307,7 @@ local function send_current_buffer(ra)
   local resolve_shape_err
   resolved_request, resolve_shape_err = resolve_request_shape(resolved_request, source_bufnr)
   if not resolved_request then
-    vim.notify("runtime-analysis: " .. resolve_shape_err, vim.log.levels.ERROR)
+    notify.error(resolve_shape_err)
     return
   end
 
@@ -382,7 +377,7 @@ local function send_current_buffer(ra)
       if handle then
         handle:cancel("failed")
       end
-      vim.notify("runtime-analysis: " .. run_err, vim.log.levels.ERROR)
+      notify.error(run_err)
       view.show({ ("✗ %s"):format(run_err) }, { split = ra.opts.split })
       check_assertion(expect, expect_line, source_bufnr, nil)
       return
@@ -412,7 +407,7 @@ local function browse_history(ra)
   local history = require("runtime-analysis.history")
   local entries = history.list()
   if #entries == 0 then
-    vim.notify("runtime-analysis: no request history for this project yet", vim.log.levels.INFO)
+    notify.info("no request history for this project yet")
     return
   end
 
@@ -449,21 +444,16 @@ local function select_environment(name)
   if name and name ~= "" then
     local ok, err = env.set_current(name)
     if ok then
-      vim.notify("runtime-analysis: environment set to " .. name)
+      notify.info("environment set to " .. name)
     else
-      vim.notify("runtime-analysis: " .. err, vim.log.levels.ERROR)
+      notify.error(err)
     end
     return
   end
 
   local names = env.list_names()
   if #names == 0 then
-    vim.notify(
-      "runtime-analysis: no environments defined — create "
-        .. env.SHARED_FILE
-        .. " at the project root",
-      vim.log.levels.INFO
-    )
+    notify.info("no environments defined — create " .. env.SHARED_FILE .. " at the project root")
     return
   end
 
@@ -475,9 +465,9 @@ local function select_environment(name)
     end
     local ok, err = env.set_current(choice)
     if ok then
-      vim.notify("runtime-analysis: environment set to " .. choice)
+      notify.info("environment set to " .. choice)
     else
-      vim.notify("runtime-analysis: " .. err, vim.log.levels.ERROR)
+      notify.error(err)
     end
   end)
 end
@@ -504,16 +494,13 @@ local function do_import(ra, ctx)
   end
 
   if not source or vim.trim(source) == "" then
-    vim.notify(
-      "runtime-analysis: nothing to import — select a curl command, or copy one to the clipboard first",
-      vim.log.levels.WARN
-    )
+    notify.warn("nothing to import — select a curl command, or copy one to the clipboard first")
     return
   end
 
   local request, err = require("runtime-analysis.curl").parse(source)
   if not request then
-    vim.notify("runtime-analysis: " .. err, vim.log.levels.ERROR)
+    notify.error(err)
     return
   end
 
@@ -557,7 +544,7 @@ local function do_export()
 
   local request, err = parse.parse(block_lines)
   if not request then
-    vim.notify("runtime-analysis: " .. err, vim.log.levels.ERROR)
+    notify.error(err)
     return
   end
 
@@ -573,7 +560,7 @@ local function do_export()
   if graphql.is_graphql(request.headers) then
     local resolved, gerr = graphql.resolve(request)
     if not resolved then
-      vim.notify("runtime-analysis: " .. gerr, vim.log.levels.ERROR)
+      notify.error(gerr)
       return
     end
     request = resolved
@@ -581,7 +568,7 @@ local function do_export()
 
   local cmd = require("runtime-analysis.curl").format(request)
   vim.fn.setreg('"', cmd)
-  vim.notify("runtime-analysis: curl command yanked to the unnamed register")
+  notify.info("curl command yanked to the unnamed register")
 end
 
 ---`:RA provenance <path>` (docs/ROADMAP.md §5.2) — "who wrapped this
@@ -597,10 +584,10 @@ local function do_provenance(path)
   local provenance = require("runtime-analysis.provenance")
   local info, err = provenance.inspect(path)
   if not info then
-    vim.notify("runtime-analysis: " .. err, vim.log.levels.ERROR)
+    notify.error(err)
     return
   end
-  vim.notify(table.concat(provenance.lines(info), "\n"))
+  notify.info(table.concat(provenance.lines(info), "\n"))
 end
 
 ---`:RA inspect <module>` (docs/ROADMAP.md §5.1) — walk a live
@@ -618,7 +605,7 @@ local function do_inspect(module_id)
   local inspect = require("runtime-analysis.inspect")
   local report, err = inspect.inspect(module_id)
   if not report then
-    vim.notify("runtime-analysis: " .. err, vim.log.levels.ERROR)
+    notify.error(err)
     return
   end
 
@@ -631,7 +618,7 @@ local function do_inspect(module_id)
       width = math.min(110, math.max(60, vim.o.columns - 8)),
     })
   else
-    vim.notify(table.concat(lines, "\n"))
+    notify.info(table.concat(lines, "\n"))
   end
 end
 
@@ -650,9 +637,8 @@ local function do_usage(sub)
 
   if sub == "start" then
     local started = usage.start()
-    vim.notify(
-      started and "runtime-analysis: usage tracking started"
-        or "runtime-analysis: usage tracking is already running",
+    notify.notify(
+      started and "usage tracking started" or "usage tracking is already running",
       started and vim.log.levels.INFO or vim.log.levels.WARN
     )
     return
@@ -660,19 +646,15 @@ local function do_usage(sub)
 
   if sub == "stop" then
     local stopped = usage.stop()
-    vim.notify(
-      stopped and "runtime-analysis: usage tracking stopped"
-        or "runtime-analysis: usage tracking is not running",
+    notify.notify(
+      stopped and "usage tracking stopped" or "usage tracking is not running",
       stopped and vim.log.levels.INFO or vim.log.levels.WARN
     )
     return
   end
 
   if not usage.is_running() then
-    vim.notify(
-      "runtime-analysis: usage tracking is not running — :RA usage start first",
-      vim.log.levels.WARN
-    )
+    notify.warn("usage tracking is not running — :RA usage start first")
     return
   end
 
@@ -685,7 +667,7 @@ local function do_usage(sub)
       width = math.min(110, math.max(60, vim.o.columns - 8)),
     })
   else
-    vim.notify(table.concat(lines, "\n"))
+    notify.info(table.concat(lines, "\n"))
   end
 end
 
@@ -736,7 +718,7 @@ function M.setup(ra)
         desc = "Clear this project's request history",
         run = function()
           require("runtime-analysis.history").clear()
-          vim.notify("runtime-analysis: request history cleared")
+          notify.info("request history cleared")
         end,
       },
       {
