@@ -304,7 +304,10 @@ full call stack — matching the roadmap entry's own scope ("one frame of
 covers why this module does not become one). §4.3 (standard trace
 formats) is not unblocked by this in the way it sounds: a real trace-
 format viewer expects nested call stacks with timing spans, which this
-data structurally is not — see that entry's own updated note.
+data structurally is not. Discussed directly on 2026-08-04 and moved to
+`docs/ROADMAP.md`'s own "Deliberately not building" table rather than
+built on a guess at what shape the data should have taken instead — see
+that table's own entry for the full reasoning.
 
 Verified in `docs/TESTS/telemetry_spec.lua`: real, distinct call sites
 (not fabricated line numbers) producing genuinely different fingerprints;
