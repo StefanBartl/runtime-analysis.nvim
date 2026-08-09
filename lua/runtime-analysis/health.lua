@@ -231,6 +231,16 @@ function M.check()
   else
     h_info("setup() has not run yet in this session — no commands registered")
   end
+
+  -- runtime-analysis.nvim's own docs/install.json via lib.nvim.deps — the
+  -- same curl check above, but with its declared `why` and a pointer to
+  -- `:Lib deps show`. Does nothing if lib.nvim.deps is unavailable (older
+  -- lib.nvim).
+  local ok_deps, deps_health = pcall(require, "lib.nvim.deps.health")
+  if ok_deps then
+    h_start("runtime-analysis.nvim: declared tools (lib.nvim.deps)")
+    deps_health.report_for("runtime-analysis.nvim")
+  end
 end
 
 return M
