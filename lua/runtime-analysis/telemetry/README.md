@@ -449,7 +449,7 @@ require("runtime-analysis.telemetry.command").setup()
 :RATelemetry stop [ns]       " every instance, or just one
 :RATelemetry reset [ns]      " every instance, or just one
 :RATelemetry coverage
-:RATelemetry export [path]   " JSON, or Markdown if path ends .md
+:RATelemetry export [path]   " JSON; Markdown if .md; PDF if .pdf (needs pdfport.nvim)
 :RATelemetry open [ns]       " render + open externally — see "Browser report" below
 :RATelemetry compare [ns] [days]   " "this week vs last week" — see below
 :RATelemetry startup [top]   " which module a plugin's startup cost sits in
@@ -467,8 +467,18 @@ markdown.nvim 14`.
 `export`'s format is inferred from the target path's own extension rather
 than a separate flag — this command's argument parsing stays positional
 throughout. `:RATelemetry export report.md` writes the same document
-`telemetry.markdown_all()` would; anything else (including the default
-auto-named path) writes the existing JSON snapshot.
+`telemetry.markdown_all()` would; `:RATelemetry export report.pdf` hands
+that exact document to [pdfport.nvim](https://github.com/StefanBartl/pdfport.nvim)
+(optional dependency, `pcall`-guarded — needs pandoc + a PDF engine,
+`pdfport.can_create("markdown")`) as text instead of writing a `.md` file
+first; anything else (including the default auto-named path) writes the
+existing JSON snapshot.
+
+`scripts/telemetry.lua export <namespace> <path>` (the headless/CI entry
+point) follows the identical extension rule, and finds pdfport.nvim on the
+runtimepath the same way it finds lib.nvim — `PDFPORT_DIR`, a
+`.deps/pdfport.nvim` checkout, or a sibling checkout beside this repo — but
+best-effort: only `export ... .pdf` needs it, everything else works without.
 
 ## Browser report
 

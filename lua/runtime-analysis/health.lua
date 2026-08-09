@@ -211,6 +211,21 @@ function M.check()
     h_info("lib.nvim.ui.kit not available — :RATelemetry's report float falls back to :messages")
   end
 
+  local ok_pp, pdfport = pcall(require, "pdfport")
+  if ok_pp and type(pdfport.can_create) == "function" and pdfport.can_create("markdown") then
+    h_ok("pdfport.nvim — :RATelemetry export report.pdf can be written")
+  elseif ok_pp then
+    h_info("pdfport.nvim installed, but no markdown producer is available", {
+      ":RATelemetry export report.pdf would fail until pandoc + a PDF engine",
+      "are installed. See pdfport.nvim's :checkhealth for which is missing.",
+    })
+  else
+    h_info("pdfport.nvim not installed", {
+      "Only :RATelemetry export report.pdf needs it; .md and .json export",
+      "work without it. https://github.com/StefanBartl/pdfport.nvim",
+    })
+  end
+
   local ok_progress = pcall(require, "lib.nvim.progress")
   if ok_progress then
     h_ok("lib.nvim.progress — :RA send shows a sending/cancel indicator")

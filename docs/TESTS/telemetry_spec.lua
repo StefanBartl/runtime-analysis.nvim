@@ -1642,6 +1642,71 @@ return function(H)
   end
 
   -- -------------------------------------------------------------------------
+  -- :RATelemetry export .pdf — routes through pdfport.nvim (optional
+  -- dependency, soft-required). Stubs package.loaded["pdfport"] rather than
+  -- depending on a real pdfport.nvim + pandoc install being present on the
+  -- machine running the suite -- same pattern github_stats.nvim/
+  -- documentation.nvim/markdown.nvim use for their own pdfport integrations.
+  -- -------------------------------------------------------------------------
+  do
+    local namespace = ns("export_pdf")
+    local mod = { f = function() end }
+    local t = telemetry.new({ namespace = namespace, persist = false })
+    t.wrap(mod)
+    t.start()
+    mod.f()
+
+    local pdf_path = tmpdir .. "/export_test.pdf"
+
+    -- No pdfport.nvim installed -> clear error, nothing written.
+    package.loaded["pdfport"] = nil
+    local notified
+    local orig_vim_notify = vim.notify
+    vim.notify = function(msg, level)
+      notified = { msg = msg, level = level }
+    end
+
+    vim.cmd("RATelemetry export " .. pdf_path)
+    H.ok(
+      notified and notified.msg:find("export failed", 1, true) ~= nil,
+      "no pdfport.nvim -> :RATelemetry export .pdf reports failure"
+    )
+    H.eq(io.open(pdf_path, "r"), nil, "no pdfport.nvim -> nothing written")
+
+    -- pdfport.nvim installed, markdown producer available -> writes through.
+    local create_opts
+    package.loaded["pdfport"] = {
+      can_create = function(kind)
+        return kind == "markdown"
+      end,
+      create = function(opts)
+        create_opts = opts
+        -- Synchronous stub so the assertion below can run immediately after
+        -- vim.cmd() returns, same as the real pdfport.create() would resolve
+        -- eventually via its own async callback.
+        opts.__callback({ status = "ok", path = opts.output })
+      end,
+    }
+    notified = nil
+    vim.cmd("RATelemetry export " .. pdf_path)
+    H.ok(
+      notified and notified.msg:find("wrote", 1, true) ~= nil,
+      "pdfport.nvim available -> :RATelemetry export .pdf reports success"
+    )
+    H.eq(create_opts.from, "markdown", "pdfport.create() gets from = \"markdown\"")
+    H.eq(create_opts.output, pdf_path, "pdfport.create() gets the requested output path")
+    H.ok(
+      create_opts.text:find("# runtime-analysis.nvim — telemetry", 1, true) ~= nil,
+      "pdfport.create() gets the same combined Markdown document the .md export writes"
+    )
+
+    vim.notify = orig_vim_notify
+    package.loaded["pdfport"] = nil
+    t.stop()
+    t.unwrap()
+  end
+
+  -- -------------------------------------------------------------------------
   -- :RATelemetry open [ns] — forces a flush, then dispatches per
   -- report_style. "mdview" falls back to "kit" here since mdview is
   -- unavailable in this test run (see report_style resolution tests above).
