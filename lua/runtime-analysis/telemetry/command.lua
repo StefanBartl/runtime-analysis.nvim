@@ -15,7 +15,8 @@
 ---   :RATelemetry enable [ns]     clear a persisted disable, resume now
 ---   :RATelemetry disabled        list namespaces currently disabled
 ---   :RATelemetry coverage        which wrapped functions were never called
----   :RATelemetry export [path]   write a snapshot (JSON, or Markdown if path ends .md)
+---   :RATelemetry export [path]   write a snapshot (JSON, Markdown if path
+---                                ends .md, PDF via pdfport.nvim if .pdf)
 ---   :RATelemetry open [ns]       render + open externally (report_style: auto/kit/mdview/file/html)
 ---   :RATelemetry compare [ns] [days]  this window vs the one before it (default 7d)
 ---   :RATelemetry startup [top]   which module a plugin's startup cost sits in
@@ -148,10 +149,47 @@ local function compare_lines(namespace, days)
   return out
 end
 
+---@internal Soft dependency on pdfport.nvim (github.com/StefanBartl/
+---pdfport.nvim), same content export()'s `.md` branch writes, handed to
+---pdfport as text instead of read back from a written .md file.
+---@param target string
+---@param callback fun(written: string|nil, err: string|nil)
+local function export_pdf(target, callback)
+  local mod = telemetry()
+
+  local ok_pp, pdfport = pcall(require, "pdfport")
+  if not ok_pp or type(pdfport.create) ~= "function" then
+    callback(nil, "pdfport.nvim not installed -- PDF export unavailable")
+    return
+  end
+  if type(pdfport.can_create) ~= "function" or not pdfport.can_create("markdown") then
+    callback(nil, "pdfport.nvim has no available markdown producer (needs pandoc + a PDF engine)")
+    return
+  end
+
+  pdfport.create({
+    text = table.concat(mod.markdown_all(), "\n"),
+    from = "markdown",
+    output = target,
+    on_conflict = "overwrite",
+    __callback = function(result)
+      if result.status == "ok" then
+        callback(target, nil)
+      else
+        callback(nil, result.error or "pdfport export failed")
+      end
+    end,
+  })
+end
+
 ---@internal
 ---@param path string|nil
----@return string|nil written
-local function export(path)
+---@param pdf_callback fun(written: string|nil, err: string|nil)|nil Required
+---when `path` ends `.pdf` -- that branch is asynchronous (pdfport.nvim
+---shells out to pandoc) and returns nothing itself; every other branch
+---stays synchronous and ignores this.
+---@return string|nil written Only for the synchronous (json/markdown) branches.
+local function export(path, pdf_callback)
   local mod = telemetry()
 
   local target = path
@@ -166,6 +204,11 @@ local function export(path)
   -- `--format` flag: this command's argument parsing is deliberately
   -- positional-only (see the module doc-comment), and ".md means Markdown"
   -- needs no flag grammar to be unambiguous.
+  if target:sub(-4):lower() == ".pdf" then
+    export_pdf(target, pdf_callback)
+    return nil
+  end
+
   if target:sub(-3):lower() == ".md" then
     local ok = report_file.write(target, mod.markdown_all())
     return ok and target or nil
@@ -359,11 +402,21 @@ function M.setup()
         "runtime-analysis.telemetry coverage"
       )
     elseif first == "export" then
-      local written = export(rest)
-      if written then
-        notify.info("wrote " .. written)
+      if rest and rest:sub(-4):lower() == ".pdf" then
+        export(rest, function(written, err)
+          if written then
+            notify.info("wrote " .. written)
+          else
+            notify.error("export failed: " .. tostring(err))
+          end
+        end)
       else
-        notify.error("export failed")
+        local written = export(rest)
+        if written then
+          notify.info("wrote " .. written)
+        else
+          notify.error("export failed")
+        end
       end
     elseif first == "open" then
       open_report(rest)

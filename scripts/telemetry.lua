@@ -20,9 +20,10 @@
 --   --dir=<path>               cache dir override (default: the plugin's own)
 --
 -- `export`'s format is inferred from <path>'s own extension — `.md` writes
--- Markdown, anything else writes JSON — the same rule `:RATelemetry export`
--- already uses, so there is one rule to remember rather than one per
--- entry point.
+-- Markdown, `.pdf` writes PDF via pdfport.nvim (optional dependency; must be
+-- reachable on the rtp the same way lib.nvim is, see add_dep() below),
+-- anything else writes JSON — the same rule `:RATelemetry export` already
+-- uses, so there is one rule to remember rather than one per entry point.
 --
 -- Deliberately not a `coverage` subcommand: "which registered functions
 -- were never called" needs to know the *registered* set, which only a live
@@ -62,6 +63,33 @@ local function add_lib_nvim()
 end
 
 add_lib_nvim()
+
+-- Same three-candidate search as add_lib_nvim(), for pdfport.nvim -- but
+-- best-effort and silent on failure, unlike lib.nvim: pdfport is only
+-- needed for `export <namespace> <file>.pdf`, every other action (and every
+-- other export format) works fine without it. The `export`/`.pdf` branch
+-- itself is what reports a clear error if this could not find it.
+---@return boolean found
+local function try_add_pdfport()
+  if pcall(require, "pdfport") then
+    return true
+  end
+  local candidates = {}
+  if vim.env.PDFPORT_DIR and vim.env.PDFPORT_DIR ~= "" then
+    candidates[#candidates + 1] = vim.env.PDFPORT_DIR
+  end
+  candidates[#candidates + 1] = vim.fn.getcwd() .. "/.deps/pdfport.nvim"
+  candidates[#candidates + 1] = vim.fs.dirname(vim.fn.getcwd()) .. "/pdfport.nvim"
+  for _, dir in ipairs(candidates) do
+    if dir and vim.fn.isdirectory(dir) == 1 then
+      vim.opt.rtp:append(dir)
+      if pcall(require, "pdfport") then
+        return true
+      end
+    end
+  end
+  return false
+end
 
 ---@param s string
 local function die(s)
@@ -179,7 +207,42 @@ elseif action == "export" then
   local report = require("runtime-analysis.telemetry.report")
   local built = load_report(namespace, flags)
 
-  if path:sub(-3):lower() == ".md" then
+  if path:sub(-4):lower() == ".pdf" then
+    if not try_add_pdfport() then
+      die(
+        "pdfport.nvim not found. Set PDFPORT_DIR, or clone it to .deps/pdfport.nvim, or beside this repo."
+      )
+    end
+    local pdfport = require("pdfport")
+    if not pdfport.can_create("markdown") then
+      die("pdfport.nvim has no available markdown producer (needs pandoc + a PDF engine)")
+    end
+
+    -- pdfport.create() is asynchronous; this script has no event loop of its
+    -- own beyond what vim.wait() pumps, so block until the callback fires
+    -- (or the timeout) rather than exiting before pandoc has run.
+    local done, wrote_ok, wrote_err = false, false, nil
+    pdfport.create({
+      text = table.concat(report.markdown(built), "\n"),
+      from = "markdown",
+      output = path,
+      on_conflict = "overwrite",
+      __callback = function(result)
+        done = true
+        wrote_ok = result.status == "ok"
+        wrote_err = result.error
+      end,
+    })
+    vim.wait(60000, function()
+      return done
+    end, 50)
+    if not done then
+      die("timed out waiting for pdfport.nvim to write " .. path)
+    end
+    if not wrote_ok then
+      die("failed to write " .. path .. ": " .. tostring(wrote_err))
+    end
+  elseif path:sub(-3):lower() == ".md" then
     local report_file = require("runtime-analysis.telemetry.report_file")
     local ok, err = report_file.write(path, report.markdown(built))
     if not ok then

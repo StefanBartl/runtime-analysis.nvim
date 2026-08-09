@@ -341,9 +341,11 @@ aggregate specifically — everything else in this module is generic.
 
 Reading a namespace does not need an editor session: `nvim --headless -l
 scripts/telemetry.lua report <namespace>` (or `export <namespace> <path>`,
-`.md` for Markdown, anything else for JSON) reads straight off disk via
-`telemetry.load()`, no live instance required — useful for CI, a cron job,
-or "what did last week look like" without opening Neovim at all.
+`.md` for Markdown, `.pdf` for PDF via [pdfport.nvim](https://github.com/StefanBartl/pdfport.nvim)
+— optional dependency, found on the runtimepath the same way lib.nvim is —
+anything else for JSON) reads straight off disk via `telemetry.load()`, no
+live instance required — useful for CI, a cron job, or "what did last week
+look like" without opening Neovim at all.
 
 ## Integration with documentation.nvim
 

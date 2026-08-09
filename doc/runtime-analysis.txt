@@ -467,7 +467,8 @@ the rest of this plugin. Command surface: >
   :RATelemetry enable [ns]     clear a persisted disable, resume now
   :RATelemetry disabled        list namespaces currently disabled
   :RATelemetry coverage        which wrapped functions were never called
-  :RATelemetry export [path]   JSON, or Markdown if path ends .md
+  :RATelemetry export [path]   JSON; Markdown if .md; PDF if .pdf (needs
+                               pdfport.nvim, optional dependency)
   :RATelemetry open [ns]       render + open externally
   :RATelemetry compare [ns] [days]  "this window vs the one before it"
   :RATelemetry startup [top]   which module a plugin's startup cost sits in
