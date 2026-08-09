@@ -59,7 +59,7 @@ function M.open_request(lines)
 end
 
 ---Plugin entry point.
----@param opts? { split?: string, request_filetype?: string, telemetry?: RA.Telemetry.LazyOpts }
+---@param opts? { split?: string, request_filetype?: string, telemetry?: RA.Telemetry.LazyOpts, deps_popup?: boolean }
 function M.setup(opts)
   M.opts = vim.tbl_deep_extend("force", vim.deepcopy(DEFAULTS), opts or {})
 
@@ -78,11 +78,15 @@ function M.setup(opts)
   -- One-time (persisted across restarts) popup on the first setup() after
   -- installing this plugin: which CLI tools it wants and why
   -- (docs/install.json). `:Lib deps show runtime-analysis.nvim` thereafter.
-  -- pcall'd: an older lib.nvim without lib.nvim.deps mustn't break setup()
-  -- over an informational popup.
-  local ok_deps, deps = pcall(require, "lib.nvim.deps")
-  if ok_deps then
-    deps.show_once("runtime-analysis.nvim")
+  -- `M.opts.deps_popup = false` (set right in the setup() spec,
+  -- config/DEFAULTS.lua) disables it for this plugin specifically. pcall'd:
+  -- an older lib.nvim without lib.nvim.deps mustn't break setup() over an
+  -- informational popup.
+  if M.opts.deps_popup ~= false then
+    local ok_deps, deps = pcall(require, "lib.nvim.deps")
+    if ok_deps then
+      deps.show_once("runtime-analysis.nvim")
+    end
   end
 end
 
