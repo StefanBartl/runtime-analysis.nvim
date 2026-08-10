@@ -48,21 +48,13 @@ same kind of overlay `docs/IDEAS.md` §6 uses for its own five-item shortlist.
 | **Medium** | Multi-day. Either a real decision has to be made first (a schema, a security trade-off, an open question the section names explicitly), or it touches several files or a small state machine — but the shape and the cost are both known. |
 | **Long-term** | Blocked on something this document itself already says is unmeasured or unresolved: an unmeasured `debug.getinfo` cost, several open design questions, another repository's half of the work, or a section the document itself calls speculative. |
 
-Thirty-four items have shipped out of this section since it was first
+Thirty-five items have shipped out of this section since it was first
 written — see [`docs/FINISHED.md`](FINISHED.md) for the full record of
-each, including §5.4 (persisted loaded-vs-declared snapshots) and §3.7
-(measuring this module's own instrumentation overhead), both the same
-day. §4.3 and §7.3 were the last two long-term/speculative items before
-those and are both gone (§4.3 into "Deliberately not building" below;
-§7.3 dropped outright — see that section's own note) — one item remains
-open:
-
-| Item | Phase | Why |
-| --- | --- | --- |
-| **§3.6** Benchmarking / "profile++" | Medium | The blocker is a decision, not an unknown: a schema and an API shape, plus where it lives (`telemetry/` vs. a separate module) — all things the section itself names, none of them unmeasured. Still gated on the one open question that could make the whole idea moot: whether it survives §3.5's "not a profiler" thesis. |
-
-Not a Quick win: gated on a decision this document itself says has not
-been made, which is by definition not what "Quick win" describes.
+each. The three most recent — §5.4 (persisted loaded-vs-declared
+snapshots), §3.7 (measuring this module's own instrumentation overhead)
+and §3.6 (benchmark comparisons, `runtime-analysis.bench`) — closed out
+everything this pass's own Phases triage had open. Nothing remains open
+in this section as of this pass.
 
 ## 1. HTTP request runner — the stated gaps
 
@@ -101,28 +93,6 @@ different instrument from one you switch on for thirty seconds to find a
 hot loop. Competing with them would cost the property that makes this
 useful. **Revisit if:** never, realistically. The right move if someone
 needs a real profiler is to point at the real profiler.
-
-### 3.6 Benchmarking / "profile++" — reopened, in direct tension with §3.5
-
-Raised 2026-08-10: the idea that since telemetry already wraps and counts,
-adding *timed* benchmark comparisons (two implementations of the same
-function, or the same plugin across two versions, run side by side) would
-cost little more. A companion idea in the same note: some way to compare
-the runtime analysis of two or more plugins, or of several distinct
-benchmark runs, against each other.
-
-This is not the same shape as §3.5's rejection on its face — a benchmark
-run is a bounded, opt-in, few-seconds measurement a user asks for by name,
-not `debug.sethook` running unattended for a week — but it is close enough
-that §3.5's own "revisit if: never, realistically" should not be read as
-silently overridden here. **Not decided.** Recorded as asked, not
-designed: no schema, no API shape, no decision on whether this lives in
-`telemetry/` alongside the counters it would reuse or as a genuinely
-separate module. A real answer needs the same kind of "does this survive
-§3.5's own thesis" pass §3.5 itself got before it is anything more than an
-idea in this file. **Revisit when:** someone actually sits down to design
-it, at which point start by re-reading §3.5's reasoning, not by assuming
-this note settles the question in the other direction.
 
 ## 4. Telemetry — reading it
 

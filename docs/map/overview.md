@@ -3,7 +3,7 @@
 > **Generated** by `documentation`. Do not edit by hand — run `:DocMap`
 > (or `nvim --headless -l scripts/gen_map.lua`) to regenerate.
 
-**3 modules** · 2 namespaces · 31 helper files
+**3 modules** · 2 namespaces · 32 helper files
 
 The [interactive map](index.html) has filtering, full descriptions and
 source links; this page is the version the code host renders directly.
@@ -69,19 +69,20 @@ flowchart LR
 
 ## Drift
 
-0 errors · 0 warnings · 3 info
+0 errors · 0 warnings · 4 info
 
 No errors or warnings.
 
 
 <details>
-<summary>3 informational findings</summary>
+<summary>4 informational findings</summary>
 
 
 | Check | Message |
 |---|---|
 | `missing-readme` | lua/runtime-analysis has no README.md |
 | `missing-readme` | lua/runtime-analysis/config has no README.md |
+| `unreferenced-module` | runtime-analysis.bench is required by no other file in the tree |
 | `unreferenced-module` | runtime-analysis.health is required by no other file in the tree |
 
 </details>

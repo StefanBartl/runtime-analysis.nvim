@@ -548,6 +548,37 @@ Run it yourself for numbers specific to your own machine — see the
 telemetry README's "Off costs nothing — literally" section for what it
 measures and why it is shaped as a script rather than a command.
 
+                                                      *runtime-analysis-bench*
+Benchmark comparisons (docs/ROADMAP.md §3.6) ~
+
+`runtime-analysis.bench` answers a different question from telemetry
+itself: not "how often was this called", but "which of these candidate
+functions is actually faster, right now, on this machine". Deliberately
+NOT built on telemetry's own wrap/count machinery — the overhead numbers
+above (~10-700ns per call depending on features) would swamp the very
+comparison a benchmark exists to make. Every candidate is called
+directly, unwrapped.
+>lua
+  local bench = require("runtime-analysis.bench")
+
+  local result = bench.compare({
+    { name = "impl_a", fn = impl_a },
+    { name = "impl_b", fn = impl_b },
+  }, { iterations = 10000 })
+
+  print(result.fastest)
+  for _, line in ipairs(bench.lines(result)) do
+    print(line)
+  end
+<
+`opts.warmup` (default `min(100, iterations)`) runs each candidate
+untimed first, so comparison *order* does not bias the result. Pure Lua
+API, no usercmd — a candidate is a real function value, and there is no
+command-line shape for "type the two closures you want compared".
+Compare-now only: no persistence, no named runs. See
+`docs/FEATURES/BENCH.md` and the decision record in `docs/FINISHED.md`
+(§3.6).
+
 ==============================================================================
 7. INTEGRATION WITH documentation.nvim          *runtime-analysis-integration*
 

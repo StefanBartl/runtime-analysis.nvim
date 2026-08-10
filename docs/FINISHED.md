@@ -24,6 +24,73 @@ Newest first, by date; original document order within a date.
 
 ---
 
+## 2026-08-11
+
+### §3.6 Benchmark comparisons — `runtime-analysis.bench`
+
+The last item left open in `docs/ROADMAP.md`'s Phases triage. Raised
+2026-08-10 alongside §3.7 (both from the same brainstorm), and both
+carried the identical gate: does this survive §3.5's "not a general
+profiler" thesis before it is anything more than a note. It does — a
+bounded, explicit, few-seconds comparison a caller asks for by name is
+nothing like `debug.sethook` running unattended for a week, the same
+distinction the roadmap entry's own text already drew.
+
+**The roadmap note's own premise did not survive contact with real
+numbers, though, and is corrected rather than built on as written.** It
+assumed reusing `runtime-analysis.telemetry`'s wrap/count machinery would
+cost "little more". §3.7's own measured numbers (`scripts/
+bench_overhead.lua`) say otherwise: counting-only overhead is ~10-15ns
+per call, argument profiling ~600-700ns — real costs that would swamp
+the very comparison a benchmark exists to make for anything fast, and
+bias it further if candidates were not wrapped identically. `bench.
+compare` calls every candidate directly, the same discipline
+`scripts/bench_overhead.lua`'s own baseline row already uses. What
+actually carries over from telemetry is not its wrap mechanism — only
+that this repo already knows how to time things carefully
+(`vim.uv.hrtime()`, wall time, not `os.clock()`'s CPU time).
+
+**A new top-level module, not nested under `telemetry/` — resolves the
+roadmap note's own "where does this live" question, the same way §3.7's
+own shape decision did.** Keeps telemetry's hot-path code untouched by
+anything benchmark-specific; a benchmark run is the opposite posture from
+telemetry's own "installed, cheap, left running" premise and does not
+need to share a module with it.
+
+**Compare-now only — confirmed with the user, not assumed.** The roadmap
+note bundled two ideas: comparing candidates right now, and a "companion
+idea" of naming/comparing saved benchmark runs later (the same shape
+§4.5/§5.4 give telemetry/loaded snapshots). Asked directly which to
+build; the answer was compare-now only — the primary half of the note,
+and enough to answer the actual question asked ("which of these two
+implementations is faster") without inventing a schema, retention policy
+and command surface for a need that has not actually come up yet. `M.
+compare` returns a plain table; persistence, if it is ever wanted, is a
+separate future step built on real usage rather than guessed at now.
+
+**API**: `bench.compare(candidates, opts)` — `candidates` a `{name, fn}`
+array, `opts.iterations` (default 1000), `opts.warmup` (default
+`min(100, iterations)`, run before the timed loop so comparison *order*
+does not bias the result — the first candidate would otherwise pay a
+one-time cold cache/branch-predictor cost the others don't), `opts.args`
+(fixed arguments every candidate is called with). Returns `{rows, fastest}`,
+rows sorted fastest-first with a `vs_fastest` ratio; `M.lines(result)`
+renders it the same `M.lines(report)` shape `usage.lua`/`inspect.lua`
+already use. Pure Lua API, no usercmd: a benchmark candidate is a real
+function value, and there is no command-line shape for "type the two
+closures you want compared" the way `:RA inspect <module>`/`:RA loaded
+snapshot <prefix>` can take a plain string.
+
+Verified against a real, checkable comparison, not just "it runs without
+erroring": a no-op candidate against one doing real (if trivial) work
+inside the timed loop, confirming the cheaper one is actually reported
+fastest and the more expensive one's `vs_fastest` is genuinely `> 1`, not
+asserted on faith. Test coverage in `docs/TESTS/bench_spec.lua`, including
+every bad-input path (empty candidates, missing name/fn, duplicate names)
+and a `lines()` rendering check that deliberately does not assert relative
+order between two equally-trivial no-op candidates, since that order is
+measurement noise, not a property `M.compare` promises.
+
 ## 2026-08-10
 
 ### §5.4 Persist loaded-vs-declared for cold viewing
