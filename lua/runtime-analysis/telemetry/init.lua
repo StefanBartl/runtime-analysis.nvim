@@ -1088,6 +1088,96 @@ function M.load(namespace, opts)
   return store.load_readonly(namespace, opts or { dir = DEFAULT_CACHE_DIR })
 end
 
+---How many named snapshots a namespace keeps before `M.snapshot` starts
+---evicting the oldest — confirmed with the user (2026-08-10, docs/ROADMAP.md
+---§4.5) rather than left unbounded, the same growth concern `retention_days`
+---already exists for on the live aggregate's own day buckets.
+M.SNAPSHOT_RETENTION = 20
+
+---Capture the current aggregate for `namespace` under a name, without
+---resetting the live counters — docs/ROADMAP.md §4.5.
+---
+---**Always explicit.** Nothing in this module ever calls this on its own —
+---no auto-snapshot on `disable()`, on a flush, on an interval. The only
+---call site is `:RATelemetry snapshot [name]`, confirmed the same day as
+---`M.SNAPSHOT_RETENTION` itself: an unexpected snapshot is a worse failure
+---mode than a missed one, since it silently starts evicting a namespace's
+---older, possibly still-wanted snapshots.
+---
+---If a live instance exists, flushed first — the snapshot has to reflect
+---calls already collected but not yet on disk, or "snapshot now" would
+---sometimes mean "snapshot as of the last periodic flush" depending on
+---timing. If none exists, whatever is already on disk (the aggregate from
+---the last flush, by any process sharing this namespace) is captured as is.
+---@param namespace string
+---@param name? string Default: a timestamp (`os.date("%Y-%m-%dT%H-%M-%S")`),
+---filesystem- and sort-friendly — `M.list_snapshots` relies on neither for
+---ordering (it reads `mtime`), but a caller listing raw filenames still
+---benefits from one that sorts the way it reads.
+---@return string|nil saved_name `nil` when nothing could be captured at all
+---(no live instance and nothing was ever persisted for `namespace`).
+function M.snapshot(namespace, name)
+  if type(namespace) ~= "string" or namespace == "" then
+    return nil
+  end
+
+  local inst = M.get(namespace)
+  local cache_opts = (inst and inst._cache_opts) or { dir = DEFAULT_CACHE_DIR }
+
+  if inst then
+    inst.flush()
+  end
+
+  local data = store.load_readonly(namespace, cache_opts)
+  if not data then
+    return nil
+  end
+
+  local snapshot_name = store.sanitize_snapshot_name(name or os.date("%Y-%m-%dT%H-%M-%S"))
+  local ok = store.save_snapshot(namespace, snapshot_name, data, cache_opts)
+  if not ok then
+    return nil
+  end
+
+  store.evict_old_snapshots(namespace, M.SNAPSHOT_RETENTION, cache_opts)
+  return snapshot_name
+end
+
+---Every snapshot saved for `namespace`, newest first — for a picker UI
+---(`:RATelemetry snapshot list`, or documentation.nvim's own Telemetry
+---panel once this ships) to build a list from.
+---@param namespace string
+---@param opts? Lib.Cache.Opts
+---@return RA.Telemetry.SnapshotInfo[]
+function M.list_snapshots(namespace, opts)
+  if type(namespace) ~= "string" or namespace == "" then
+    return {}
+  end
+  local inst = M.get(namespace)
+  return store.list_snapshots(
+    namespace,
+    opts or (inst and inst._cache_opts) or { dir = DEFAULT_CACHE_DIR }
+  )
+end
+
+---Read one named snapshot back — `nil` when `name` was never saved for
+---`namespace` (or was and has since been evicted by `M.SNAPSHOT_RETENTION`).
+---@param namespace string
+---@param name string
+---@param opts? Lib.Cache.Opts
+---@return RA.Telemetry.Data|nil
+function M.load_snapshot(namespace, name, opts)
+  if type(namespace) ~= "string" or namespace == "" or type(name) ~= "string" or name == "" then
+    return nil
+  end
+  local inst = M.get(namespace)
+  return store.load_snapshot(
+    namespace,
+    name,
+    opts or (inst and inst._cache_opts) or { dir = DEFAULT_CACHE_DIR }
+  )
+end
+
 ---@param opts? RA.Telemetry.ReportOpts
 ---@return RA.Telemetry.Report[]
 function M.report_all(opts)

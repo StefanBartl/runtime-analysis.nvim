@@ -116,40 +116,16 @@ this note settles the question in the other direction.
 
 ## 4. Telemetry — reading it
 
-§4.4 (a real dashboard) has shipped — see [`docs/FINISHED.md`](FINISHED.md)
-for the full record. §4.3 (standard trace formats) was never built and is
-not a live backlog item any more — moved to the "Deliberately not
-building" table below, on 2026-08-04, after a look at what it would
-actually take (see that table's own entry for the reasoning).
-
-### 4.5 Named, dated snapshots — not just "latest"
-
-Raised 2026-08-10, from documentation.nvim's side: `store.M.save`/`M.load`
-already persist telemetry across restarts and across processes (any
-process can `telemetry.load(namespace)` cold, no live instance needed —
-this was already true before this note, worth restating since it is easy
-to assume otherwise), but there is exactly **one** slot per namespace,
-continuously overwritten. There is no way to ask "what did this look like
-last Tuesday" once Wednesday's counts have merged in.
-
-The concrete want, from a documentation.nvim integration: a bare
-`t.load(namespace)` stays the always-current aggregate and becomes the
-thing a new "Telemetry" panel opens on by default (see
-`documentation.nvim/docs/ROADMAP/ROADMAP.md`'s own entry on this, added
-the same day). On top of it: `t.snapshot(namespace, name?)` to capture the
-*current* aggregate under a label (default label = timestamp) without
-resetting the live counters, `t.list_snapshots(namespace)`, and
-`t.load_snapshot(namespace, name)`. Storage: same `lib.nvim.cache.disk`
-namespace, one file per snapshot rather than the single always-overwritten
-file `store.lua` writes today — additive, does not change the existing
-`save`/`load` contract for anything already calling it.
-
-Open question this note does not answer: a retention policy (unbounded
-snapshots is a slow leak; least-recently-created eviction is the obvious
-default, not yet decided) and whether snapshotting should ever be
-automatic (e.g. one per `:RATelemetry disable`) rather than always
-explicit. **Medium** — the schema and the two open questions above are the
-whole gap; nothing here is blocked on unmeasured cost the way §3.1 was.
+§4.4 (a real dashboard) and §4.5 (named/dated snapshots) have both
+shipped — see [`docs/FINISHED.md`](FINISHED.md) for the full record of
+each. §4.3 (standard trace formats) was never built and is not a live
+backlog item any more — moved to the "Deliberately not building" table
+below, on 2026-08-04, after a look at what it would actually take (see
+that table's own entry for the reasoning). This section is intentionally
+left empty rather than deleted, the same reasoning §1's own empty section
+states: the numbers themselves (`§4.x`) are still cited in
+`docs/FINISHED.md`, and removing the section would orphan those
+references without actually freeing the numbers for reuse.
 
 ---
 
