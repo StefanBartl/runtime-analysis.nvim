@@ -2176,5 +2176,63 @@ return function(H)
     inst.stop()
   end
 
+  -- opts.snapshot_retention: a per-instance override, confirmed with the
+  -- user 2026-08-10 -- SNAPSHOT_RETENTION alone was a hardcoded module
+  -- constant with no way to configure it per namespace.
+  do
+    local namespace = ns("snap_api_retention_override")
+    -- Global left at its real default deliberately, to prove the override
+    -- actually wins rather than merely matching a global also set to 2.
+    local inst = telemetry.new({
+      namespace = namespace,
+      dir = tmpdir,
+      persist = true,
+      snapshot_retention = 2,
+    })
+    inst.start()
+    for i = 1, 5 do
+      telemetry.snapshot(namespace, "s" .. i)
+    end
+    H.eq(
+      #telemetry.list_snapshots(namespace),
+      2,
+      "opts.snapshot_retention overrides the global SNAPSHOT_RETENTION default"
+    )
+    inst.stop()
+  end
+
+  -- No live instance at all: M.snapshot falls back to the global
+  -- SNAPSHOT_RETENTION, exactly the pre-override behavior -- a namespace
+  -- with nothing wrapped can still be snapshotted (from data another
+  -- process already persisted), and it has no instance to carry an
+  -- override on.
+  do
+    local namespace = ns("snap_api_retention_no_instance")
+    local data = store.empty()
+    data.functions.f = { calls = 1 }
+    store.save(namespace, data, { dir = tmpdir })
+
+    local saved_retention = telemetry.SNAPSHOT_RETENTION
+    telemetry.SNAPSHOT_RETENTION = 2
+    -- No live instance, so `M.snapshot` reads/writes via DEFAULT_CACHE_DIR
+    -- (the real one) rather than `tmpdir` -- clear it after, same
+    -- self-healing pattern the real end-to-end block above already uses.
+    local real_cache_dir = vim.fn.stdpath("cache") .. "/runtime-analysis.nvim/cache"
+    store.save(namespace, data, { dir = real_cache_dir })
+    for i = 1, 4 do
+      telemetry.snapshot(namespace, "n" .. i)
+    end
+    H.eq(
+      #telemetry.list_snapshots(namespace, { dir = real_cache_dir }),
+      2,
+      "no live instance: falls back to the global SNAPSHOT_RETENTION"
+    )
+    telemetry.SNAPSHOT_RETENTION = saved_retention
+    store.clear(namespace, { dir = real_cache_dir })
+    for i = 1, 4 do
+      store.delete_snapshot(namespace, "n" .. i, { dir = real_cache_dir })
+    end
+  end
+
   vim.fn.delete(tmpdir, "rf")
 end

@@ -62,6 +62,27 @@ a real headless session running the actual `:RATelemetry snapshot`/
 auto-generated timestamp name, and the forced-flush-before-capture
 behavior all work as designed.
 
+### `opts.snapshot_retention` — a per-instance override
+
+Same day, found during a doc-currency audit of both this plugin and
+documentation.nvim: `M.SNAPSHOT_RETENTION` above was a real feature —
+governing how many snapshots a namespace keeps — implemented as a
+hardcoded module constant with no way to configure it per namespace, only
+by mutating the global directly. Confirmed with the user (alongside a
+matching gap in documentation.nvim, `core/snippet.lua`'s `MAX_LINES`) that
+this specific one was worth a real option; a third candidate found the
+same pass (`core/duplicates.lua`'s `MIN_SIZE` in documentation.nvim) was
+deliberately left alone — its own code comment already argues callers
+should not need to override it.
+
+`telemetry.new({ snapshot_retention = N, ... })` stores the override on the
+instance (`inst._snapshot_retention`, the same shape `_cache_opts` already
+uses); `M.snapshot()` reads it when a live instance exists for the
+namespace, falling back to `M.SNAPSHOT_RETENTION` otherwise — the identical
+fallback a namespace with no live instance always used, unaffected by
+this addition. Purely additive: no existing caller's behavior changes
+unless it opts in.
+
 ## 2026-08-04
 
 ### Table tracking — `inst.track_table`

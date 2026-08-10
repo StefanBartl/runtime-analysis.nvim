@@ -21,6 +21,7 @@
 ---@field max_arg_values? integer                       # distinct fingerprints kept per function (default 32)
 ---@field report_file? boolean                          # keep this namespace's Markdown report on disk, rewritten at every flush (default false); see lua/lib/nvim/telemetry/report_file.lua
 ---@field info? table<string, string>                   # free-form metadata bundled with the report (branch, version/release tag, commit, …) — see lib.nvim.git.info() for a ready-made source; the caller supplies it, this module never inspects a repo to guess it
+---@field snapshot_retention? integer                    # per-instance override for how many named snapshots (M.snapshot(), docs/ROADMAP.md §4.5) this namespace keeps before the oldest are evicted — default M.SNAPSHOT_RETENTION (20) when unset
 
 --- "auto" (default) prefers mdview if loadable, else the kit float — same
 --- degrade-silently discipline as `lib.nvim.progress`'s style resolution.

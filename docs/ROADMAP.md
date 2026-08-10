@@ -1,5 +1,14 @@
 # runtime-analysis.nvim — roadmap
 
+## NEU (noch nicht im konzept verankert)
+
+- [ ] bisher galt: `runtime-analysis.nvim` ist kein profiler - aber nun würde es sich anbieten, auch benchmarkling mit rein zu nehmen, denn es ist ja alles schon vroberetiet dafür. sozusagen ein profiler
+  - [ ] Sinnvoll-Prüfung: Eine Möglichkeit, zewei/mjehrere plugins die runtime analyse zu vergleichen, verschiedne benchmarks?
+- [ ] Es wre für mich zur argumentaton und information interessant zu wissen, wie viel performance ein plugin velriert wednn wir runtime-anmalyse.nvim (vercshiedene features) darauf anwenden. Wenn man das mit ai testen und banhcmarken kann, gerne
+
+
+## Intro
+
 A brainstormed backlog, grouped by theme. **Nothing here is scheduled**, and
 several entries end in "probably not" — a documented rejection is as much a
 result as a shipped feature, and worth keeping so the question does not get
@@ -28,6 +37,7 @@ scan could answer belongs in documentation.nvim instead, and several
 otherwise-attractive ideas are turned down below on exactly that ground.
 
 ---
+
 
 ## Phases
 

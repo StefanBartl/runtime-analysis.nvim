@@ -308,7 +308,16 @@ function M.new(opts)
     remind_after = reminder.DEFAULTS
   end
 
-  local inst = { namespace = namespace, _cache_opts = cache_opts }
+  -- `nil` here, not `M.SNAPSHOT_RETENTION` — that default is read at
+  -- `M.snapshot()` call time instead (see its own header), so a global
+  -- reassignment of `M.SNAPSHOT_RETENTION` after this instance already
+  -- exists still applies to it, the same way it always did before this
+  -- per-instance override existed.
+  local inst = {
+    namespace = namespace,
+    _cache_opts = cache_opts,
+    _snapshot_retention = opts.snapshot_retention,
+  }
 
   --- Targets registered via wrap()/wrap_fn(), whether or not currently attached.
   ---@type table[]
@@ -1123,6 +1132,11 @@ function M.snapshot(namespace, name)
 
   local inst = M.get(namespace)
   local cache_opts = (inst and inst._cache_opts) or { dir = DEFAULT_CACHE_DIR }
+  -- Per-instance `opts.snapshot_retention` (`telemetry.new({snapshot_retention=N,
+  -- ...})`) wins when the namespace has a live instance with one set;
+  -- `M.SNAPSHOT_RETENTION` is the fallback both for a namespace with no
+  -- live instance and for one whose instance never set an override.
+  local keep = (inst and inst._snapshot_retention) or M.SNAPSHOT_RETENTION
 
   if inst then
     inst.flush()
@@ -1139,7 +1153,7 @@ function M.snapshot(namespace, name)
     return nil
   end
 
-  store.evict_old_snapshots(namespace, M.SNAPSHOT_RETENTION, cache_opts)
+  store.evict_old_snapshots(namespace, keep, cache_opts)
   return snapshot_name
 end
 
