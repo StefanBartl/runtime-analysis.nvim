@@ -1,12 +1,5 @@
 # runtime-analysis.nvim — roadmap
 
-## NEU (noch nicht im konzept verankert)
-
-- [ ] bisher galt: `runtime-analysis.nvim` ist kein profiler - aber nun würde es sich anbieten, auch benchmarkling mit rein zu nehmen, denn es ist ja alles schon vroberetiet dafür. sozusagen ein profiler
-  - [ ] Sinnvoll-Prüfung: Eine Möglichkeit, zewei/mjehrere plugins die runtime analyse zu vergleichen, verschiedne benchmarks?
-- [ ] Es wre für mich zur argumentaton und information interessant zu wissen, wie viel performance ein plugin velriert wednn wir runtime-anmalyse.nvim (vercshiedene features) darauf anwenden. Wenn man das mit ai testen und banhcmarken kann, gerne
-
-
 ## Intro
 
 A brainstormed backlog, grouped by theme. **Nothing here is scheduled**, and
@@ -55,12 +48,23 @@ same kind of overlay `docs/IDEAS.md` §6 uses for its own five-item shortlist.
 | **Medium** | Multi-day. Either a real decision has to be made first (a schema, a security trade-off, an open question the section names explicitly), or it touches several files or a small state machine — but the shape and the cost are both known. |
 | **Long-term** | Blocked on something this document itself already says is unmeasured or unresolved: an unmeasured `debug.getinfo` cost, several open design questions, another repository's half of the work, or a section the document itself calls speculative. |
 
-Thirty-two items have shipped out of this section since it was first
+Thirty-three items have shipped out of this section since it was first
 written — see [`docs/FINISHED.md`](FINISHED.md) for the full record of
-each. Nothing remains in active Long-term/speculative status: the one
-item worth keeping at all (§4.3) moved to the "Deliberately not building"
-table below, and the other (§7.3) was dropped outright — see that
-section's own note.
+each, including §3.7 (measuring this module's own instrumentation
+overhead — `scripts/bench_overhead.lua`), the most recent. §4.3 and §7.3
+were the last two long-term/speculative items and are both gone (§4.3
+into "Deliberately not building" below; §7.3 dropped outright — see that
+section's own note) — but that is not the whole picture either: §3.6 and
+§5.4 remain open. Two items, current as of this pass:
+
+| Item | Phase | Why |
+| --- | --- | --- |
+| **§3.6** Benchmarking / "profile++" | Medium | The blocker is a decision, not an unknown: a schema and an API shape, plus where it lives (`telemetry/` vs. a separate module) — all things the section itself names, none of them unmeasured. Still gated on the one open question that could make the whole idea moot: whether it survives §3.5's "not a profiler" thesis. |
+| **§5.4** Persist loaded-vs-declared for cold viewing | Long-term **on paper, ready to re-check** | Explicitly self-classified "Long-term, not Medium" when written, blocked on "revisit alongside §4.5's implementation" — §4.5 (named/dated telemetry snapshots) has since shipped, so the stated blocking condition is now satisfied. Not reclassified to Medium here, since the actual open question §5.4 names (whether a persisted loaded-vs-declared snapshot is worth having *at all*) was never about §4.5's absence, only about timing — the real next step is asking that question against the now-real snapshot mechanism, which is what would settle the tier, not this pass. See also the fresh feedback under §5.4 itself, not yet reconciled with this framing. |
+
+Neither is a Quick win: both are explicitly gated on a decision this
+document itself says has not been made, which is by definition not what
+"Quick win" describes.
 
 ## 1. HTTP request runner — the stated gaps
 
@@ -122,8 +126,6 @@ idea in this file. **Revisit when:** someone actually sits down to design
 it, at which point start by re-reading §3.5's reasoning, not by assuming
 this note settles the question in the other direction.
 
----
-
 ## 4. Telemetry — reading it
 
 §4.4 (a real dashboard) and §4.5 (named/dated snapshots) have both
@@ -165,6 +167,10 @@ documentation.nvim's integration only ever gets the Telemetry half.
 Revisit alongside §4.5's implementation, not before — building the
 snapshot mechanism there first will make the marginal cost of asking
 `loaded.lua` for the same thing obvious one way or the other.
+
+Feedback: Hier vertehe ich nicht ganz das problem: wenn ein runtime-analses reopirt durchgefphrt wurde, kann man diesen anspeiuchern und später wi eder anschauen. Diese Reports sollen auch in `docemntaton.nvim` in denssen bereich für runtime-analyssys.nvim features, diese reportts n plugin state data (stdpath('data') vieleicht?) zuj finden, dann aufzulisten  und dann kann man einen report nach den anderen durchklicken
+
+warm solle das ein großes problem sein?
 
 ---
 
