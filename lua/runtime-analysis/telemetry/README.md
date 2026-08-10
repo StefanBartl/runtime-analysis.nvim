@@ -880,6 +880,58 @@ ever reads `entry.errors` — `entry.error_fp` is additive, `nil` whenever no
 error has actually been fingerprinted yet (including every function that
 never opted into `errors` at all).
 
+## Table tracking
+
+Everything above counts *calls*. `inst.track_table(t, key, opts)` counts
+per-key **reads and writes on a table** instead — not part of the original
+roadmap, added after a user asked "how often was table X accessed with which
+key, reading, writing":
+
+```lua
+local get, set = t.track_table(config, "config")
+
+local host = get("host")          -- counted as "config[host] read"
+set("host", "example.com")        -- counted as "config[host] write"
+```
+
+**Explicit accessor functions, not a transparent proxy — the design was
+revised once, for a real reason worth stating.** A `__index`/`__newindex`
+metatable proxy was the first shape this was built as. It has a severe,
+easy-to-hit footgun: those metamethods only fire for keys the proxy's own
+raw storage does not have, which means the proxy must *never* accumulate a
+single real key of its own to keep counting working — which means
+`pairs()`/`ipairs()`/`#`/every `vim.tbl_*` helper sees the proxy as
+permanently, silently empty. A config table that looks completely normal
+the moment before it is wrapped, and reports zero keys to any code that
+enumerates it afterward, is a worse failure than this feature not existing
+at all. So `t` itself is **never replaced or touched** — `track_table`
+returns two functions, and a caller opts a specific call site into counting
+by writing `get("field")`/`set("field", value)` there instead of
+`t.field`/`t.field = value`. An explicit, visible change per call site, not
+a silent global one; `t` stays a completely ordinary, fully enumerable table
+throughout.
+
+Mechanically, each distinct field wraps a trivial no-op through `wrap_fn`
+exactly once — the identical "wrap once per distinct key, call many times"
+discipline `runtime-analysis.usage`'s own command counting already relies
+on — so repeated access to the same field accumulates on one registry site,
+not a new one leaked per call.
+
+**Values are never inspected, stored, or reported — only how often each
+field was read/written.** The same "count, do not capture" posture argument
+fingerprinting already takes, for the same reason: a config table is exactly
+the kind of place a real token ends up, and this module has no business
+knowing what one looked like, only that it was read.
+
+```lua
+local get, set = t.track_table(cfg, "cfg", { writes = false })  -- reads only
+```
+
+`opts.reads`/`opts.writes` (both default `true`) turn off a whole side
+independently — a read-only table (most config) never needs write counting
+at all, and there's no reason to pay for a registry site that would never
+receive a call.
+
 ## Comparison across time windows
 
 `report({ since = "7d" })` answers "how much, in the last week"; `compare()`

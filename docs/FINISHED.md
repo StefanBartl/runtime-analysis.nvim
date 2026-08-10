@@ -26,6 +26,65 @@ Newest first, by date; original document order within a date.
 
 ## 2026-08-04
 
+### Table tracking — `inst.track_table`
+
+Not part of the original roadmap at all — a user asked directly for
+per-table, per-key read/write counting ("wie oft wurde welcher table mit
+welchem item davon zugegriffen, lesend, schreibend"), with strings raised
+in the same breath. The string half was answered without writing any code:
+Lua strings are immutable, interned value types with no per-occurrence
+identity to attach a counter to — "how was this string initialized and
+used" is a static-analysis question, documentation.nvim's job by this
+whole ecosystem's own stated thesis, and the part of it runtime instrumentation
+*can* honestly answer ("which argument values does this function actually
+see") already exists as argument fingerprinting.
+
+**The table half shipped, after one real design revision worth recording.**
+The first shape sketched was a transparent `__index`/`__newindex` proxy —
+wrap a table, get back something that behaves like the original but also
+counts. Working through the mechanics before writing it surfaced a severe
+footgun: those metamethods only fire for a key the proxy's own raw storage
+does not already have, which means the proxy can never accumulate a single
+real key without breaking its own counting — which means `pairs()`,
+`ipairs()`, `#`, and every `vim.tbl_*` helper sees the proxy as
+permanently, silently empty. A config table that looks completely ordinary
+right up until the moment it is wrapped, then reports zero keys to any
+code that ever enumerates it, is a worse failure than the feature not
+existing — exactly the kind of wrong-guess-is-worse-than-no-answer
+judgment this plugin has made repeatedly elsewhere (`curl.parse`'s
+unrecognized-flag handling, `provenance.lua`'s refusal to guess a module
+boundary, `cost_vs_use`'s refusal to fuzzy-match a namespace to a module
+root).
+
+Shipped instead as `inst.track_table(t, key, opts)`, returning **two
+explicit functions, never a proxy**: `get(field)`/`set(field, value)`,
+which a caller opts specific call sites into using in place of
+`t.field`/`t.field = value`. `t` itself is never replaced or touched —
+still a completely ordinary, fully enumerable table before, during and
+after. Mechanically the smallest possible addition: each distinct field
+wraps a trivial no-op through the already-existing `wrap_fn` exactly once
+— the identical "wrap once per distinct key, call many times" discipline
+`runtime-analysis.usage`'s own command counting already established for
+an analogous problem (many hits, one stable registry site per distinct
+name) — so no changes to `registry.lua`'s hot path, `store.lua`'s
+persistence, or `report.lua`'s rendering were needed at all; every read
+count and write count is just an ordinary `RA.Telemetry.FnStats` entry
+under a descriptive key (`"config[host] read"`), reusing the entire
+existing report/persist/render pipeline for free. `opts.reads`/
+`opts.writes` (both default `true`) turn a whole side off independently.
+Values themselves are never inspected, stored or reported — the same
+"count, do not capture" posture argument fingerprinting already takes,
+for the identical reason: a config table is exactly the kind of place a
+real secret ends up.
+
+Verified in `telemetry_spec.lua`: per-field read/write counts kept
+separate from each other and from other fields; a field never written has
+no write entry at all (not a zero-count one); the real table proven still
+fully enumerable via `pairs()` after wrapping (the actual regression this
+design avoids); `opts.reads`/`opts.writes` independently disabling a
+whole side; and repeated access to the same field accumulating on one
+entry rather than leaking a new registry site per call.
+
 ### §4.4 A real dashboard rather than a report
 
 "Worth doing only if the Markdown report is actually being read often
