@@ -90,6 +90,28 @@ hot loop. Competing with them would cost the property that makes this
 useful. **Revisit if:** never, realistically. The right move if someone
 needs a real profiler is to point at the real profiler.
 
+### 3.6 Benchmarking / "profile++" — reopened, in direct tension with §3.5
+
+Raised 2026-08-10: the idea that since telemetry already wraps and counts,
+adding *timed* benchmark comparisons (two implementations of the same
+function, or the same plugin across two versions, run side by side) would
+cost little more. A companion idea in the same note: some way to compare
+the runtime analysis of two or more plugins, or of several distinct
+benchmark runs, against each other.
+
+This is not the same shape as §3.5's rejection on its face — a benchmark
+run is a bounded, opt-in, few-seconds measurement a user asks for by name,
+not `debug.sethook` running unattended for a week — but it is close enough
+that §3.5's own "revisit if: never, realistically" should not be read as
+silently overridden here. **Not decided.** Recorded as asked, not
+designed: no schema, no API shape, no decision on whether this lives in
+`telemetry/` alongside the counters it would reuse or as a genuinely
+separate module. A real answer needs the same kind of "does this survive
+§3.5's own thesis" pass §3.5 itself got before it is anything more than an
+idea in this file. **Revisit when:** someone actually sits down to design
+it, at which point start by re-reading §3.5's reasoning, not by assuming
+this note settles the question in the other direction.
+
 ---
 
 ## 4. Telemetry — reading it
@@ -98,22 +120,65 @@ needs a real profiler is to point at the real profiler.
 for the full record. §4.3 (standard trace formats) was never built and is
 not a live backlog item any more — moved to the "Deliberately not
 building" table below, on 2026-08-04, after a look at what it would
-actually take (see that table's own entry for the reasoning). This section
-is intentionally left empty rather than deleted, the same reasoning §1's
-own empty section states: the numbers themselves (`§4.x`) are still cited
-in `docs/FINISHED.md`, and removing the section would orphan those
-references without actually freeing the numbers for reuse.
+actually take (see that table's own entry for the reasoning).
+
+### 4.5 Named, dated snapshots — not just "latest"
+
+Raised 2026-08-10, from documentation.nvim's side: `store.M.save`/`M.load`
+already persist telemetry across restarts and across processes (any
+process can `telemetry.load(namespace)` cold, no live instance needed —
+this was already true before this note, worth restating since it is easy
+to assume otherwise), but there is exactly **one** slot per namespace,
+continuously overwritten. There is no way to ask "what did this look like
+last Tuesday" once Wednesday's counts have merged in.
+
+The concrete want, from a documentation.nvim integration: a bare
+`t.load(namespace)` stays the always-current aggregate and becomes the
+thing a new "Telemetry" panel opens on by default (see
+`documentation.nvim/docs/ROADMAP/ROADMAP.md`'s own entry on this, added
+the same day). On top of it: `t.snapshot(namespace, name?)` to capture the
+*current* aggregate under a label (default label = timestamp) without
+resetting the live counters, `t.list_snapshots(namespace)`, and
+`t.load_snapshot(namespace, name)`. Storage: same `lib.nvim.cache.disk`
+namespace, one file per snapshot rather than the single always-overwritten
+file `store.lua` writes today — additive, does not change the existing
+`save`/`load` contract for anything already calling it.
+
+Open question this note does not answer: a retention policy (unbounded
+snapshots is a slow leak; least-recently-created eviction is the obvious
+default, not yet decided) and whether snapshotting should ever be
+automatic (e.g. one per `:RATelemetry disable`) rather than always
+explicit. **Medium** — the schema and the two open questions above are the
+whole gap; nothing here is blocked on unmeasured cost the way §3.1 was.
 
 ---
 
 ## 5. Runtime inspection — a second pillar
 
 §5.1 (`:RA inspect <module>`) has shipped — see
-[`docs/FINISHED.md`](FINISHED.md) for the full record. This section is
-intentionally left empty rather than deleted, the same reasoning §1's own
-empty section states: the number itself (`§5.x`) is still cited in
-`docs/FINISHED.md`, and removing the section would orphan that reference
-without actually freeing the number for reuse.
+[`docs/FINISHED.md`](FINISHED.md) for the full record. §5.3
+(loaded-vs-declared, `loaded.lua`) has also shipped as a live-only view —
+see §4.5's own note for why "shipped" does not mean "persisted".
+
+### 5.4 Persist loaded-vs-declared for cold viewing
+
+Raised 2026-08-10, same source as §4.5. `loaded.lua` is deliberately,
+structurally live-only — it reads `package.loaded` in *this* process, and
+"declared but dead" vs. "not loaded here" is a distinction the module's
+own header says can only be drawn from a live session. A
+documentation.nvim panel for it (parallel to §4.5's Telemetry one) would
+need a persisted snapshot the same way, but the value of a *stale* one is
+genuinely lower here than for telemetry: "what was loaded a week ago"
+answers a narrower question than "how often was this called over a
+week", and saving one is only ever meaningful for the single session it
+was taken from. **Long-term, not Medium** — unlike §4.5, this is not just
+a missing API on top of an existing store; it is a real open question
+whether a persisted loaded-vs-declared snapshot is worth having at all,
+or whether the honest answer is that this stays a live-only view and
+documentation.nvim's integration only ever gets the Telemetry half.
+Revisit alongside §4.5's implementation, not before — building the
+snapshot mechanism there first will make the marginal cost of asking
+`loaded.lua` for the same thing obvious one way or the other.
 
 ---
 
