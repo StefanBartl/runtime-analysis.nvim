@@ -434,6 +434,61 @@ lib.nvim when this module moved out of it — it is about the *consumer* of
 this data, not about the collection this module does, so it was never
 telemetry's own file to take along.
 
+### Named snapshots — docs/ROADMAP.md §4.5
+
+`telemetry.load()`/`t.report()` above are always the *current* aggregate —
+one continuously-overwritten slot per namespace. There is no way to ask
+"what did this look like last Tuesday" once today's counts have merged in.
+A snapshot is a second, independent capture, saved under a name and never
+merged into again:
+
+```lua
+telemetry.snapshot("lsp.nvim")              -- name defaults to a timestamp
+telemetry.snapshot("lsp.nvim", "pre-refactor")
+
+telemetry.list_snapshots("lsp.nvim")
+-- { { name = "pre-refactor", saved_at = 1723300000 }, { name = "2026-08-10T14-02-11", saved_at = 1723299000 } }
+
+local before = telemetry.load_snapshot("lsp.nvim", "pre-refactor")
+-- RA.Telemetry.Data|nil, same shape telemetry.load() returns
+```
+
+If a live instance exists for the namespace, `telemetry.snapshot()` flushes
+it first — the capture has to reflect calls already collected but not yet
+on disk, or "snapshot now" would sometimes mean "as of the last periodic
+flush" depending on timing. With no live instance, whatever is already on
+disk (the aggregate from the last flush, by any process sharing the
+namespace) is captured as is — reading, not requiring, a live instance,
+the same posture `telemetry.load()` itself takes.
+
+**Always explicit, on purpose.** Nothing in this module ever calls
+`telemetry.snapshot()` on its own — no auto-snapshot on `disable()`, on a
+flush, on an interval. An unexpected snapshot silently evicting a
+namespace's older, possibly still-wanted ones was judged a worse failure
+mode than a missed one. The only call site is `:RATelemetry snapshot`:
+
+```
+:RATelemetry snapshot lsp.nvim              " auto-named (a timestamp)
+:RATelemetry snapshot lsp.nvim pre-refactor
+:RATelemetry snapshots lsp.nvim             " list, newest first
+```
+
+**Retention** is LRU — `telemetry.SNAPSHOT_RETENTION` (default `20`), an
+oldest-evicted cap applied after every `telemetry.snapshot()` call, so a
+namespace snapshotted often never accumulates an unbounded set. `keep <= 0`
+means "do not evict," never "delete everything," so an unset or zero
+config value can't wipe a namespace's history by accident. Override it
+per namespace with `opts.snapshot_retention` on `telemetry.new()`:
+
+```lua
+local t = telemetry.new({ namespace = "lsp.nvim", snapshot_retention = 50 })
+```
+
+— which wins over the global default for that namespace specifically;
+`telemetry.SNAPSHOT_RETENTION` itself still applies to a namespace read via
+`telemetry.snapshot()`/`load_snapshot()` with no live instance (a fresh
+process, a CI run), which has no per-instance override to carry.
+
 ## `:RATelemetry`
 
 Opt-in, like `:LibLogger` — requiring the module registers nothing:
