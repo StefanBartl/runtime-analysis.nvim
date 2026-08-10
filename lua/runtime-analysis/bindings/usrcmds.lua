@@ -590,6 +590,53 @@ local function do_provenance(path)
   notify.info(table.concat(provenance.lines(info), "\n"))
 end
 
+---`:RA loaded snapshot <prefix> [name]` (docs/ROADMAP.md §5.4) — capture
+---every currently-loaded module under `prefix` as a named, persisted
+---snapshot, so it can be viewed later (or from a different process — a
+---`:DocMap serve` session, say) rather than only in the live one that took
+---it. Always explicit, the same posture `:RATelemetry snapshot` already
+---has — nothing here ever snapshots on its own.
+---@param prefix string?
+---@param name string?
+---@internal
+local function do_loaded_snapshot(prefix, name)
+  if not prefix or prefix == "" then
+    notify.error("usage: :RA loaded snapshot <prefix> [name]")
+    return
+  end
+  local loaded = require("runtime-analysis.loaded")
+  local saved = loaded.snapshot(prefix, name)
+  if not saved then
+    notify.warn(("nothing loaded under prefix %q — nothing to snapshot"):format(prefix))
+    return
+  end
+  notify.info(("loaded snapshot %q saved for prefix %q"):format(saved, prefix))
+end
+
+---`:RA loaded snapshots <prefix>` (docs/ROADMAP.md §5.4) — list every
+---saved snapshot for `prefix`, newest first. The same read
+---documentation.nvim's own Loaded panel picker does over the server API,
+---exposed here as a plain command for a quick local check.
+---@param prefix string?
+---@internal
+local function do_loaded_snapshots(prefix)
+  if not prefix or prefix == "" then
+    notify.error("usage: :RA loaded snapshots <prefix>")
+    return
+  end
+  local loaded = require("runtime-analysis.loaded")
+  local list = loaded.list_snapshots(prefix)
+  if #list == 0 then
+    notify.info(("no snapshots saved for prefix %q"):format(prefix))
+    return
+  end
+  local lines = { ("%d snapshot(s) for prefix %q:"):format(#list, prefix) }
+  for _, s in ipairs(list) do
+    lines[#lines + 1] = ("  %s (%s)"):format(s.name, os.date("%Y-%m-%d %H:%M:%S", s.saved_at))
+  end
+  notify.info(table.concat(lines, "\n"))
+end
+
 ---`:RA inspect <module>` (docs/ROADMAP.md §5.1) — walk a live
 ---`package.loaded` table and render it: functions with upvalue counts and
 ---source, tables with their own shape, metatables, and what a direct key
@@ -779,6 +826,25 @@ function M.setup(ra)
         desc = "Stop counting keymap/command presses",
         run = function()
           do_usage("stop")
+        end,
+      },
+      {
+        path = { "loaded", "snapshot" },
+        desc = "Persist a loaded-vs-declared snapshot for <prefix> (docs/ROADMAP.md §5.4)",
+        args = {
+          { name = "prefix", type = "STRING" },
+          { name = "name", type = "STRING", optional = true },
+        },
+        run = function(ctx)
+          do_loaded_snapshot(ctx.args.prefix, ctx.args.name)
+        end,
+      },
+      {
+        path = { "loaded", "snapshots" },
+        desc = "List saved loaded snapshots for <prefix>",
+        args = { { name = "prefix", type = "STRING" } },
+        run = function(ctx)
+          do_loaded_snapshots(ctx.args.prefix)
         end,
       },
     },

@@ -76,4 +76,77 @@ return function(H)
     eq(loaded.functions(""), nil, "functions: empty string is not a module id")
     eq(loaded.functions(nil), nil, "functions: nil input does not error")
   end
+
+  -- --------------------------------------------- persisted snapshots (§5.4)
+
+  local PREFIX = "__loaded_spec_snap"
+
+  do
+    package.loaded[PREFIX] = { top_fn = function() end, top_data = 1 }
+    package.loaded[PREFIX .. ".sub"] = { sub_fn = function() end }
+    package.loaded[PREFIX .. "_not_a_match"] = { decoy = function() end }
+
+    local name = loaded.snapshot(PREFIX, "spec-name")
+    eq(name, "spec-name", "snapshot: returns the (sanitized) name it was given")
+
+    local snap = loaded.load_snapshot(PREFIX, "spec-name")
+    ok(snap ~= nil, "load_snapshot: real data comes back")
+    eq(snap.prefix, PREFIX, "load_snapshot: records the prefix it was taken under")
+    ok(snap.modules[PREFIX] ~= nil, "load_snapshot: the prefix module itself is captured")
+    eq(snap.modules[PREFIX].top_fn, true, "load_snapshot: function field captured")
+    eq(snap.modules[PREFIX].top_data, nil, "load_snapshot: non-function field excluded")
+    ok(
+      snap.modules[PREFIX .. ".sub"] ~= nil,
+      "load_snapshot: a dotted submodule under prefix is captured"
+    )
+    eq(
+      snap.modules[PREFIX .. "_not_a_match"],
+      nil,
+      "load_snapshot: a module that merely starts with the prefix string (no dot boundary) is excluded"
+    )
+
+    local list = loaded.list_snapshots(PREFIX)
+    eq(#list, 1, "list_snapshots: exactly the one saved snapshot")
+    eq(list[1].name, "spec-name", "list_snapshots: correct name")
+
+    package.loaded[PREFIX] = nil
+    package.loaded[PREFIX .. ".sub"] = nil
+    package.loaded[PREFIX .. "_not_a_match"] = nil
+  end
+
+  -- Nothing loaded under the prefix at all: no snapshot, no error.
+  do
+    eq(
+      loaded.snapshot("__loaded_spec_nothing_here", "x"),
+      nil,
+      "snapshot: nil when nothing is loaded under the prefix"
+    )
+  end
+
+  -- Retention: capping at a small number evicts down to the cap. Which one
+  -- specifically gets evicted is not asserted beyond that — `saved_at` is
+  -- second-granularity (`mtime.sec`, the same precision
+  -- `telemetry/store.lua#M.list_snapshots` already accepts), and three
+  -- snapshots saved back-to-back inside one test can land in the same
+  -- second, at which point "oldest" is not actually distinguishable.
+  do
+    local RPREFIX = "__loaded_spec_retention"
+    package.loaded[RPREFIX] = { fn = function() end }
+    local saved_retention = loaded.SNAPSHOT_RETENTION
+    loaded.SNAPSHOT_RETENTION = 2
+    loaded.snapshot(RPREFIX, "s1")
+    loaded.snapshot(RPREFIX, "s2")
+    loaded.snapshot(RPREFIX, "s3")
+    local list = loaded.list_snapshots(RPREFIX)
+    eq(#list, 2, "snapshot: retention evicts down to SNAPSHOT_RETENTION")
+    loaded.SNAPSHOT_RETENTION = saved_retention
+    package.loaded[RPREFIX] = nil
+  end
+
+  -- Bogus prefix/name: no error, same "nothing to report" shape.
+  do
+    eq(#loaded.list_snapshots(""), 0, "list_snapshots: empty prefix -> empty list")
+    eq(loaded.load_snapshot("", "x"), nil, "load_snapshot: empty prefix -> nil")
+    eq(loaded.load_snapshot(PREFIX, ""), nil, "load_snapshot: empty name -> nil")
+  end
 end

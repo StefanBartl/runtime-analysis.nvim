@@ -295,6 +295,27 @@ Response assertions ~
 
                                 See |runtime-analysis-usage| below.
 
+                                                     *:RA-loaded-snapshot*
+:RA loaded snapshot {prefix} [name]
+                                Persist every currently-loaded module
+                                under {prefix} (itself, or anything
+                                beginning `{prefix}.` — the same scoping
+                                `wrap_loaded(prefix)` already uses) as a
+                                named snapshot, so it can be read later —
+                                or from a different process entirely, e.g.
+                                documentation.nvim's own Loaded Analysis
+                                panel over `:DocMap serve` — rather than
+                                only in the live session that took it.
+                                {name} defaults to a timestamp. Always
+                                explicit: nothing here ever snapshots on
+                                its own.
+
+                                                    *:RA-loaded-snapshots*
+:RA loaded snapshots {prefix}   List every saved snapshot for {prefix},
+                                newest first.
+
+                                See |runtime-analysis-loaded| below.
+
                                                    *runtime-analysis-history*
 Request history ~
   Every |:RA-send|/|:RASend| records one entry via
@@ -552,6 +573,29 @@ the method and path are pre-filled and the reader completes the base URL
   ---@field open_request fun(lines?: string[])
   ---@field setup fun(opts?: table)
 <
+
+                                                    *runtime-analysis-loaded*
+Loaded-vs-declared (docs/ROADMAP.md §5.3/§5.4) ~
+
+`runtime-analysis.loaded` answers what documentation.nvim's own static
+scan structurally cannot: what is actually on a module's table right now,
+in the current process — as opposed to what the source *declares*.
+`M.functions(module_id)`/`M.is_loaded(module_id)` are the live read;
+documentation.nvim's own `core/loaded_diff.lua` joins them against its IR
+for |:DocBrowse| `loaded` mode.
+
+The one honest limit that shapes all of it: this reads `package.loaded` in
+the current process only. A tree analyzed from a process that never loaded
+it sees nothing, which must render as "not loaded here", never as
+"declared but dead".
+
+|:RA-loaded-snapshot| persists what a live read like the above would say,
+under a name, so it can be read later — or from a different process
+entirely. documentation.nvim's Loaded Analysis panel (`:DocMap serve`,
+`GET /api/loaded`) is exactly that second process: a server route
+answering a browser tab has no live `package.loaded` of its own, so it
+only ever reads named snapshots, never a live aggregate the way its
+Telemetry panel counterpart can.
 
 ==============================================================================
 8. HEALTH CHECK                                       *runtime-analysis-health*
