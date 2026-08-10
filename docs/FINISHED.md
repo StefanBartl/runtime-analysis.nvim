@@ -24,6 +24,44 @@ Newest first, by date; original document order within a date.
 
 ---
 
+## 2026-08-10
+
+### §4.5 Named, dated telemetry snapshots
+
+Raised the same day, from documentation.nvim's side, wanting a Telemetry
+Analysis panel with a "compare saved states" picker, not just the current
+aggregate `store.load`/`save` already provide. `telemetry.snapshot(namespace,
+name?)` captures the current aggregate under a name without resetting the
+live counters — flushing a live instance first if one exists, so a snapshot
+taken mid-session reflects calls not yet written to disk, not "as of the
+last periodic flush". `telemetry.list_snapshots(namespace)` and
+`telemetry.load_snapshot(namespace, name)` round it out. Storage: nested
+under the namespace's own `snapshots/` subdirectory in `lib.nvim.cache.disk`
+(already supports slash-separated namespaces), one file per snapshot rather
+than the single always-overwritten file `store.save`/`load` write —
+additive, the existing contract for anything already calling those is
+unchanged.
+
+Two decisions confirmed with the user before building, both recorded here
+rather than left to be re-derived from the code: **retention** is LRU,
+`telemetry.SNAPSHOT_RETENTION` (currently 20) — evicted after every
+`snapshot()` call, `keep <= 0` treated as "do not evict" rather than "delete
+everything" so an unset/zero config value cannot wipe a namespace's history
+by accident. **Trigger** is always explicit — `:RATelemetry snapshot <ns>
+[name]` (default name a timestamp) / `:RATelemetry snapshots <ns>` to list
+— nothing in this module ever snapshots on its own (no auto-snapshot on
+`disable()`, on a flush, on an interval); an unexpected snapshot silently
+evicting older, possibly still-wanted ones was judged a worse failure mode
+than a missed one.
+
+Verified against real behavior, not only `docs/TESTS/telemetry_spec.lua`'s
+own unit coverage (store-level round trip, module-level API, retention
+eviction, both via `store.lua` directly and through `telemetry.snapshot`):
+a real headless session running the actual `:RATelemetry snapshot`/
+`snapshots` commands end to end, confirming the notification text, the
+auto-generated timestamp name, and the forced-flush-before-capture
+behavior all work as designed.
+
 ## 2026-08-04
 
 ### Table tracking — `inst.track_table`

@@ -216,6 +216,12 @@
 ---@field dir? string                                   # forwarded to new() -- cache directory override
 ---@field module_filter? fun(name: string): boolean      # default: excludes `@types` modules
 
+---One entry in `RA.Telemetry.load_snapshots` — enough to build a picker
+---without loading every snapshot's full data first.
+---@class RA.Telemetry.SnapshotInfo
+---@field name string Sanitized — what `RA.Telemetry.load_snapshot`/`delete_snapshot` expect back.
+---@field saved_at integer Unix timestamp, the snapshot file's own mtime.
+
 ---@class RA.Telemetry
 ---@field new fun(opts: RA.Telemetry.Options): RA.Telemetry.Instance
 ---@field auto fun(opts: RA.Telemetry.AutoOpts): RA.Telemetry.Instance|nil
@@ -231,6 +237,10 @@
 ---@field enable fun(namespace: string): nil
 ---@field is_disabled fun(namespace: string): boolean
 ---@field disabled fun(): string[]
+---@field SNAPSHOT_RETENTION integer
+---@field snapshot fun(namespace: string, name?: string): string|nil
+---@field list_snapshots fun(namespace: string, opts?: Lib.Cache.Opts): RA.Telemetry.SnapshotInfo[]
+---@field load_snapshot fun(namespace: string, name: string, opts?: Lib.Cache.Opts): RA.Telemetry.Data|nil
 
 ---@class RA.Telemetry.LazyPluginOpts
 ---@field namespace string

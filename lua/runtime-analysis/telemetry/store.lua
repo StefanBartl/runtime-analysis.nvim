@@ -130,6 +130,152 @@ function M.clear(namespace, opts)
 end
 
 -- ---------------------------------------------------------------------------
+-- Named/dated snapshots — docs/ROADMAP.md §4.5.
+--
+-- `M.load`/`M.save` above are one continuously-overwritten aggregate per
+-- namespace: exactly what a live instance wants to merge into, but no way to
+-- ask "what did this look like last Tuesday" once today's counts have merged
+-- in. A snapshot is a second, independent capture under its own name,
+-- written once and never merged into again — nested under the namespace's
+-- own `snapshots/` subdirectory (`cache.disk` supports slash-separated
+-- namespaces already, the same nesting `M.sanitize`'s own header notes),
+-- so listing means scanning one directory rather than filtering a flat
+-- namespace list `cache.disk` has no API for in the first place.
+-- ---------------------------------------------------------------------------
+
+---Everything but these is replaced with `_`, same rule as `M.sanitize` for
+---the same reason — a snapshot name is caller-chosen (a plugin author's
+---`:RATelemetry snapshot <name>` argument), and allowing separators would
+---let one escape `snapshots/` the same way an unsanitized namespace would
+---escape the cache root.
+---@param name string
+---@return string
+function M.sanitize_snapshot_name(name)
+  local s = tostring(name or ""):gsub(SAFE, "_")
+  s = s:gsub("^%.+", "")
+  if s == "" then
+    s = "unnamed"
+  end
+  return s
+end
+
+---@param namespace string
+---@param name string Not yet sanitized.
+---@return string
+function M.snapshot_cache_key(namespace, name)
+  return M.cache_key(namespace) .. "/snapshots/" .. M.sanitize_snapshot_name(name)
+end
+
+---The directory snapshots for `namespace` live under — resolved the same
+---way `cache.disk`'s own (private) `cache_dir()` would, duplicated rather
+---than exposed from there since this is the only caller that ever needs a
+---raw directory rather than a `namespace` key `disk.load`/`disk.save`
+---already know how to turn into one.
+---@param namespace string
+---@param opts? Lib.Cache.Opts
+---@return string
+function M.snapshot_dir(namespace, opts)
+  local root = (opts and opts.dir) or (vim.fn.stdpath("cache") .. "/lib.nvim/cache")
+  return root .. "/" .. M.cache_key(namespace) .. "/snapshots"
+end
+
+---Save `data` as a new snapshot. Overwrites silently if `name` (after
+---sanitizing) already exists — the same "last write under this name wins"
+---posture `M.save` itself takes for the live aggregate, and a caller who
+---wants uniqueness can check `M.list_snapshots` first.
+---@param namespace string
+---@param name string
+---@param data RA.Telemetry.Data
+---@param opts? Lib.Cache.Opts
+---@return boolean ok
+function M.save_snapshot(namespace, name, data, opts)
+  local ok, saved = pcall(disk.save, M.snapshot_cache_key(namespace, name), data, opts)
+  return ok and saved == true
+end
+
+---@param namespace string
+---@param name string
+---@param opts? Lib.Cache.Opts
+---@return RA.Telemetry.Data|nil
+function M.load_snapshot(namespace, name, opts)
+  local ok, raw = pcall(disk.load, M.snapshot_cache_key(namespace, name), opts)
+  if not ok or raw == nil then
+    return nil
+  end
+  return normalize(raw)
+end
+
+---@param namespace string
+---@param name string
+---@param opts? Lib.Cache.Opts
+---@return boolean ok
+function M.delete_snapshot(namespace, name, opts)
+  local ok, cleared = pcall(disk.clear, M.snapshot_cache_key(namespace, name), opts)
+  return ok and cleared ~= false
+end
+
+---Every snapshot saved for `namespace`, newest first.
+---
+---Reads the directory directly (`vim.uv.fs_scandir`, not `disk`'s own API —
+---it has none for listing, only single-key load/save/clear) rather than
+---keeping a side-index of names: a side-index is one more thing that could
+---drift from what is actually on disk, and a directory listing cannot.
+---@param namespace string
+---@param opts? Lib.Cache.Opts
+---@return RA.Telemetry.SnapshotInfo[]
+function M.list_snapshots(namespace, opts)
+  local dir = M.snapshot_dir(namespace, opts)
+  local uv = vim.uv or vim.loop
+
+  local handle = uv.fs_scandir(dir)
+  if not handle then
+    return {}
+  end
+
+  local out = {}
+  while true do
+    local name, kind = uv.fs_scandir_next(handle)
+    if not name then
+      break
+    end
+    if kind == "file" and name:match("%.json$") then
+      local snapshot_name = name:gsub("%.json$", "")
+      local stat = uv.fs_stat(dir .. "/" .. name)
+      out[#out + 1] = { name = snapshot_name, saved_at = stat and stat.mtime.sec or 0 }
+    end
+  end
+
+  table.sort(out, function(a, b)
+    return a.saved_at > b.saved_at
+  end)
+  return out
+end
+
+---Evict the oldest snapshots beyond `keep` — the retention policy for
+---`M.list_snapshots`' own growth, called after every `M.save_snapshot` so a
+---namespace snapshotted often never accumulates an unbounded set. `keep <=
+---0` is treated as "do not evict" rather than "delete everything": a caller
+---passing an unset/zero config value by accident must not wipe every
+---snapshot silently.
+---@param namespace string
+---@param keep integer
+---@param opts? Lib.Cache.Opts
+---@return integer evicted
+function M.evict_old_snapshots(namespace, keep, opts)
+  if not keep or keep <= 0 then
+    return 0
+  end
+  local all = M.list_snapshots(namespace, opts)
+  local evicted = 0
+  for i = keep + 1, #all do
+    if M.delete_snapshot(namespace, all[i].name, opts) then
+      evicted = evicted + 1
+    end
+  end
+  return evicted
+end
+
+-- ---------------------------------------------------------------------------
 -- Merging
 -- ---------------------------------------------------------------------------
 

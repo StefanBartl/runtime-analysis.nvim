@@ -2048,5 +2048,133 @@ return function(H)
     package.loaded["fakeauto_opts"] = nil
   end
 
+  -- -------------------------------------------------------------------------
+  -- named/dated snapshots -- docs/ROADMAP.md §4.5
+  -- -------------------------------------------------------------------------
+
+  do
+    H.eq(
+      store.sanitize_snapshot_name("my name"),
+      "my_name",
+      "snapshot name sanitized the same way a namespace is"
+    )
+    H.eq(store.sanitize_snapshot_name("../evil"), "_evil", "cannot escape the snapshots directory")
+    H.eq(store.sanitize_snapshot_name(""), "unnamed", "empty name falls back")
+  end
+
+  -- store-level round trip, no telemetry instance involved at all
+  do
+    local namespace = ns("snap_store")
+    local data = store.empty()
+    data.functions.f = { calls = 5 }
+
+    H.eq(#store.list_snapshots(namespace, { dir = tmpdir }), 0, "nothing saved yet")
+    H.ok(store.save_snapshot(namespace, "first", data, { dir = tmpdir }), "save_snapshot ok")
+
+    local list = store.list_snapshots(namespace, { dir = tmpdir })
+    H.eq(#list, 1, "one snapshot listed")
+    H.eq(list[1].name, "first", "sanitized name carried through")
+
+    local loaded = store.load_snapshot(namespace, "first", { dir = tmpdir })
+    H.eq(loaded.functions.f.calls, 5, "snapshot data round-trips")
+
+    H.eq(
+      store.load_snapshot(namespace, "does-not-exist", { dir = tmpdir }),
+      nil,
+      "unknown snapshot: nil, not an error"
+    )
+
+    H.ok(store.delete_snapshot(namespace, "first", { dir = tmpdir }), "delete_snapshot ok")
+    H.eq(#store.list_snapshots(namespace, { dir = tmpdir }), 0, "gone after delete")
+  end
+
+  -- retention / eviction -- store-level, count-only assertions: mtime
+  -- granularity is one second, so five snapshots saved back-to-back in a
+  -- tight loop can tie, and *which* two are oldest among a tie is not this
+  -- test's business -- only that eviction keeps exactly `keep` of them.
+  do
+    local namespace = ns("snap_evict")
+    for i = 1, 5 do
+      store.save_snapshot(namespace, "s" .. i, store.empty(), { dir = tmpdir })
+    end
+    H.eq(#store.list_snapshots(namespace, { dir = tmpdir }), 5, "all five present before eviction")
+
+    local evicted = store.evict_old_snapshots(namespace, 3, { dir = tmpdir })
+    H.eq(evicted, 2, "oldest two evicted, three kept")
+    H.eq(#store.list_snapshots(namespace, { dir = tmpdir }), 3, "three remain")
+
+    H.eq(
+      store.evict_old_snapshots(namespace, 0, { dir = tmpdir }),
+      0,
+      "keep<=0 means do not evict, not delete everything"
+    )
+    H.eq(#store.list_snapshots(namespace, { dir = tmpdir }), 3, "...confirmed untouched")
+  end
+
+  -- telemetry.snapshot / list_snapshots / load_snapshot -- module-level API
+  do
+    local namespace = ns("snap_api_none")
+    H.eq(
+      telemetry.snapshot(namespace),
+      nil,
+      "nothing to snapshot: no live instance and nothing ever persisted"
+    )
+  end
+
+  do
+    local namespace = ns("snap_api_live")
+    local mod = { f = function() end }
+    local inst = telemetry.new({ namespace = namespace, dir = tmpdir, persist = true })
+    inst.wrap(mod, "mod", { module_id = "a" })
+    inst.start()
+    mod.f()
+    mod.f()
+    -- Deliberately not flushed yet -- M.snapshot must flush itself, and this
+    -- is the property this block actually checks.
+
+    local saved_name = telemetry.snapshot(namespace, "before release")
+    H.eq(
+      saved_name,
+      "before_release",
+      "returned name sanitized the same way store.sanitize_snapshot_name does"
+    )
+
+    local snap = telemetry.load_snapshot(namespace, saved_name)
+    H.eq(
+      snap.functions["mod.f"].calls,
+      2,
+      "snapshot captured pending calls too, via the forced flush"
+    )
+
+    local list = telemetry.list_snapshots(namespace)
+    H.eq(#list, 1, "listed via the module-level API too")
+    H.eq(list[1].name, "before_release", "same name")
+
+    local auto_name = telemetry.snapshot(namespace)
+    H.ok(
+      auto_name ~= nil and auto_name:match("^%d%d%d%d%-%d%d%-%d%dT") ~= nil,
+      "no name given: falls back to a timestamp"
+    )
+
+    inst.stop()
+  end
+
+  -- retention wired through the module-level API, not just store.lua's own
+  do
+    local namespace = ns("snap_api_retention")
+    local inst = telemetry.new({ namespace = namespace, dir = tmpdir, persist = true })
+    inst.start()
+
+    local saved_retention = telemetry.SNAPSHOT_RETENTION
+    telemetry.SNAPSHOT_RETENTION = 3
+    for i = 1, 5 do
+      telemetry.snapshot(namespace, "s" .. i)
+    end
+    H.eq(#telemetry.list_snapshots(namespace), 3, "M.snapshot evicts down to SNAPSHOT_RETENTION")
+    telemetry.SNAPSHOT_RETENTION = saved_retention
+
+    inst.stop()
+  end
+
   vim.fn.delete(tmpdir, "rf")
 end

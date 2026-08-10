@@ -21,6 +21,10 @@
 ---   :RATelemetry compare [ns] [days]  this window vs the one before it (default 7d)
 ---   :RATelemetry startup [top]   which module a plugin's startup cost sits in
 ---   :RATelemetry cost            startup cost vs. call count, worst first
+---   :RATelemetry snapshot <ns> [name]  save a named capture of ns's current
+---                                aggregate (docs/ROADMAP.md §4.5) -- always
+---                                explicit, nothing ever snapshots on its own
+---   :RATelemetry snapshots <ns>  list ns's saved snapshots, newest first
 
 local usercmd = require("lib.nvim.usercmd")
 local notify = require("lib.nvim.notify").create("[runtime-analysis.telemetry]")
@@ -46,6 +50,8 @@ local SUBCOMMANDS = {
   "compare",
   "startup",
   "cost",
+  "snapshot",
+  "snapshots",
 }
 
 ---@internal
@@ -449,6 +455,44 @@ function M.setup()
         cost_vs_use.lines(cost_vs_use.build_all(namespaces, startup.report())),
         "runtime-analysis.telemetry — cost vs use"
       )
+    elseif first == "snapshot" then
+      -- `rest` is the namespace, same slot every other subcommand puts it
+      -- in; a third token, if present, is the snapshot's own name. Requires
+      -- a namespace explicitly (unlike start/stop/reset's "every instance"
+      -- fallback) -- a bare `:RATelemetry snapshot` snapshotting every live
+      -- instance at once under the same auto-generated timestamp would be a
+      -- surprising amount of silent disk writing for a command whose whole
+      -- point is being explicit.
+      if not rest or rest == "" then
+        notify.warn("usage: :RATelemetry snapshot <namespace> [name]")
+        return
+      end
+      local saved_name = mod.snapshot(rest, args.fargs[3])
+      if saved_name then
+        notify.info(("saved snapshot %q for %s"):format(saved_name, rest))
+      else
+        notify.warn(
+          ("nothing to snapshot for %q -- no live instance and nothing persisted yet"):format(rest)
+        )
+      end
+    elseif first == "snapshots" then
+      if not rest or rest == "" then
+        notify.warn("usage: :RATelemetry snapshots <namespace>")
+        return
+      end
+      local list = mod.list_snapshots(rest)
+      if #list == 0 then
+        show(
+          { ("no snapshots saved for %s yet."):format(rest) },
+          "runtime-analysis.telemetry — snapshots"
+        )
+        return
+      end
+      local lines = {}
+      for _, s in ipairs(list) do
+        lines[#lines + 1] = ("%s — %s"):format(s.name, os.date("%Y-%m-%d %H:%M:%S", s.saved_at))
+      end
+      show(lines, ("runtime-analysis.telemetry — snapshots (%s)"):format(rest))
     elseif first == "compare" then
       -- `rest` is a namespace exactly the way every other subcommand's
       -- second slot already is; a third token, if numeric, overrides
@@ -468,7 +512,7 @@ function M.setup()
     end
   end, {
     nargs = "*",
-    desc = "runtime-analysis.telemetry: report|start|stop|reset|disable|enable|disabled|coverage|export|open|compare|startup|cost [namespace] [days]",
+    desc = "runtime-analysis.telemetry: report|start|stop|reset|disable|enable|disabled|coverage|export|open|compare|startup|cost|snapshot|snapshots [namespace] [days]",
     complete = function(arg_lead, cmd_line)
       -- Second token of `start`/`stop`/`reset`/`open`/`compare` is always a
       -- namespace, never another subcommand — narrow completion there
@@ -486,6 +530,8 @@ function M.setup()
         or sub == "enable"
         or sub == "open"
         or sub == "compare"
+        or sub == "snapshot"
+        or sub == "snapshots"
 
       local out = {}
       if takes_namespace then
