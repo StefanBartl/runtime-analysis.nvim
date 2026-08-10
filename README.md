@@ -424,4 +424,6 @@ project's [`docs/REUSE.md`](https://github.com/StefanBartl/documentation.nvim/bl
 `nvim --headless -l scripts/gen_map.lua` regenerates it; `--check` (the CI
 gate, `.github/workflows/ci.yml`'s `map` job) verifies it is current and
 drift-free without writing anything. `git config core.hooksPath scripts/hooks`
-installs a local pre-commit hook running the same check.
+installs a local pre-commit hook running the same check. This repository's own
+map: [docs/map/overview.md](docs/map/overview.md) (renders on GitHub directly)
+— `docs/map/index.html` is the richer interactive version, open it locally.
