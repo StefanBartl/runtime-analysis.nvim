@@ -292,6 +292,20 @@ telemetry data on this side. Explicitly later than the in-editor mode — the
 in-editor version has to prove the join is worth looking at often before the
 expensive surface is worth building.
 
+**A concrete candidate for what else the Runtime tab could show, moved
+here from documentation.nvim's own personal notes (2026-08-10):**
+persistent data a plugin writes at runtime — normally scattered across
+`stdpath("data")`/`stdpath("cache")`, opaque without opening the raw
+files by hand — surfaced nicely formatted. This is a runtime question,
+not a static one (`ECOSYSTEM.md`'s own split), so it belongs here rather
+than in documentation.nvim's own backlog; a first cut could ride
+`runtime-analysis.telemetry`'s existing `stdpath("cache")` namespace
+convention (`store.lua`) as the obvious starting example, generalizing
+outward to other plugins' own data once the shape of "nicely formatted
+persistent data" is clearer from that one real case. Even once built
+here, a dedicated panel in the Runtime tab above (rather than only
+`:RATelemetry`'s own surfaces) stays a reasonable, separate follow-up.
+
 ### 3.3 One `ECOSYSTEM.md`, four repositories reading it
 
 A soft, real problem visible while writing this document: the architecture doc
