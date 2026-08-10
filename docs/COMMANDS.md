@@ -594,9 +594,12 @@ Registered by the same `setup()` call as `:RA` above, but its own module
 see that module's own extensive README
 ([`lua/runtime-analysis/telemetry/README.md`](../lua/runtime-analysis/telemetry/README.md))
 for the full API this command is a thin front-end over: instances, scoping
-(`wrap`/`wrap_loaded`/`wrap_fn`), the lifecycle (`start`/`stop`/`unwrap`),
-persistent enable/disable, argument profiling, report metadata, the
-mdview browser bridge, and the sortable/filterable HTML dashboard (§4.4,
+(`wrap`/`wrap_loaded`/`wrap_fn`), per-key table read/write counting
+(`track_table`, explicit `get`/`set` functions rather than a table proxy —
+see that README's own "Table tracking" section for why), the lifecycle
+(`start`/`stop`/`unwrap`), persistent enable/disable, argument profiling,
+report metadata, the mdview browser bridge, and the sortable/filterable
+HTML dashboard (§4.4,
 `report_style = "html"`).
 
 Subcommand table: [`docs/BINDINGS.md`](BINDINGS.md#ratelemetry-subcommands).

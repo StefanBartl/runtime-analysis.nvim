@@ -501,6 +501,74 @@ function M.new(opts)
     end
   end
 
+  ---Per-key read/write counting for one table, requested directly (not part
+  ---of the original roadmap — added after a user asked for it and the
+  ---transparent-proxy shape it was first sketched as turned out to have a
+  ---severe, easy-to-hit footgun; see the module README's own section on
+  ---this for the full story of why it looks like this instead).
+  ---
+  ---**Explicit accessor functions, not a transparent proxy.** A `__index`/
+  ---`__newindex` metatable proxy would only fire for keys the proxy itself
+  ---never stores — which means it can never accumulate its own raw keys
+  ---without breaking counting, which means `pairs()`/`ipairs()`/`#`/every
+  ---`vim.tbl_*` helper sees the proxy as permanently empty. Silently
+  ---returning "no keys" for a real config table the moment it is wrapped is
+  ---a worse failure than this function simply not existing. So `t` itself
+  ---is never replaced or touched — the caller gets back two functions and
+  ---uses `get(field)`/`set(field, value)` at call sites that want counting,
+  ---in place of `t[field]`/`t[field] = value`, an explicit, visible change
+  ---at each site rather than a silent global one.
+  ---
+  ---Each distinct field wraps a trivial no-op through `inst.wrap_fn` exactly
+  ---once, the identical "wrap once per distinct key, call many times"
+  ---discipline `runtime-analysis.usage`'s own command counting already
+  ---uses, for the identical reason: calling `wrap_fn` on every access
+  ---instead would leak one registry site per access rather than counting
+  ---through a single stable one.
+  ---
+  ---Values themselves are never inspected, stored, or reported — only how
+  ---often each field was read/written — the same "count, do not capture"
+  ---posture argument fingerprinting already takes, and for the same reason:
+  ---a config table is exactly the kind of place a real token ends up.
+  ---@param t table
+  ---@param key string label prefix for reported keys, e.g. `"config"` -> keys like `config[token] read`
+  ---@param track_opts? { reads?: boolean, writes?: boolean } both default true
+  ---@return fun(field: any): any get
+  ---@return fun(field: any, value: any) set
+  function inst.track_table(t, key, track_opts)
+    track_opts = track_opts or {}
+    local track_reads = track_opts.reads ~= false
+    local track_writes = track_opts.writes ~= false
+    local get_wrappers = {}
+    local set_wrappers = {}
+
+    local function get(field)
+      if track_reads then
+        local w = get_wrappers[field]
+        if not w then
+          w = inst.wrap_fn(function() end, ("%s[%s] read"):format(key, tostring(field)))
+          get_wrappers[field] = w
+        end
+        w()
+      end
+      return t[field]
+    end
+
+    local function set(field, value)
+      if track_writes then
+        local w = set_wrappers[field]
+        if not w then
+          w = inst.wrap_fn(function() end, ("%s[%s] write"):format(key, tostring(field)))
+          set_wrappers[field] = w
+        end
+        w()
+      end
+      t[field] = value
+    end
+
+    return get, set
+  end
+
   ---Register every already-loaded module under `prefix` — `prefix` itself and
   ---anything beginning `prefix.`.
   ---

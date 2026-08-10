@@ -882,6 +882,98 @@ return function(H)
   end
 
   -- -------------------------------------------------------------------------
+  -- track_table: per-key read/write counting via explicit get/set functions,
+  -- not a transparent proxy (see the module's own doc-comment for why: a
+  -- __index/__newindex proxy would break pairs()/ipairs()/# on the wrapped
+  -- table permanently, which this deliberately avoids).
+  -- -------------------------------------------------------------------------
+  do
+    local config = { host = "localhost", port = 8080 }
+    local t = telemetry.new({ namespace = ns("track_table"), persist = false })
+    t.start()
+
+    local get, set = t.track_table(config, "config")
+
+    H.eq(get("host"), "localhost", "track_table: get() returns the real value")
+    get("host")
+    get("host")
+    get("port")
+
+    set("host", "example.com")
+    H.eq(config.host, "example.com", "track_table: set() actually writes through to the real table")
+
+    local rep = t.report()
+    local by_key = {}
+    for _, e in ipairs(rep.entries) do
+      by_key[e.key] = e
+    end
+    H.eq(by_key["config[host] read"].calls, 3, "track_table: read count is per-field")
+    H.eq(by_key["config[port] read"].calls, 1, "track_table: a different field has its own count")
+    H.eq(
+      by_key["config[host] write"].calls,
+      1,
+      "track_table: write count is separate from read count"
+    )
+    H.ok(
+      by_key["config[port] write"] == nil,
+      "track_table: a field never written has no write entry at all"
+    )
+
+    -- The table itself is never touched — a plain table before and after,
+    -- fully enumerable, the entire point of not proxying it.
+    local keys = {}
+    for k in pairs(config) do
+      keys[#keys + 1] = k
+    end
+    table.sort(keys)
+    H.eq(#keys, 2, "track_table: the real table still has exactly its own two keys")
+    H.eq(keys[1], "host", "track_table: pairs() still works normally — 'host' present")
+    H.eq(keys[2], "port", "track_table: pairs() still works normally — 'port' present")
+
+    t.stop()
+    t.unwrap()
+  end
+
+  -- track_table: reads/writes can be independently disabled, and repeated
+  -- access to the same field reuses one registry site rather than leaking a
+  -- new one per call (the same "wrap once per distinct key" discipline
+  -- runtime-analysis.usage's own command counting already relies on).
+  do
+    local data = { x = 1 }
+    local t = telemetry.new({ namespace = ns("track_table_opts"), persist = false })
+    t.start()
+
+    local get_only = select(1, t.track_table(data, "reads_only", { writes = false }))
+    get_only("x")
+    local rep1 = t.report()
+    local has_write_entry = false
+    for _, e in ipairs(rep1.entries) do
+      if e.key:find("write", 1, true) then
+        has_write_entry = true
+      end
+    end
+    H.ok(not has_write_entry, "track_table: writes = false records no write entries at all")
+
+    local _, set_only = t.track_table(data, "writes_only", { reads = false })
+    for _ = 1, 25 do
+      set_only("y", 2)
+    end
+    local rep2 = t.report()
+    local by_key2 = {}
+    for _, e in ipairs(rep2.entries) do
+      by_key2[e.key] = e
+    end
+    H.eq(
+      by_key2["writes_only[y] write"].calls,
+      25,
+      "track_table: repeated access to the same field accumulates on one entry, not 25 separate ones"
+    )
+
+    t.stop()
+    t.unwrap()
+  end
+
+  -- -------------------------------------------------------------------------
   -- recursion: every entry by default, outermost only on request
   -- -------------------------------------------------------------------------
   do
@@ -1693,7 +1785,7 @@ return function(H)
       notified and notified.msg:find("wrote", 1, true) ~= nil,
       "pdfport.nvim available -> :RATelemetry export .pdf reports success"
     )
-    H.eq(create_opts.from, "markdown", "pdfport.create() gets from = \"markdown\"")
+    H.eq(create_opts.from, "markdown", 'pdfport.create() gets from = "markdown"')
     H.eq(create_opts.output, pdf_path, "pdfport.create() gets the requested output path")
     H.ok(
       create_opts.text:find("# runtime-analysis.nvim — telemetry", 1, true) ~= nil,

@@ -188,6 +188,7 @@
 ---@field namespace string
 ---@field wrap fun(container: table, prefix?: string, opts?: RA.Telemetry.WrapOpts): integer
 ---@field wrap_fn fun(fn: function, key: string, opts?: RA.Telemetry.WrapOpts): function
+---@field track_table fun(t: table, key: string, opts?: { reads?: boolean, writes?: boolean }): (fun(field: any): any), (fun(field: any, value: any))
 ---@field wrap_loaded fun(prefix: string, opts?: RA.Telemetry.WrapLoadedOpts): integer, integer
 ---@field unwrap fun(): nil
 ---@field start fun(opts?: RA.Telemetry.StartOpts): boolean
