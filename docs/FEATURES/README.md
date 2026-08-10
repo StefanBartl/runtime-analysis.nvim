@@ -23,3 +23,7 @@ remain the complete reference.
 - **[TELEMETRY.md](TELEMETRY.md)** — `runtime-analysis.telemetry`:
   zero-cost-when-stopped instrumentation, reading a namespace without a
   live instance, named/dated snapshots for comparing two points in time.
+- **[LOADED.md](LOADED.md)** — `runtime-analysis.loaded`: the
+  loaded-vs-declared live read documentation.nvim joins against its own
+  IR, and persisted snapshots of it for cold viewing outside the session
+  that took them.

@@ -26,6 +26,76 @@ Newest first, by date; original document order within a date.
 
 ## 2026-08-10
 
+### §5.4 Persist loaded-vs-declared for cold viewing
+
+Raised the same day as §4.5, and explicitly left open pending it: "the
+snapshot mechanism there first will make the marginal cost of asking
+`loaded.lua` for the same thing obvious one way or the other" (that
+entry's own original wording). It did — once §4.5 existed as a real,
+working pattern, the parallel for loaded-vs-declared was a much smaller
+lift than the original framing suggested.
+
+**The open question §5.4 itself named — "whether a persisted
+loaded-vs-declared snapshot is worth having at all" — was resolved by
+direct user pushback, not further analysis.** Feedback on the roadmap
+entry disagreed with the premise outright: a report can already be saved
+and reopened; surfacing it in documentation.nvim as persisted state data,
+listed and clicked through one at a time, was not seen as the hard problem
+the entry's own hedging suggested. It wasn't. Once reframed as "the exact
+mechanism §4.5 already proved, applied to a different runtime fact rather
+than a new design question", the remaining work was mechanical.
+
+**One identifier, not two — traced, not assumed, from how telemetry's own
+two actually differ.** `documentation.nvim`'s own `core/telemetry_self.lua`
+wraps `main = "documentation"` (a require prefix) under
+`namespace = "documentation.nvim"` (`opts.title`) — genuinely two
+different strings, for that repo itself, because a telemetry namespace can
+wrap arbitrary code under any prefix. A loaded snapshot has nothing to
+name except the prefix it was captured under, so `M.snapshot(prefix,
+name)` takes no separate namespace argument at all — the alternative (a
+caller-chosen namespace kept in sync with the prefix by hand) would be one
+more thing to drift for no benefit, since documentation.nvim's own reading
+side derives the identical prefix independently from `opts.source`/
+`opts.lua_root`, never told which one was used.
+
+**Shipped:** `loaded.lua` gained `M.snapshot`/`M.list_snapshots`/
+`M.load_snapshot`/`M.evict_old_snapshots`/`M.SNAPSHOT_RETENTION` —
+deliberately parallel to `telemetry/store.lua` rather than reusing it (a
+loaded snapshot is a module→function-keys map, not a call-count
+aggregate; own `"loaded/"` cache-key prefix, same `lib.nvim.cache.disk`
+primitive, same retention default and eviction policy). `:RA loaded
+snapshot <prefix> [name]` / `:RA loaded snapshots <prefix>` — the only
+call sites, "always explicit" the identical posture `telemetry.snapshot`
+already has.
+
+On the documentation.nvim side (same commit set): `core/loaded_diff.lua`'s
+live `M.rows(ir)` and a new `M.rows_from_snapshot(ir, snapshot)` now share
+one `diff(ir, present_for)` implementation; `editor/serve.lua` gained
+`GET /api/loaded[?snapshot=]`/`GET /api/loaded/snapshots`; a new Loaded
+Analysis panel — structurally simpler than Telemetry's own picker, on
+purpose: no "latest" fallback (a loaded diff is a property of some live
+session's `package.loaded`, and a server route answering a browser tab has
+none of its own to default to) and no A/B compare (the user's own framing
+was "list them, click through one report after another", not "diff two
+captures" — a different, not-asked-for question Telemetry's own compare
+view already answers if it's ever wanted here too).
+
+Verified against real data before calling it done: a real headless session
+took a real snapshot, started `documentation.editor.serve`, and curled
+both new routes — the snapshot list came back real, the diff came back
+correct against documentation.nvim's own IR, including a synthetic
+`loaded_only` field planted specifically to confirm that direction (a
+mostly-cold headless session produces mostly `declared_only` rows by
+default, which would have hidden a bug in the other direction). A request
+for a snapshot that was never saved correctly answered "snapshot not
+found".
+
+Test coverage: `docs/TESTS/loaded_spec.lua` here (snapshot/list/load/
+retention/eviction — retention's own test asserts the count evicted down
+to the cap rather than which specific one, since `saved_at` is
+second-granularity and three snapshots saved back-to-back inside one test
+can tie); `TESTS/browse_loaded_spec.lua` on the documentation.nvim side.
+
 ### §4.5 Named, dated telemetry snapshots
 
 Raised the same day, from documentation.nvim's side, wanting a Telemetry

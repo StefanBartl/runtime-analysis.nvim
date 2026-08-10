@@ -69,13 +69,13 @@ flowchart LR
 
 ## Drift
 
-0 errors · 0 warnings · 4 info
+0 errors · 0 warnings · 3 info
 
 No errors or warnings.
 
 
 <details>
-<summary>4 informational findings</summary>
+<summary>3 informational findings</summary>
 
 
 | Check | Message |
@@ -83,6 +83,5 @@ No errors or warnings.
 | `missing-readme` | lua/runtime-analysis has no README.md |
 | `missing-readme` | lua/runtime-analysis/config has no README.md |
 | `unreferenced-module` | runtime-analysis.health is required by no other file in the tree |
-| `unreferenced-module` | runtime-analysis.loaded is required by no other file in the tree |
 
 </details>

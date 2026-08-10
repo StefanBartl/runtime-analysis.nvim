@@ -48,23 +48,21 @@ same kind of overlay `docs/IDEAS.md` §6 uses for its own five-item shortlist.
 | **Medium** | Multi-day. Either a real decision has to be made first (a schema, a security trade-off, an open question the section names explicitly), or it touches several files or a small state machine — but the shape and the cost are both known. |
 | **Long-term** | Blocked on something this document itself already says is unmeasured or unresolved: an unmeasured `debug.getinfo` cost, several open design questions, another repository's half of the work, or a section the document itself calls speculative. |
 
-Thirty-three items have shipped out of this section since it was first
+Thirty-four items have shipped out of this section since it was first
 written — see [`docs/FINISHED.md`](FINISHED.md) for the full record of
-each, including §3.7 (measuring this module's own instrumentation
-overhead — `scripts/bench_overhead.lua`), the most recent. §4.3 and §7.3
-were the last two long-term/speculative items and are both gone (§4.3
-into "Deliberately not building" below; §7.3 dropped outright — see that
-section's own note) — but that is not the whole picture either: §3.6 and
-§5.4 remain open. Two items, current as of this pass:
+each, including §5.4 (persisted loaded-vs-declared snapshots) and §3.7
+(measuring this module's own instrumentation overhead), both the same
+day. §4.3 and §7.3 were the last two long-term/speculative items before
+those and are both gone (§4.3 into "Deliberately not building" below;
+§7.3 dropped outright — see that section's own note) — one item remains
+open:
 
 | Item | Phase | Why |
 | --- | --- | --- |
 | **§3.6** Benchmarking / "profile++" | Medium | The blocker is a decision, not an unknown: a schema and an API shape, plus where it lives (`telemetry/` vs. a separate module) — all things the section itself names, none of them unmeasured. Still gated on the one open question that could make the whole idea moot: whether it survives §3.5's "not a profiler" thesis. |
-| **§5.4** Persist loaded-vs-declared for cold viewing | Long-term **on paper, ready to re-check** | Explicitly self-classified "Long-term, not Medium" when written, blocked on "revisit alongside §4.5's implementation" — §4.5 (named/dated telemetry snapshots) has since shipped, so the stated blocking condition is now satisfied. Not reclassified to Medium here, since the actual open question §5.4 names (whether a persisted loaded-vs-declared snapshot is worth having *at all*) was never about §4.5's absence, only about timing — the real next step is asking that question against the now-real snapshot mechanism, which is what would settle the tier, not this pass. See also the fresh feedback under §5.4 itself, not yet reconciled with this framing. |
 
-Neither is a Quick win: both are explicitly gated on a decision this
-document itself says has not been made, which is by definition not what
-"Quick win" describes.
+Not a Quick win: gated on a decision this document itself says has not
+been made, which is by definition not what "Quick win" describes.
 
 ## 1. HTTP request runner — the stated gaps
 
@@ -145,32 +143,13 @@ references without actually freeing the numbers for reuse.
 
 §5.1 (`:RA inspect <module>`) has shipped — see
 [`docs/FINISHED.md`](FINISHED.md) for the full record. §5.3
-(loaded-vs-declared, `loaded.lua`) has also shipped as a live-only view —
-see §4.5's own note for why "shipped" does not mean "persisted".
-
-### 5.4 Persist loaded-vs-declared for cold viewing
-
-Raised 2026-08-10, same source as §4.5. `loaded.lua` is deliberately,
-structurally live-only — it reads `package.loaded` in *this* process, and
-"declared but dead" vs. "not loaded here" is a distinction the module's
-own header says can only be drawn from a live session. A
-documentation.nvim panel for it (parallel to §4.5's Telemetry one) would
-need a persisted snapshot the same way, but the value of a *stale* one is
-genuinely lower here than for telemetry: "what was loaded a week ago"
-answers a narrower question than "how often was this called over a
-week", and saving one is only ever meaningful for the single session it
-was taken from. **Long-term, not Medium** — unlike §4.5, this is not just
-a missing API on top of an existing store; it is a real open question
-whether a persisted loaded-vs-declared snapshot is worth having at all,
-or whether the honest answer is that this stays a live-only view and
-documentation.nvim's integration only ever gets the Telemetry half.
-Revisit alongside §4.5's implementation, not before — building the
-snapshot mechanism there first will make the marginal cost of asking
-`loaded.lua` for the same thing obvious one way or the other.
-
-Feedback: Hier vertehe ich nicht ganz das problem: wenn ein runtime-analses reopirt durchgefphrt wurde, kann man diesen anspeiuchern und später wi eder anschauen. Diese Reports sollen auch in `docemntaton.nvim` in denssen bereich für runtime-analyssys.nvim features, diese reportts n plugin state data (stdpath('data') vieleicht?) zuj finden, dann aufzulisten  und dann kann man einen report nach den anderen durchklicken
-
-warm solle das ein großes problem sein?
+(loaded-vs-declared, `loaded.lua`) has also shipped as a live read, and
+§5.4 (persisted snapshots of it, for cold viewing) has shipped alongside
+it — see `docs/FINISHED.md` for both. This section is intentionally left
+empty rather than deleted, the same reasoning §1's own empty section
+states: the numbers themselves (`§5.x`) are still cited in
+`docs/FINISHED.md`, and removing the section would orphan those
+references without actually freeing the numbers for reuse.
 
 ---
 
