@@ -27,3 +27,6 @@ remain the complete reference.
   loaded-vs-declared live read documentation.nvim joins against its own
   IR, and persisted snapshots of it for cold viewing outside the session
   that took them.
+- **[BENCH.md](BENCH.md)** — `runtime-analysis.bench`: timed comparisons
+  between candidate functions, deliberately not built on telemetry's own
+  wrap/count machinery.
