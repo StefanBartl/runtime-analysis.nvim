@@ -33,23 +33,47 @@ When it *is* on:
 
 | Mode | Per-call cost | Measured (200k calls, 2 scalar args) |
 | --- | --- | ---: |
-| Counting | one table index + one integer add | **0.014 µs** |
-| + timing | two `vim.uv.hrtime()` reads | 0.394 µs |
-| + argument profiling | one fingerprint computation | 0.619 µs |
-| + `call_tree` (docs/ROADMAP.md §3.1) | one `debug.getinfo(2, "Sl")` call | ~0.32 µs total (counting + this) |
-| `errors` / `outermost_only` | one `pcall` (the call must return through us even when it raises) | — |
+| Counting | one table index + one integer add | **~0.01 µs** |
+| + timing | two `vim.uv.hrtime()` reads | ~0.2–0.4 µs |
+| + argument profiling | one fingerprint computation | ~0.6–0.7 µs |
+| + `call_tree` (docs/ROADMAP.md §3.1) | one `debug.getinfo(2, "Sl")` call | ~0.3–0.5 µs (counting + this) |
+| `errors` / `outermost_only` | one `pcall` (the call must return through us even when it raises) | ~0.3 µs (the unconditional `pcall` tax alone, not counting a raise) |
 | `errors`, on an actual raise | + one fingerprint of the error value (docs/ROADMAP.md §3.4) | — (only paid on the already-rare, already-`pcall`'d failure path; the success path above is unaffected) |
 | `sample = N` (docs/ROADMAP.md §3.2) | the branches above run on only 1 in `N` calls; every other call takes the counting-only path | — (a caller controls the trade-off directly via `N`) |
 
-Counting is genuinely free at editor scale. Argument profiling is **~44×
-counting** — still nothing on a surface driven by keypresses and autocmds
-(0.6 µs × a few thousand calls a day), and a real cost on helpers that run in
-inner loops. That asymmetry is why it is opt-in per function rather than a
-global switch, and why `profile_args` accepts a predicate:
+**Ranges, not single numbers, and reproducible rather than quoted from
+memory** — `scripts/bench_overhead.lua` (docs/ROADMAP.md §3.7's answer;
+decision record in `docs/FINISHED.md`) is what actually measures this
+table, run fresh for it rather than hand-typed. It is a plain repo script,
+not a dev-only tool: **run it yourself** —
+`nvim --headless -l scripts/bench_overhead.lua` — to get numbers for your
+own machine instead of trusting either this table's or any other run's.
+The table above is one real run's output, kept as a range because a second
+run on the same machine already lands a little differently; treat any
+single decimal here as false precision.
+
+Counting is genuinely free at editor scale. Argument profiling is **~40–60×
+counting** in every run measured so far — still nothing on a surface driven
+by keypresses and autocmds (well under a microsecond × a few thousand calls
+a day), and a real cost on helpers that run in inner loops. That asymmetry
+is why it is opt-in per function rather than a global switch, and why
+`profile_args` accepts a predicate:
 
 ```lua
 t.start({ profile_args = function(key) return key:match("^bindings%.") ~= nil end })
 ```
+
+**If you are turning on more than counting, know what it costs on your own
+setup before leaving it on.** Counting alone is safe to leave running
+indefinitely — that is this module's whole premise (see "Zero-cost when
+stopped" above and docs/ROADMAP.md §3.5). Argument profiling, `call_tree`
+and `errors` are each real, measured multiples of that floor, not
+rounding error — on a function called heavily enough, stacking several of
+them is the kind of cost you want a number for, not an assurance, before
+deciding whether to leave it enabled between sessions or turn it on only
+while you are actually looking at something. `scripts/bench_overhead.lua`
+exists so that number is a five-second measurement on your machine, not a
+guess from this table.
 
 ### Call trees — "who called this" (docs/ROADMAP.md §3.1)
 

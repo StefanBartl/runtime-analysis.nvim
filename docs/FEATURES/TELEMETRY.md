@@ -55,6 +55,31 @@ ever snapshots on its own.
 - **Docs:** [`lua/runtime-analysis/telemetry/README.md`](../../lua/runtime-analysis/telemetry/README.md)
   "Named snapshots" section.
 
+## Measuring the instrumentation's own overhead
+
+`scripts/bench_overhead.lua` — a reproducible, user-runnable benchmark
+answering "does turning on telemetry (or one specific feature of it —
+timing, argument profiling, `call_tree`, `errors`) actually slow a plugin
+down, and by how much", with a measured number instead of an assurance.
+Deliberately **not** a runtime feature: nothing here is installed, left
+running, or user-toggleable — a one-time script you run and read numbers
+from, the same posture a library's README publishing "~200ns per call"
+already has. That exclusion is what lets it exist without reopening
+`docs/ROADMAP.md` §3.5's "not a general profiler" rejection.
+
+Run it yourself for numbers specific to your own machine, rather than
+trusting a committed table:
+
+```bash
+nvim --headless -l scripts/bench_overhead.lua
+nvim --headless -l scripts/bench_overhead.lua --calls=1000000
+```
+
+- **Module:** `scripts/bench_overhead.lua`
+- **Docs:** [`lua/runtime-analysis/telemetry/README.md`](../../lua/runtime-analysis/telemetry/README.md)
+  "Off costs nothing — literally" section; decision record in
+  [`docs/FINISHED.md`](../FINISHED.md) (§3.7).
+
 ## The static × runtime join
 
 The reason this plugin exists next to documentation.nvim rather than

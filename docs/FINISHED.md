@@ -83,6 +83,53 @@ fallback a namespace with no live instance always used, unaffected by
 this addition. Purely additive: no existing caller's behavior changes
 unless it opts in.
 
+### §3.7 Measuring this module's own instrumentation overhead
+
+Raised the same day as §3.6, and gated behind the identical checkpoint:
+does this survive §3.5's "not a general profiler" thesis? It sits even
+closer to that rejected territory than §3.6 does — measuring the cost of
+instrumentation is nearer to what a profiler answers than a plugin-vs-
+plugin benchmark comparison is — so the shape had to be chosen carefully,
+not just the methodology.
+
+**What makes it survive §3.5: it is not installed, not left running, and
+nothing about it is user-toggleable.** `scripts/bench_overhead.lua` is a
+one-time (or occasional) dev-side benchmark someone runs and reads numbers
+from — the same posture a library's README publishing "~200ns per call"
+already has — never a runtime module, never reachable from a usercmd, and
+deliberately not under `telemetry/`. That exclusion is the actual design
+decision here, not an afterthought bolted on after the fact.
+
+**The "KI testen und benchmarken" ambiguity the roadmap entry itself
+flagged was resolved with the user directly, not assumed either way**: the
+benchmark harness gets built and verified with AI assistance (a
+build-process note) — not an AI-driven feature at runtime, which would
+have been a substantially different and larger idea.
+
+**Methodology**: one synthetic fixture (`fixture(a, b) = a + b` — real, if
+trivial, work, so a JIT cannot fold the whole call away and understate
+real overhead) called 200k times per row — unwrapped baseline, then wrapped
+with exactly one optional feature on at a time (counting alone, +timing,
++argument profiling, +`call_tree`, +`errors`' unconditional `pcall` tax) —
+timed via `vim.uv.hrtime()`, a fresh unpersisted instance per row so no
+row's counts or cache warmth leak into the next row's timing.
+
+**Closes a real, pre-existing gap, not just answers a new question.** The
+`telemetry/README.md` overhead table ("Off costs nothing — literally") had
+carried specific decimal numbers (`0.014 µs`, `0.394 µs`, …) with no
+backing script anywhere in the repo — confirmed by search before writing
+this, not assumed: those numbers had no way to be reproduced or re-checked.
+The table now cites ranges from a real run of this script rather than
+single decimals treated as a universal constant, and explicitly invites a
+reader to run the script themselves for numbers specific to their own
+machine — the user's own framing for why this needed to be user-runnable,
+not dev-only: being able to say "enabling feature X costs Nx" with a real
+number, measured on your own setup, rather than an assurance.
+
+- **Module:** `scripts/bench_overhead.lua`
+- **Docs:** `lua/runtime-analysis/telemetry/README.md` "Off costs nothing —
+  literally" section; `docs/FEATURES/TELEMETRY.md`.
+
 ## 2026-08-04
 
 ### Table tracking — `inst.track_table`

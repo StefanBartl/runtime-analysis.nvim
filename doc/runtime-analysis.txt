@@ -516,6 +516,17 @@ registered functions were never called" needs a live instance's own
 `wrap()` calls to know the registered set, which a cold `telemetry.load()`
 read cannot answer.
 
+Measuring instrumentation's own overhead — a separate, one-time script,
+never a runtime feature (see docs/ROADMAP.md §3.5's "not a general
+profiler" thesis for why that distinction matters): >
+
+  nvim --headless -l scripts/bench_overhead.lua
+  nvim --headless -l scripts/bench_overhead.lua --calls=1000000
+<
+Run it yourself for numbers specific to your own machine — see the
+telemetry README's "Off costs nothing — literally" section for what it
+measures and why it is shaped as a script rather than a command.
+
 ==============================================================================
 7. INTEGRATION WITH documentation.nvim          *runtime-analysis-integration*
 
