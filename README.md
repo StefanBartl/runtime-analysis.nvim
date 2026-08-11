@@ -425,5 +425,7 @@ project's [`docs/REUSE.md`](https://github.com/StefanBartl/documentation.nvim/bl
 gate, `.github/workflows/ci.yml`'s `map` job) verifies it is current and
 drift-free without writing anything. `git config core.hooksPath scripts/hooks`
 installs a local pre-commit hook running the same check. This repository's own
-map: [docs/map/overview.md](docs/map/overview.md) (renders on GitHub directly)
-— `docs/map/index.html` is the richer interactive version, open it locally.
+map is published at **<https://stefanbartl.github.io/runtime-analysis.nvim/>**;
+[docs/map/overview.md](docs/map/overview.md) is the same tree as Markdown,
+rendered on GitHub. History, Telemetry and Loaded need a local server and say
+so on the published copy — every other tab works there in full.
