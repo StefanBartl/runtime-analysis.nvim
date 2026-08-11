@@ -6,6 +6,17 @@ return function(H)
 
   -- A real comparison: one candidate does measurably more work than the
   -- other, so the ranking has a real, checkable answer, not just "it ran".
+  --
+  -- The inner loop is 20,000 rather than a few hundred, and that number was
+  -- measured rather than picked. At 200 the slow/fast ratio came out
+  -- anywhere between 2.5x and 6.3x across repeated runs on an *idle*
+  -- machine — the run-to-run noise was as large as the signal it is meant
+  -- to prove. On a shared CI runner one scheduler preemption during the
+  -- `fast` pass is then enough to invert the ranking, which is exactly how
+  -- this spec failed intermittently on `main`: green and red runs
+  -- alternating with no relevant change between them. At 20,000 the same
+  -- measurement gives 336x-529x — two orders of magnitude clear of the
+  -- question being asked, for a few milliseconds of extra work.
   do
     local fast_calls, slow_calls = 0, 0
     local function fast()
@@ -14,7 +25,7 @@ return function(H)
     local function slow()
       slow_calls = slow_calls + 1
       local s = 0
-      for i = 1, 200 do
+      for i = 1, 20000 do
         s = s + i
       end
       return s
