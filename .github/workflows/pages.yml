@@ -1,0 +1,50 @@
+# Publish this repository's generated module map to GitHub Pages.
+#
+# The map is produced by documentation.nvim (a dev-only dependency — see the
+# README) and committed under `docs/map/`. The page is self-contained,
+# offline-capable HTML with no build step, so this uploads that directory as
+# committed and deploys it. Nothing is generated here: `ci.yml`'s `map` job
+# already fails the build when the committed artifact is stale, so publishing
+# a different map than the one under review is not reachable.
+#
+# `actions/deploy-pages` rather than an orphan `gh-pages` branch: the map is
+# derived output whose history has no value, and this way it never becomes a
+# branch at all.
+#
+# What the published copy can do is worth knowing before clicking: the Tree,
+# Hierarchy, Analysis, Index, Notes and Compare tabs need no server and work
+# fully. History, Telemetry and Loaded are computed on demand from git and
+# from runtime data on the machine that ran the scan; opened here they say so
+# plainly rather than reporting a network error.
+
+name: Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/map/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/map
+      - id: deployment
+        uses: actions/deploy-pages@v4
