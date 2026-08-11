@@ -20,8 +20,7 @@ actually loaded it sees nothing, which renders as "not loaded here", never
 as "declared but dead" — a distinction only a live session can draw.
 
 - **Module:** `loaded.lua`
-- **Docs:** [`../../README.md`](../../README.md#loaded-vs-declared),
-  `doc/runtime-analysis.txt` `*runtime-analysis-loaded*`.
+- **Docs:** `doc/runtime-analysis.txt` `*runtime-analysis-loaded*`.
 
 ## Persisted snapshots, for cold viewing
 
