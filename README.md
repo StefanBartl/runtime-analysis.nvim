@@ -21,6 +21,7 @@
 - [Setup](#setup)
 - [Telemetry](#telemetry)
 - [Integration with documentation.nvim](#integration-with-documentationnvim)
+- [The static × runtime join](#the-static--runtime-join)
 - [What's not here yet](#whats-not-here-yet)
 - [Where this is going](#where-this-is-going)
 - [Dependencies](#dependencies)
@@ -364,18 +365,27 @@ documentation.nvim's static analysis could send correctly on its own — so
 the method and path are pre-filled and the reader completes the base URL
 (and any params) before running `:RASend` themselves.
 
+## The static × runtime join
+
+**Shipped.** documentation.nvim's `:DocBrowse telemetry` mode joins this
+plugin's counts against its static analysis — the design doc that scoped it
+(`docs/ROADMAP/telemetry-documentation-bridge.md`, lib.nvim) called it
+"Mode 7"; it landed as the **eighth** entry in the real `MODES` list, since
+Endpoints took position seven first (see `ECOSYSTEM.md` step 8 for that
+renumbering). `:DocBrowse loaded` — the declared-vs-loaded diff,
+[`docs/ROADMAP.md`](docs/ROADMAP.md) §5.3 — followed as the ninth.
+
+The same join now also answers outside Neovim entirely:
+[`docmap-desktop`](https://github.com/StefanBartl/docmap-desktop) runs
+documentation.nvim's standalone binary as a subprocess and serves its
+`/api/telemetry`/`/api/loaded` routes over a real HTTP origin, so a project
+opened in that app shows the same Telemetry and Loaded panels a live
+Neovim session would — real data when this plugin has collected any for
+that project's namespace, an honest "no host"/"no data" message otherwise.
+
 ## What's not here yet
 
-- **The static × runtime join** — a planned `:DocBrowse` mode joining
-  documentation.nvim's static analysis against telemetry's counts, a
-  *different*, later mode than the Endpoints mode already added — is a
-  later step in `ECOSYSTEM.md`'s own sequencing, not this one. Both that
-  document and the design it points at call it "Mode 7"; it will be the
-  **eighth** entry in the real `MODES` list, since Endpoints took position
-  seven first.
-
-See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full, phased backlog behind
-this short list.
+See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full, phased backlog.
 
 ## Where this is going
 
