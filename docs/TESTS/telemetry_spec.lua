@@ -1734,6 +1734,64 @@ return function(H)
   end
 
   -- -------------------------------------------------------------------------
+  -- store.namespaces / telemetry.export_all — every namespace ON DISK, not
+  -- just this process's live `instances`. The whole point: a namespace with
+  -- no live instance at all (a different plugin's cache file, or this one
+  -- from an earlier session) must still be found and exported.
+  -- -------------------------------------------------------------------------
+  do
+    local export_dir = tmpdir .. "-export-all"
+
+    local live_ns = ns("export_all_live")
+    local mod = { f = function() end }
+    local t = telemetry.new({ namespace = live_ns, persist = true, dir = tmpdir })
+    t.wrap(mod)
+    t.start()
+    mod.f()
+    mod.f()
+    t.flush()
+    t.stop()
+    t.unwrap()
+
+    -- Written straight to disk, no `telemetry.new()` involved at all —
+    -- exactly the "no live instance" case `export_all` exists for.
+    local disk_only_ns = ns("export_all_disk_only")
+    local data = store.empty()
+    data.functions["m.g"] =
+      { calls = 7, args = { values = { ["()"] = 7 }, other = 0, distinct = 1, n = 1 } }
+    store.save(disk_only_ns, data, { dir = tmpdir })
+
+    local namespaces = store.namespaces({ dir = tmpdir })
+    H.ok(
+      vim.tbl_contains(namespaces, live_ns),
+      "namespaces() finds a namespace with a live instance"
+    )
+    H.ok(
+      vim.tbl_contains(namespaces, disk_only_ns),
+      "namespaces() finds a namespace written straight to disk, no instance involved"
+    )
+    H.ok(not vim.tbl_contains(namespaces, "_control"), "the control file is not a namespace")
+
+    local written, failed = telemetry.export_all(export_dir, { dir = tmpdir })
+    H.eq(#failed, 0, "nothing failed to export")
+    H.ok(
+      vim.tbl_contains(written, export_dir .. "/" .. store.sanitize(live_ns) .. ".md"),
+      "wrote the live namespace's report"
+    )
+    H.ok(
+      vim.tbl_contains(written, export_dir .. "/" .. store.sanitize(disk_only_ns) .. ".md"),
+      "wrote the disk-only namespace's report -- no live instance was ever created for it"
+    )
+
+    local disk_only_file = io.open(export_dir .. "/" .. store.sanitize(disk_only_ns) .. ".md", "r")
+    H.ok(disk_only_file ~= nil, "the disk-only report file actually exists")
+    local disk_only_content = disk_only_file:read("*a")
+    disk_only_file:close()
+    H.ok(disk_only_content:find("m.g", 1, true) ~= nil, "...with the real function key in it")
+    H.ok(disk_only_content:find("7", 1, true) ~= nil, "...and the real call count")
+  end
+
+  -- -------------------------------------------------------------------------
   -- :RATelemetry export .pdf — routes through pdfport.nvim (optional
   -- dependency, soft-required). Stubs package.loaded["pdfport"] rather than
   -- depending on a real pdfport.nvim + pandoc install being present on the

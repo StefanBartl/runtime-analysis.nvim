@@ -12,6 +12,7 @@
 -- Usage:
 --   nvim --headless -l scripts/telemetry.lua report <namespace> [opts]
 --   nvim --headless -l scripts/telemetry.lua export <namespace> <path> [opts]
+--   nvim --headless -l scripts/telemetry.lua export-all <dir> [opts]
 --
 -- opts:
 --   --since=7d|24h|2w|<days>   only calls within this window
@@ -263,6 +264,31 @@ elseif action == "export" then
     file:close()
   end
   io.stdout:write("wrote ", path, "\n")
+elseif action == "export-all" then
+  local positionals, flags = split_flags(argv, 2)
+  local target_dir = positionals[1]
+  if not target_dir then
+    die(
+      "usage: telemetry.lua export-all <dir> [--since=7d] [--top=N] [--sort=calls|name|time] [--dir=path]"
+    )
+  end
+  ---@cast target_dir -nil
+  local telemetry = require("runtime-analysis.telemetry")
+  local written, failed = telemetry.export_all(target_dir, {
+    dir = (cache_opts(flags) or {}).dir,
+    report_opts = report_opts(flags),
+  })
+  if #failed > 0 then
+    die(
+      ("wrote %d report(s) to %s, %d failed: %s"):format(
+        #written,
+        target_dir,
+        #failed,
+        table.concat(failed, ", ")
+      )
+    )
+  end
+  io.stdout:write(("wrote %d report(s) to %s\n"):format(#written, target_dir))
 else
-  die("usage: telemetry.lua {report|export} <namespace> [...opts]")
+  die("usage: telemetry.lua {report|export|export-all} <namespace> [...opts]")
 end

@@ -129,6 +129,44 @@ function M.clear(namespace, opts)
   return ok and cleared ~= false
 end
 
+---Every namespace with a persisted aggregate — live right now or not, this
+---process or a different one. `telemetry.export_all()`'s one building block:
+---"every namespace on disk" cannot come from `instances` (module-level, this
+---process's live ones only), only from the directory itself.
+---
+---Reads the directory directly, same reasoning `M.list_snapshots` already
+---gives for doing that over a side-index. `_control.json` (the persistent
+---disable list, not a namespace's own data) is the one file this
+---deliberately excludes; a `snapshots/` subdirectory under a namespace file
+---is a directory, not a `.json` file, so it is already excluded by the
+---extension check.
+---@param opts? Lib.Cache.Opts
+---@return string[] namespaces  # sorted
+function M.namespaces(opts)
+  local root = (opts and opts.dir) or (vim.fn.stdpath("cache") .. "/lib.nvim/cache")
+  local dir = root .. "/telemetry"
+  local uv = vim.uv or vim.loop
+
+  local handle = uv.fs_scandir(dir)
+  if not handle then
+    return {}
+  end
+
+  local out = {}
+  while true do
+    local name, kind = uv.fs_scandir_next(handle)
+    if not name then
+      break
+    end
+    if kind == "file" and name:match("%.json$") and name ~= "_control.json" then
+      out[#out + 1] = name:gsub("%.json$", "")
+    end
+  end
+
+  table.sort(out)
+  return out
+end
+
 -- ---------------------------------------------------------------------------
 -- Named/dated snapshots — docs/ROADMAP.md §4.5.
 --
