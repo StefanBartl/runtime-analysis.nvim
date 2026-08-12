@@ -23,6 +23,37 @@ local MAX_STRING = 40
 --- variadic call sites otherwise produce one distinct fingerprint per arity.
 local MAX_ARGS = 4
 
+---Byte length `<= max_len` that still lands on a UTF-8 character boundary.
+---
+---`v:sub(1, MAX_STRING)` alone cuts by byte count, and a call argument is not
+---guaranteed to have an ASCII byte sitting exactly at that offset — a project
+---path with a non-ASCII directory name, a docstring, anything outside 7-bit
+---ASCII. Cutting mid-character writes an invalid UTF-8 continuation byte into
+---the stored fingerprint, which then sits in `stdpath("cache")` as a string
+---no JSON/Markdown reader downstream can round-trip correctly. Found exactly
+---this way: a real telemetry file for documentation.nvim, argument text
+---containing "→" (U+2192, 3 bytes), split after its first byte.
+---
+---A byte is a UTF-8 continuation byte iff its top two bits are `10`
+---(`0x80`-`0xBF`). Walking backward from `max_len` until the byte *after* the
+---cut is not a continuation byte finds the nearest boundary at or before it —
+---so this only ever shortens the truncation, never lengthens it past
+---`max_len`.
+---@param s string
+---@param max_len integer
+---@return integer
+local function utf8_boundary(s, max_len)
+  local k = max_len
+  while k > 0 do
+    local b = s:byte(k + 1)
+    if not b or b < 0x80 or b >= 0xC0 then
+      break
+    end
+    k = k - 1
+  end
+  return k
+end
+
 ---@param v any
 ---@return string
 function M.value(v)
@@ -36,7 +67,7 @@ function M.value(v)
     if #v <= MAX_STRING then
       return ("%q"):format(v)
     end
-    return ("%q…"):format(v:sub(1, MAX_STRING))
+    return ("%q…"):format(v:sub(1, utf8_boundary(v, MAX_STRING)))
   elseif t == "table" then
     -- Shape only. `#v` is cheap; a full pair count on a large table is not,
     -- and this runs on every profiled call.
