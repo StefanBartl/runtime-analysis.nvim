@@ -231,6 +231,7 @@
 ---@field load fun(namespace: string, opts?: Lib.Cache.Opts): RA.Telemetry.Data|nil
 ---@field report_all fun(opts?: RA.Telemetry.ReportOpts): RA.Telemetry.Report[]
 ---@field markdown_all fun(opts?: RA.Telemetry.ReportOpts): string[]
+---@field export_all fun(target_dir: string, opts?: { dir?: string, report_opts?: RA.Telemetry.ReportOpts }): string[], string[]
 ---@field setup fun(opts?: { report_style?: RA.Telemetry.ReportStyle }): nil
 ---@field flush_all fun(): integer
 ---@field stop_all fun(): integer

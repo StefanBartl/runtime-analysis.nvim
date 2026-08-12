@@ -1211,6 +1211,61 @@ function M.markdown_all(opts)
   return report_mod.markdown_all(M.report_all(opts))
 end
 
+---Render every namespace's aggregate to its own Markdown file under
+---`target_dir` — live this process, live a different one, or no live
+---instance at all. `markdown_all()`'s own combined document only ever sees
+---`instances` (this process's live ones); this instead starts from
+---`store.namespaces()`, so a namespace nothing has loaded THIS session still
+---gets exported from whatever it last flushed.
+---
+---A synthesized `meta` stands in for what only a live instance would
+---normally supply: `running` is always false (nothing here is live),
+---`wrapped` is read back from `Data.modules` (every function `wrap_loaded()`
+---ever registered, whether or not it was called — the honest disk-only
+---substitute for "how many functions are wrapped right now"), and `modes`
+---is inferred from which fields the stored calls actually populated (an
+---`args` bucket on any entry means argument profiling was on, etc.) rather
+---than guessed at, since nothing here remembers the options a since-gone
+---instance was started with.
+---@param target_dir string
+---@param opts? { dir?: string, report_opts?: RA.Telemetry.ReportOpts }
+---@return string[] written  # paths written, one per exported namespace
+---@return string[] failed   # namespaces that had data but could not be written
+function M.export_all(target_dir, opts)
+  opts = opts or {}
+  local cache_opts = { dir = opts.dir or DEFAULT_CACHE_DIR }
+
+  local written, failed = {}, {}
+  for _, namespace in ipairs(store.namespaces(cache_opts)) do
+    local data = store.load_readonly(namespace, cache_opts)
+    if data then
+      local modes =
+        { counting = true, args = false, timing = false, errors = false, call_tree = false }
+      for _, stats in pairs(data.functions or {}) do
+        modes.args = modes.args or stats.args ~= nil
+        modes.timing = modes.timing or stats.timing ~= nil
+        modes.errors = modes.errors or (stats.errors or 0) > 0 or stats.error_fp ~= nil
+        modes.call_tree = modes.call_tree or stats.callers ~= nil
+      end
+
+      local meta = {
+        running = false,
+        disabled = toggle.is_disabled(namespace, cache_opts),
+        wrapped = vim.tbl_count(data.modules or {}),
+        modes = modes,
+      }
+      local report = report_mod.build(namespace, data, meta, opts.report_opts)
+      local path = target_dir .. "/" .. store.sanitize(namespace) .. ".md"
+      if report_file.write(path, report_mod.markdown(report)) then
+        written[#written + 1] = path
+      else
+        failed[#failed + 1] = namespace
+      end
+    end
+  end
+  return written, failed
+end
+
 ---@return integer flushed
 function M.flush_all()
   local n = 0

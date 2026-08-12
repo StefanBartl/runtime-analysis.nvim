@@ -490,6 +490,9 @@ the rest of this plugin. Command surface: >
   :RATelemetry coverage        which wrapped functions were never called
   :RATelemetry export [path]   JSON; Markdown if .md; PDF if .pdf (needs
                                pdfport.nvim, optional dependency)
+  :RATelemetry export-all <dir>  one Markdown file per namespace found on
+                               disk into <dir> — not limited to this
+                               session's live instances
   :RATelemetry open [ns]       render + open externally
   :RATelemetry compare [ns] [days]  "this window vs the one before it"
   :RATelemetry startup [top]   which module a plugin's startup cost sits in

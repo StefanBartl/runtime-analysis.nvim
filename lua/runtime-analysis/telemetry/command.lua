@@ -17,6 +17,9 @@
 ---   :RATelemetry coverage        which wrapped functions were never called
 ---   :RATelemetry export [path]   write a snapshot (JSON, Markdown if path
 ---                                ends .md, PDF via pdfport.nvim if .pdf)
+---   :RATelemetry export-all <dir>  one Markdown file per namespace found on
+---                                disk into <dir> -- unlike `export`, not
+---                                limited to this session's live instances
 ---   :RATelemetry open [ns]       render + open externally (report_style: auto/kit/mdview/file/html)
 ---   :RATelemetry compare [ns] [days]  this window vs the one before it (default 7d)
 ---   :RATelemetry startup [top]   which module a plugin's startup cost sits in
@@ -46,6 +49,7 @@ local SUBCOMMANDS = {
   "disabled",
   "coverage",
   "export",
+  "export-all",
   "open",
   "compare",
   "startup",
@@ -424,6 +428,26 @@ function M.setup()
           notify.error("export failed")
         end
       end
+    elseif first == "export-all" then
+      if not rest or rest == "" then
+        notify.warn("usage: :RATelemetry export-all <dir>")
+        return
+      end
+      local written, failed = mod.export_all(rest)
+      if #failed > 0 then
+        notify.warn(
+          ("wrote %d report(s) to %s, %d failed: %s"):format(
+            #written,
+            rest,
+            #failed,
+            table.concat(failed, ", ")
+          )
+        )
+      elseif #written == 0 then
+        notify.warn("no telemetry data found to export")
+      else
+        notify.info(("wrote %d report(s) to %s"):format(#written, rest))
+      end
     elseif first == "open" then
       open_report(rest)
     elseif first == "startup" then
@@ -512,7 +536,7 @@ function M.setup()
     end
   end, {
     nargs = "*",
-    desc = "runtime-analysis.telemetry: report|start|stop|reset|disable|enable|disabled|coverage|export|open|compare|startup|cost|snapshot|snapshots [namespace] [days]",
+    desc = "runtime-analysis.telemetry: report|start|stop|reset|disable|enable|disabled|coverage|export|export-all|open|compare|startup|cost|snapshot|snapshots [namespace] [days]",
     complete = function(arg_lead, cmd_line)
       -- Second token of `start`/`stop`/`reset`/`open`/`compare` is always a
       -- namespace, never another subcommand — narrow completion there

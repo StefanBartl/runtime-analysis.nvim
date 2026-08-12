@@ -529,6 +529,7 @@ require("runtime-analysis.telemetry.command").setup()
 :RATelemetry reset [ns]      " every instance, or just one
 :RATelemetry coverage
 :RATelemetry export [path]   " JSON; Markdown if .md; PDF if .pdf (needs pdfport.nvim)
+:RATelemetry export-all <dir>  " one Markdown file per namespace found ON DISK into <dir>
 :RATelemetry open [ns]       " render + open externally — see "Browser report" below
 :RATelemetry compare [ns] [days]   " "this week vs last week" — see below
 :RATelemetry startup [top]   " which module a plugin's startup cost sits in
@@ -558,6 +559,22 @@ point) follows the identical extension rule, and finds pdfport.nvim on the
 runtimepath the same way it finds lib.nvim — `PDFPORT_DIR`, a
 `.deps/pdfport.nvim` checkout, or a sibling checkout beside this repo — but
 best-effort: only `export ... .pdf` needs it, everything else works without.
+
+`export-all` is the one command in this list that is not scoped to
+`instances` (this process's live ones). `export`/`report_all`/`markdown_all`
+all read only what THIS Neovim process has instrumented THIS session — a
+plugin nothing has loaded yet, or one instrumented in a process that has
+since exited, is invisible to them. `export-all` instead scans
+`stdpath("cache")/runtime-analysis.nvim/cache/telemetry/*.json` directly
+(`store.namespaces()`) and builds each namespace's report straight from
+what is on disk (`telemetry.load()` + `report.build()`, no live instance
+required), one `<namespace>.md` file per namespace into the given
+directory — the way to get every instrumented plugin's report in one
+command without first loading all of them in the same session.
+
+```lua
+local written, failed = telemetry.export_all("~/telemetry-export")
+```
 
 ## Browser report
 
