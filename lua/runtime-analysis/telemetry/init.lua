@@ -1266,6 +1266,22 @@ function M.export_all(target_dir, opts)
   return written, failed
 end
 
+---Start every live instance that is not already running. Symmetric with
+---`M.stop_all()` — added alongside it rather than left as the inline loop
+---`:RATelemetry start` (bare) already had, so a caller wanting "every
+---instance" has one real function to call instead of reaching into
+---`M.instances()` itself.
+---@return integer started
+function M.start_all()
+  local n = 0
+  for _, inst in ipairs(instances) do
+    if inst.start() then
+      n = n + 1
+    end
+  end
+  return n
+end
+
 ---@return integer flushed
 function M.flush_all()
   local n = 0

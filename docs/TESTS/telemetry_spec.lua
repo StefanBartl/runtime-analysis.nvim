@@ -1447,6 +1447,47 @@ return function(H)
   end
 
   -- -------------------------------------------------------------------------
+  -- telemetry.start_all() / stop_all() — every live instance, symmetric
+  -- pair. Bare `:RATelemetry start`/`stop` (no namespace) already exercise
+  -- this through the command layer above; this is the direct, function-level
+  -- coverage `stop_all()` never had either, now that `start_all()` exists to
+  -- match it.
+  -- -------------------------------------------------------------------------
+  do
+    local ns_a, ns_b = ns("start_stop_all_a"), ns("start_stop_all_b")
+    local mod_a, mod_b = { f = function() end }, { g = function() end }
+    local ta = telemetry.new({ namespace = ns_a, persist = false })
+    local tb = telemetry.new({ namespace = ns_b, persist = false })
+    ta.wrap(mod_a)
+    tb.wrap(mod_b)
+
+    H.eq(ta.is_running(), false, "not running before start_all()")
+    H.eq(tb.is_running(), false, "not running before start_all()")
+
+    local started = telemetry.start_all()
+    H.ok(started >= 2, "start_all() started at least both of these instances")
+    H.eq(ta.is_running(), true, "start_all() started this instance")
+    H.eq(tb.is_running(), true, "start_all() started this instance too")
+
+    -- `inst.start()` re-attaches unconditionally even when already running
+    -- (how updated `wants` reach an already-installed site — see its own
+    -- doc-comment), so a second start_all() still reports every instance,
+    -- not zero; the property worth checking here is that it does not break
+    -- anything already running.
+    local restarted = telemetry.start_all()
+    H.ok(restarted >= 2, "start_all() again still reports every instance, idempotent re-attach")
+    H.eq(ta.is_running(), true, "...and this instance is still running")
+
+    local stopped = telemetry.stop_all()
+    H.ok(stopped >= 2, "stop_all() stopped at least both of these instances")
+    H.eq(ta.is_running(), false, "stop_all() stopped this instance")
+    H.eq(tb.is_running(), false, "stop_all() stopped this instance too")
+
+    ta.unwrap()
+    tb.unwrap()
+  end
+
+  -- -------------------------------------------------------------------------
   -- :RATelemetry disable/enable/disabled — dir=tmpdir, isolated from the
   -- real stdpath("cache") the same way the toggle tests above are.
   -- -------------------------------------------------------------------------
