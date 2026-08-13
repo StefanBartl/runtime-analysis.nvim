@@ -64,7 +64,7 @@ flowchart LR
 |---|---|---|---|
 | `bindings` |  |  |  |
 | `runtime-analysis.config` | Configuration entry point — re-exports the defaults in [`DEFAULTS.lua`](DEFAULTS.lua). |  | [src](../../lua/runtime-analysis/config/init.lua) |
-| `runtime-analysis.telemetry` | Opt-in call counting and usage statistics for any Lua/Neovim plugin that points an instance at its own modules. | 25 | [README](../../lua/runtime-analysis/telemetry/README.md) · [src](../../lua/runtime-analysis/telemetry/init.lua) |
+| `runtime-analysis.telemetry` | Opt-in call counting and usage statistics for any Lua/Neovim plugin that points an instance at its own modules. | 26 | [README](../../lua/runtime-analysis/telemetry/README.md) · [src](../../lua/runtime-analysis/telemetry/init.lua) |
 | &nbsp;&nbsp;`renderers` |  |  |  |
 
 ## Drift

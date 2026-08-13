@@ -356,13 +356,7 @@ function M.setup()
       end
 
       if first == "start" then
-        local n = 0
-        for _, inst in ipairs(mod.instances()) do
-          if inst.start() then
-            n = n + 1
-          end
-        end
-        notify.info(("started %d instance(s)"):format(n))
+        notify.info(("started %d instance(s)"):format(mod.start_all()))
       elseif first == "stop" then
         notify.info(("stopped %d instance(s)"):format(mod.stop_all()))
       else

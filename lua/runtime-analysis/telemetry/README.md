@@ -368,8 +368,9 @@ Module level:
 telemetry.instances()        -- every live instance
 telemetry.get("lsp.nvim")
 telemetry.report_all(opts)
+telemetry.start_all()        -- also `:RATelemetry start` (bare)
 telemetry.flush_all()
-telemetry.stop_all()
+telemetry.stop_all()         -- also `:RATelemetry stop` (bare)
 ```
 
 ### Report metadata — which branch/version this data came from
