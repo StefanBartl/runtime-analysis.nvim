@@ -1,5 +1,42 @@
 # runtime-analysis.nvim — cross-plugin feature ideas
 
+## Table of content
+
+  - [Intro](#intro)
+  - [0. The map — who owns what](#0-the-map-who-owns-what)
+  - [1. runtime-analysis × documentation.nvim — beyond the join already planned](#1-runtime-analysis-documentationnvim-beyond-the-join-already-planned)
+    - [1.1 Churn × call count — the refactoring queue, finally ordered](#11-churn-call-count-the-refactoring-queue-finally-ordered)
+    - [1.2 Auto-coverage × telemetry — the four-cell table nobody has](#12-auto-coverage-telemetry-the-four-cell-table-nobody-has)
+    - [1.3 `:DocMap impact` weighted by runtime reach](#13-docmap-impact-weighted-by-runtime-reach)
+    - [1.4 `:DocMap why` × call trees — the require chain vs the call chain](#14-docmap-why-call-trees-the-require-chain-vs-the-call-chain)
+    - [1.5 Runtime evidence as a *check input*, not just a view](#15-runtime-evidence-as-a-check-input-not-just-a-view)
+    - [1.6 `doc-references-missing`, in the other direction](#16-doc-references-missing-in-the-other-direction)
+    - [1.7 Endpoint inventory × request history × response shape](#17-endpoint-inventory-request-history-response-shape)
+    - [1.8 A live badge in the annotation popup](#18-a-live-badge-in-the-annotation-popup)
+  - [2. runtime-analysis × mdview.nvim — mdview as more than a renderer](#2-runtime-analysis-mdviewnvim-mdview-as-more-than-a-renderer)
+    - [2.1 Theme parity, and who owns the report's look](#21-theme-parity-and-who-owns-the-reports-look)
+    - [2.2 `:MDView preview-tab` — the browser-free tier](#22-mdview-preview-tab-the-browser-free-tier)
+    - [2.3 The request runner's response pane, rendered](#23-the-request-runners-response-pane-rendered)
+    - [2.4 mdview's relay as the token-gated server, if a browser tier ever happens](#24-mdviews-relay-as-the-token-gated-server-if-a-browser-tier-ever-happens)
+    - [2.5 Instrument mdview with mdview's own bridge](#25-instrument-mdview-with-mdviews-own-bridge)
+    - [2.6 Borrow `:MDView diagnose`, do not build a second one](#26-borrow-mdview-diagnose-do-not-build-a-second-one)
+  - [3. Three-way — where all of them meet](#3-three-way-where-all-of-them-meet)
+    - [3.1 Two browser tiers already exist — decided, 2026-08-04](#31-two-browser-tiers-already-exist-decided-2026-08-04)
+    - [3.2 A Runtime tab in the served artifact](#32-a-runtime-tab-in-the-served-artifact)
+    - [3.3 One `ECOSYSTEM.md`, four repositories reading it](#33-one-ecosystemmd-four-repositories-reading-it)
+    - [3.4 A shared project key, so the three plugins agree what "this project" is](#34-a-shared-project-key-so-the-three-plugins-agree-what-this-project-is)
+  - [4. runtime-analysis × lib.nvim — the floor](#4-runtime-analysis-libnvim-the-floor)
+    - [4.1 `proc_trace` and `:RAInspect` are the same technique twice](#41-proc_trace-and-rainspect-are-the-same-technique-twice)
+    - [4.2 Push work down only when a second consumer exists](#42-push-work-down-only-when-a-second-consumer-exists)
+  - [5. The rest of the ecosystem](#5-the-rest-of-the-ecosystem)
+  - [6. If only five things are ever built from this document](#6-if-only-five-things-are-ever-built-from-this-document)
+  - [7. Deliberately not](#7-deliberately-not)
+  - [Epistemic note](#epistemic-note)
+
+---
+
+## Intro
+
 **Nothing here is scheduled, and nothing here is costed.** This is the layer
 *before* a roadmap: ideas worth writing down so they are not re-derived, with
 enough reasoning attached to judge them later. It borrows documentation.nvim's
@@ -59,6 +96,8 @@ documentation-priority-by-usage. Everything below is a *different* crossing,
 found by walking documentation.nvim's actual command surface and asking what
 each one would answer differently with runtime evidence attached.
 
+---
+
 ### 1.1 Churn × call count — the refactoring queue, finally ordered
 
 `core/churn.lua` ranks modules by **change frequency × complexity**, Tornhill's
@@ -76,6 +115,8 @@ collection on either side — churn already ships, counts already persist,
 **The honest limit up front:** telemetry only sees *your* usage. A module cold
 on this machine may be the hot path for every other user of the plugin. The
 render has to say "not called in **your** sessions", never "unused".
+
+---
 
 ### 1.2 Auto-coverage × telemetry — the four-cell table nobody has
 
@@ -96,6 +137,8 @@ sorted by evidence. It also **repairs coverage.lua's own stated blind spot** in
 one direction: an indirectly-exercised function that telemetry saw being called
 is no longer invisible.
 
+---
+
 ### 1.3 `:DocMap impact` weighted by runtime reach
 
 `impact` answers "which functions do my changed lines touch, and who calls
@@ -107,6 +150,8 @@ day.*
 
 Cheap (a lookup per quickfix entry), and it lands on the one command where a
 reader is already about to make a decision.
+
+---
 
 ### 1.4 `:DocMap why` × call trees — the require chain vs the call chain
 
@@ -129,6 +174,8 @@ cross-repo join itself (documentation.nvim's static require graph against
 this module's now-real runtime caller data), unbuilt, and belongs in
 whichever repo's roadmap picks it up next — most naturally documentation.nvim's,
 since `:DocMap why` is its command.
+
+---
 
 ### 1.5 Runtime evidence as a *check input*, not just a view
 
@@ -156,6 +203,8 @@ found nothing" (`{}`), and a committed artifact generated **without** it.
 well-formed empty table, which is the same distinction one layer down — that
 was not an accident, and this is the consumer it was built for.
 
+---
+
 ### 1.6 `doc-references-missing`, in the other direction
 
 **Both halves shipped 2026-08-04** — see [`docs/FINISHED.md`](FINISHED.md)'s
@@ -165,6 +214,8 @@ documented that is never used, and is anything used constantly that no doc
 mentions? Both are now the two aggregate lines `documentation.core.
 telemetry_join.doc_usage_summary` prints alongside `:DocMap`'s own doc-
 coverage line.
+
+---
 
 ### 1.7 Endpoint inventory × request history × response shape
 
@@ -178,6 +229,8 @@ where documentation.nvim can reach.
 
 Deliberately *not* a schema validator. The useful, cheap version is "this route
 is documented as returning an object and returned an array", not JSON Schema.
+
+---
 
 ### 1.8 A live badge in the annotation popup
 
@@ -198,6 +251,8 @@ apply. This is surface 1 in that document's own ranking, at its cheapest.
 Today mdview is one thing to this plugin: a `report_style`. The plugin ships
 four capabilities beyond rendering, and each suggests a different crossing.
 
+---
+
 ### 2.1 Theme parity, and who owns the report's look
 
 `:MDView theme` switches the preview theme at runtime across five themes with
@@ -206,6 +261,8 @@ browser tab already had. Reports rendered from the editor could pass the
 editor's own background — a one-argument crossing, and the alternative
 (rendering our own HTML) is explicitly rejected in the telemetry README for the
 right reason: it would duplicate mdview's themes and immediately drift.
+
+---
 
 ### 2.2 `:MDView preview-tab` — the browser-free tier
 
@@ -217,6 +274,8 @@ resolution — that the first `:RATelemetry open` may pause while mdview
 self-installs its relay from GitHub Releases.
 
 Cheapest idea in this section by a wide margin.
+
+---
 
 ### 2.3 The request runner's response pane, rendered
 
@@ -231,6 +290,8 @@ bridge (`renderers/mdview.lua`).
 Where this stops being right: anything interactive. A transcript is a document;
 a request *builder* in the browser is §3.2's problem and much more expensive.
 
+---
+
 ### 2.4 mdview's relay as the token-gated server, if a browser tier ever happens
 
 `ECOSYSTEM.md` §6 and §9 both land here already: if a browser-side request
@@ -241,6 +302,8 @@ security posture `serve.lua` would have to grow from scratch. Recorded here so
 the option is not re-derived; genuinely far off, and correctly last in that
 document's sequencing.
 
+---
+
 ### 2.5 Instrument mdview with mdview's own bridge
 
 Slightly circular and entirely practical: mdview is a plugin with a relay
@@ -249,6 +312,8 @@ moving parts in the ecosystem, so the most worth measuring. The lazy.nvim
 adapter already makes this one line of config. The specific question worth
 answering: **which of its adapter modules actually run in a normal session**,
 against the ones that only exist for one platform or one failure path.
+
+---
 
 ### 2.6 Borrow `:MDView diagnose`, do not build a second one
 
@@ -261,6 +326,8 @@ file that can be attached to an issue. Worth copying the *shape*, not the code.
 ---
 
 ## 3. Three-way — where all of them meet
+
+---
 
 ### 3.1 Two browser tiers already exist — decided, 2026-08-04
 
@@ -281,6 +348,8 @@ resulted — `renderers/html.lua` is telemetry's own report renderer, the
 same category `report.lua`'s Markdown output and `renderers/mdview.lua`'s
 browser bridge already occupy, not a new independent HTML generator
 competing with documentation.nvim's or mdview's own.
+
+---
 
 ### 3.2 A Runtime tab in the served artifact
 
@@ -306,6 +375,8 @@ persistent data" is clearer from that one real case. Even once built
 here, a dedicated panel in the Runtime tab above (rather than only
 `:RATelemetry`'s own surfaces) stays a reasonable, separate follow-up.
 
+---
+
 ### 3.3 One `ECOSYSTEM.md`, four repositories reading it
 
 A soft, real problem visible while writing this document: the architecture doc
@@ -329,6 +400,8 @@ purpose is detecting where documentation and code stop agreeing. Turning
 `doc-references-missing` on the docs *of its own siblings* is the most
 on-thesis housekeeping idea available.
 
+---
+
 ### 3.4 A shared project key, so the three plugins agree what "this project" is
 
 Request history (`ROADMAP.md` §1.3) wants per-project scoping. documentation.nvim
@@ -345,6 +418,8 @@ document to make early and the most expensive to retrofit.**
 
 Not a feature seam so much as a discipline one, but two items are real.
 
+---
+
 ### 4.1 `proc_trace` and `:RAInspect` are the same technique twice
 
 `lib.nvim.system.proc_trace` wraps `vim.fn.system`; telemetry's registry wraps
@@ -358,6 +433,8 @@ what it did. A shared, minimal **wrapper registry convention** — an
 identifiable marker on an installed wrapper — would make provenance answerable
 for all three instead of one. Small, and it has to be lib.nvim's, because the
 alternative is this plugin knowing about a module in a library it depends on.
+
+---
 
 ### 4.2 Push work down only when a second consumer exists
 
@@ -452,3 +529,6 @@ prototype was written for any of them, and this ecosystem has already been
 burned once by exactly that gap — `core/plugins.lua` passed nine hand-written
 fixtures and then produced 235 false positives against one real config. Treat
 every "cheap" here as a hypothesis to test against a real tree, not a result.
+
+---
+
