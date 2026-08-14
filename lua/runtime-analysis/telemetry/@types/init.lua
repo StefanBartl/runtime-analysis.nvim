@@ -79,6 +79,19 @@
 ---@field changed RA.Telemetry.Comparison.Entry[]          # called in both, sorted by |delta| desc
 ---@field incomplete_previous_window boolean                # true when 2 × days exceeds retention_days — the previous window may already be missing pruned buckets
 
+---`M.compare_snapshots()`'s own result shape — a snapshot-vs-snapshot
+---diff, not `RA.Telemetry.Comparison`'s calendar window (no `days`, since
+---two snapshots can be arbitrarily far apart; labelled by name instead).
+---@class RA.Telemetry.SnapshotComparison
+---@field namespace string
+---@field name_a string                                     # the earlier snapshot's name
+---@field name_b string                                     # the later snapshot's name
+---@field total_a integer
+---@field total_b integer
+---@field new_functions RA.Telemetry.Comparison.Entry[]      # silent in name_a, called in name_b
+---@field cold_functions RA.Telemetry.Comparison.Entry[]     # called in name_a, silent in name_b
+---@field changed RA.Telemetry.Comparison.Entry[]            # called in both, sorted by |delta| desc
+
 -- ---------------------------------------------------------------------------
 -- Collected data
 -- ---------------------------------------------------------------------------
@@ -241,9 +254,10 @@
 ---@field is_disabled fun(namespace: string): boolean
 ---@field disabled fun(): string[]
 ---@field SNAPSHOT_RETENTION integer
----@field snapshot fun(namespace: string, name?: string): string|nil
+---@field snapshot fun(namespace: string, name?: string, opts?: { device?: string|false }): string|nil
 ---@field list_snapshots fun(namespace: string, opts?: Lib.Cache.Opts): RA.Telemetry.SnapshotInfo[]
 ---@field load_snapshot fun(namespace: string, name: string, opts?: Lib.Cache.Opts): RA.Telemetry.Data|nil
+---@field compare_snapshots fun(namespace: string, name_a: string, name_b: string, opts?: Lib.Cache.Opts): RA.Telemetry.SnapshotComparison|nil
 
 ---@class RA.Telemetry.LazyPluginOpts
 ---@field namespace string

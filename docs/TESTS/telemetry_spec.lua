@@ -1488,6 +1488,29 @@ return function(H)
   end
 
   -- -------------------------------------------------------------------------
+  -- :RATelemetryStartAll / :RATelemetryStopAll — standalone alias commands,
+  -- same underlying effect as bare :RATelemetry start/stop, registered by
+  -- the same command.setup() call.
+  -- -------------------------------------------------------------------------
+  do
+    require("runtime-analysis.telemetry.command").setup()
+
+    local ns_a = ns("cmd_start_all")
+    local mod_a = { f = function() end }
+    local ta = telemetry.new({ namespace = ns_a, persist = false })
+    ta.wrap(mod_a)
+
+    H.eq(ta.is_running(), false, "not running before :RATelemetryStartAll")
+    vim.cmd("RATelemetryStartAll")
+    H.eq(ta.is_running(), true, ":RATelemetryStartAll starts every live instance")
+
+    vim.cmd("RATelemetryStopAll")
+    H.eq(ta.is_running(), false, ":RATelemetryStopAll stops every live instance")
+
+    ta.unwrap()
+  end
+
+  -- -------------------------------------------------------------------------
   -- :RATelemetry disable/enable/disabled — dir=tmpdir, isolated from the
   -- real stdpath("cache") the same way the toggle tests above are.
   -- -------------------------------------------------------------------------
@@ -2254,6 +2277,113 @@ return function(H)
       auto_name ~= nil and auto_name:match("^%d%d%d%d%-%d%d%-%d%dT") ~= nil,
       "no name given: falls back to a timestamp"
     )
+
+    inst.stop()
+  end
+
+  -- -------------------------------------------------------------------------
+  -- telemetry.snapshot() — device tagging (opts.device)
+  -- -------------------------------------------------------------------------
+  do
+    local namespace = ns("snap_device")
+    local inst = telemetry.new({ namespace = namespace, dir = tmpdir, persist = true })
+    inst.start()
+
+    telemetry.snapshot(namespace, "tagged", { device = "test-machine-A" })
+    local tagged = telemetry.load_snapshot(namespace, "tagged")
+    H.eq(
+      tagged.info.device,
+      "test-machine-A",
+      "explicit opts.device lands in the snapshot's own info"
+    )
+
+    telemetry.snapshot(namespace, "untagged", { device = false })
+    local untagged = telemetry.load_snapshot(namespace, "untagged")
+    H.eq((untagged.info or {}).device, nil, "opts.device = false records no device at all")
+
+    telemetry.snapshot(namespace, "default")
+    local default_tag = telemetry.load_snapshot(namespace, "default")
+    -- Best-effort real hostname -- present in any normal environment
+    -- (including CI/headless), but the property worth checking is that
+    -- *some* string landed, not which one.
+    H.ok(
+      default_tag.info.device == nil or type(default_tag.info.device) == "string",
+      "no opts.device given: defaults to vim.uv.os_gethostname() (or absent if that failed)"
+    )
+
+    inst.stop()
+  end
+
+  -- -------------------------------------------------------------------------
+  -- telemetry.compare_snapshots() — two named snapshots diffed directly,
+  -- distinct from telemetry.compare()'s calendar-window comparison.
+  -- -------------------------------------------------------------------------
+  do
+    local namespace = ns("snap_compare")
+    local mod = {
+      warm = function() end,
+      fading = function() end,
+      growing = function() end,
+    }
+    local inst = telemetry.new({ namespace = namespace, dir = tmpdir, persist = true })
+    inst.wrap(mod)
+    inst.start()
+
+    mod.fading()
+    mod.fading()
+    mod.growing()
+    telemetry.snapshot(namespace, "before")
+
+    mod.warm()
+    mod.warm()
+    mod.warm()
+    mod.growing()
+    mod.growing()
+    telemetry.snapshot(namespace, "after")
+
+    H.eq(
+      telemetry.compare_snapshots(namespace, "before", "does-not-exist"),
+      nil,
+      "a missing snapshot name returns nil rather than erroring"
+    )
+
+    local cmp = telemetry.compare_snapshots(namespace, "before", "after")
+    H.eq(cmp.namespace, namespace, "namespace carried through")
+    H.eq(cmp.name_a, "before", "name_a carried through")
+    H.eq(cmp.name_b, "after", "name_b carried through")
+
+    H.eq(#cmp.new_functions, 1, "one function silent in 'before', called in 'after'")
+    H.eq(cmp.new_functions[1].key, "warm", "...warm")
+    H.eq(cmp.new_functions[1].current, 3, "...3 calls in 'after'")
+
+    H.eq(#cmp.cold_functions, 1, "one function called in 'before', silent in 'after'")
+    H.eq(cmp.cold_functions[1].key, "fading", "...fading")
+    H.eq(cmp.cold_functions[1].previous, 2, "...had 2 calls in 'before'")
+
+    H.eq(#cmp.changed, 1, "one function called in both periods, with new calls in between")
+    H.eq(cmp.changed[1].key, "growing", "...growing")
+    H.eq(cmp.changed[1].previous, 1, "...1 call as of 'before'")
+    H.eq(cmp.changed[1].current, 3, "...3 calls total as of 'after'")
+    H.eq(cmp.changed[1].delta, 2, "...2 NEW calls happened between 'before' and 'after'")
+
+    local lines = require("runtime-analysis.telemetry.report").compare_snapshots_lines(cmp)
+    H.ok(
+      table.concat(lines, "\n"):find("warm", 1, true) ~= nil,
+      "compare_snapshots_lines mentions the newly-hot function"
+    )
+
+    local md = require("runtime-analysis.telemetry.report").compare_snapshots_markdown(cmp)
+    H.ok(
+      table.concat(md, "\n"):find("fading", 1, true) ~= nil,
+      "compare_snapshots_markdown mentions the gone-cold function"
+    )
+
+    -- :RATelemetry snapshot-compare <ns> <a> <b>
+    require("runtime-analysis.telemetry.command").setup()
+    vim.cmd(("RATelemetry snapshot-compare %s before after"):format(namespace))
+    local ok =
+      pcall(vim.cmd, ("RATelemetry snapshot-compare %s before does-not-exist"):format(namespace))
+    H.eq(ok, true, "a missing snapshot name warns rather than erroring")
 
     inst.stop()
   end

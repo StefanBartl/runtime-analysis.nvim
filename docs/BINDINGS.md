@@ -169,6 +169,11 @@ See `docs/COMMANDS.md` for the honest limits (only mappings set after
 | `:RATelemetry compare [ns] [days]` | "this window vs the one before it" (default 7 days) — newly-hot/gone-cold/changed functions |
 | `:RATelemetry startup [top]` | which module a plugin's startup cost sits in, as a waterfall. Opt-in via `autostart()` from this plugin's own lazy.nvim `init` hook — see the telemetry README for why `init` and not `init.lua`. |
 | `:RATelemetry cost` | startup cost vs. call count per namespace, worst (expensive, underused) first — joins `startup` and every live instance's own `resolved_modules()` on real module paths, never a name guess. |
+| `:RATelemetry snapshot <ns> [name]` | save a named, device-tagged capture of `ns`'s current aggregate |
+| `:RATelemetry snapshots <ns>` | list `ns`'s saved snapshots, newest first |
+| `:RATelemetry snapshot-compare <ns> <a> <b>` | diff two named snapshots' call counts directly (not a calendar window like `compare`) |
+| `:RATelemetryStartAll` | standalone alias for `:RATelemetry start` (bare) |
+| `:RATelemetryStopAll` | standalone alias for `:RATelemetry stop` (bare) |
 
 `<Tab>` after `start `/`stop `/`reset `/`open `/`compare ` completes
 namespaces only; `compare`'s own third token (a day count) is not

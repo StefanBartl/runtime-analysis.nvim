@@ -703,6 +703,198 @@ function M.compare_markdown(cmp)
   return out
 end
 
+---Compare two named snapshots' function call counts directly against each
+---other — distinct from `M.compare`, which reads one continuously-
+---accumulating dataset's own day buckets ("this week vs last week"). A
+---snapshot is a deliberate point-in-time capture with no day buckets of its
+---own worth trusting for this (`M.snapshot`'s doc-comment: it captures
+---whatever `Data.days` happened to hold at that moment, not a clean window)
+---— so this reads `Data.functions[key].calls` (lifetime totals as of each
+---capture) instead, which is the one number every snapshot always has.
+---
+---**Classification reads the A→B *delta*, not raw totals — deliberately.**
+---`calls` is a lifetime counter that only ever grows, so for two
+---chronologically-ordered snapshots `b.calls` is always `>= a.calls` for
+---any key already present at A (barring a `reset()` in between). Bucketing
+---on raw totals the way `M.compare` does (which reads already-windowed,
+---already-reset-per-window counts from day buckets — a different kind of
+---number) would leave `cold_functions` structurally empty for the entire
+---lifetime of a namespace: "silent since A" can never happen when a
+---function's own count cannot go back down. Bucketing on `b.calls - a.calls`
+---instead answers the question a caller comparing two checkpoints actually
+---has — "did this get exercised across my test", not "has it EVER been
+---exercised" — and is stable however long the namespace has already run
+---before `name_a` was ever taken.
+---@param namespace string
+---@param name_a string  Label for `data_a` — conventionally the earlier one.
+---@param name_b string  Label for `data_b` — conventionally the later one.
+---@param data_a RA.Telemetry.Data
+---@param data_b RA.Telemetry.Data
+---@return RA.Telemetry.SnapshotComparison
+function M.compare_snapshots(namespace, name_a, name_b, data_a, data_b)
+  local a_functions, b_functions = data_a.functions or {}, data_b.functions or {}
+
+  local keys = {}
+  for key in pairs(a_functions) do
+    keys[key] = true
+  end
+  for key in pairs(b_functions) do
+    keys[key] = true
+  end
+
+  local new_functions, cold_functions, changed = {}, {}, {}
+  local total_a, total_b = 0, 0
+  for key in pairs(keys) do
+    local a = (a_functions[key] and a_functions[key].calls) or 0
+    local b = (b_functions[key] and b_functions[key].calls) or 0
+    total_a, total_b = total_a + a, total_b + b
+    local delta = b - a
+    if a == 0 then
+      -- No history at all before `name_a` — genuinely new, not just quiet
+      -- this period. `b` must be > 0 here: a key with both counts 0 is
+      -- never in `keys`.
+      new_functions[#new_functions + 1] = comparison_entry(key, b, a)
+    elseif delta == 0 then
+      -- Had history before `name_a`, but zero calls happened between the
+      -- two snapshots — "went cold" for THIS period, not "never called".
+      cold_functions[#cold_functions + 1] = comparison_entry(key, b, a)
+    else
+      changed[#changed + 1] = comparison_entry(key, b, a)
+    end
+  end
+
+  table.sort(new_functions, function(x, y)
+    return x.current > y.current
+  end)
+  table.sort(cold_functions, function(x, y)
+    return x.previous > y.previous
+  end)
+  table.sort(changed, function(x, y)
+    return math.abs(x.delta) > math.abs(y.delta)
+  end)
+
+  return {
+    namespace = namespace,
+    name_a = name_a,
+    name_b = name_b,
+    total_a = total_a,
+    total_b = total_b,
+    new_functions = new_functions,
+    cold_functions = cold_functions,
+    changed = changed,
+  }
+end
+
+---@param cmp RA.Telemetry.SnapshotComparison
+---@return string[]
+function M.compare_snapshots_lines(cmp)
+  local out = {}
+  out[#out + 1] = ("%s: %q vs %q  —  %s calls vs %s calls"):format(
+    cmp.namespace,
+    cmp.name_a,
+    cmp.name_b,
+    num(cmp.total_a),
+    num(cmp.total_b)
+  )
+  out[#out + 1] = ""
+
+  if #cmp.new_functions == 0 and #cmp.cold_functions == 0 and #cmp.changed == 0 then
+    out[#out + 1] = "  (no calls recorded in either snapshot)"
+    return out
+  end
+
+  if #cmp.new_functions > 0 then
+    out[#out + 1] = ("  newly hot (silent in %q):"):format(cmp.name_a)
+    for _, e in ipairs(cmp.new_functions) do
+      out[#out + 1] = ("    + %-40s %s calls"):format(e.key, num(e.current))
+    end
+    out[#out + 1] = ""
+  end
+
+  if #cmp.cold_functions > 0 then
+    out[#out + 1] = ("  no new calls since %q:"):format(cmp.name_a)
+    for _, e in ipairs(cmp.cold_functions) do
+      out[#out + 1] = ("    - %-40s %s calls total, none new"):format(e.key, num(e.previous))
+    end
+    out[#out + 1] = ""
+  end
+
+  if #cmp.changed > 0 then
+    out[#out + 1] = "  changed:"
+    for _, e in ipairs(cmp.changed) do
+      local arrow = e.delta >= 0 and "↑" or "↓"
+      local sign = e.delta >= 0 and "+" or ""
+      local pct = e.delta_pct and (("%s%.0f %%"):format(sign, e.delta_pct * 100)) or "n/a"
+      out[#out + 1] = ("    %s %-40s %s -> %s calls (%s)"):format(
+        arrow,
+        e.key,
+        num(e.previous),
+        num(e.current),
+        pct
+      )
+    end
+  end
+
+  return out
+end
+
+---@param cmp RA.Telemetry.SnapshotComparison
+---@return string[]
+function M.compare_snapshots_markdown(cmp)
+  local out = {
+    ("# %s — %q vs %q"):format(cmp.namespace, cmp.name_a, cmp.name_b),
+    "",
+    ("**%s calls** vs **%s calls**"):format(num(cmp.total_a), num(cmp.total_b)),
+    "",
+  }
+
+  if #cmp.new_functions == 0 and #cmp.cold_functions == 0 and #cmp.changed == 0 then
+    out[#out + 1] = "_(no calls recorded in either snapshot)_"
+    return out
+  end
+
+  if #cmp.new_functions > 0 then
+    out[#out + 1] = ("## Newly hot (silent in %q)"):format(cmp.name_a)
+    out[#out + 1] = ""
+    out[#out + 1] = "| Function | Calls |"
+    out[#out + 1] = "| --- | ---: |"
+    for _, e in ipairs(cmp.new_functions) do
+      out[#out + 1] = ("| `%s` | %s |"):format(e.key, num(e.current))
+    end
+    out[#out + 1] = ""
+  end
+
+  if #cmp.cold_functions > 0 then
+    out[#out + 1] = ("## No new calls since %q"):format(cmp.name_a)
+    out[#out + 1] = ""
+    out[#out + 1] = "| Function | Total (unchanged) |"
+    out[#out + 1] = "| --- | ---: |"
+    for _, e in ipairs(cmp.cold_functions) do
+      out[#out + 1] = ("| `%s` | %s |"):format(e.key, num(e.previous))
+    end
+    out[#out + 1] = ""
+  end
+
+  if #cmp.changed > 0 then
+    out[#out + 1] = "## Changed"
+    out[#out + 1] = ""
+    out[#out + 1] = ("| Function | %s | %s | Change |"):format(cmp.name_a, cmp.name_b)
+    out[#out + 1] = "| --- | ---: | ---: | ---: |"
+    for _, e in ipairs(cmp.changed) do
+      local sign = e.delta >= 0 and "+" or ""
+      local pct = e.delta_pct and (("%s%.0f %%"):format(sign, e.delta_pct * 100)) or "n/a"
+      out[#out + 1] = ("| `%s` | %s | %s | %s |"):format(
+        e.key,
+        num(e.previous),
+        num(e.current),
+        pct
+      )
+    end
+  end
+
+  return out
+end
+
 M.DOMINANT_SHARE = DOMINANT_SHARE
 M.DOMINANT_MIN_CALLS = DOMINANT_MIN_CALLS
 M.num = num

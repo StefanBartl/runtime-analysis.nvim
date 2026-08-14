@@ -497,6 +497,14 @@ the rest of this plugin. Command surface: >
   :RATelemetry compare [ns] [days]  "this window vs the one before it"
   :RATelemetry startup [top]   which module a plugin's startup cost sits in
   :RATelemetry cost            startup cost vs. call count, worst first
+
+  :RATelemetry snapshot <ns> [name]  save a named, device-tagged capture
+  :RATelemetry snapshots <ns>  list ns's saved snapshots, newest first
+  :RATelemetry snapshot-compare <ns> <a> <b>  diff two named snapshots'
+                               call counts directly (not a calendar window)
+
+  :RATelemetryStartAll         standalone alias for :RATelemetry start (bare)
+  :RATelemetryStopAll          standalone alias for :RATelemetry stop (bare)
 <
 Startup attribution (|:RATelemetry| `startup`) is opt-in, from this
 plugin's own lazy.nvim spec — `init` runs for every plugin before lazy

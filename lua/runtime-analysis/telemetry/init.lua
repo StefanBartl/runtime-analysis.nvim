@@ -1118,17 +1118,35 @@ M.SNAPSHOT_RETENTION = 20
 ---sometimes mean "snapshot as of the last periodic flush" depending on
 ---timing. If none exists, whatever is already on disk (the aggregate from
 ---the last flush, by any process sharing this namespace) is captured as is.
+---Best-effort local hostname, for `M.snapshot()`'s default device tag.
+---Never raises: an exotic sandboxed environment with no hostname API is a
+---missing tag, not a broken snapshot.
+---@internal
+---@return string|nil
+local function local_hostname()
+  local ok, name = pcall(uv.os_gethostname)
+  return (ok and type(name) == "string" and name ~= "") and name or nil
+end
+
 ---@param namespace string
 ---@param name? string Default: a timestamp (`os.date("%Y-%m-%dT%H-%M-%S")`),
 ---filesystem- and sort-friendly — `M.list_snapshots` relies on neither for
 ---ordering (it reads `mtime`), but a caller listing raw filenames still
 ---benefits from one that sorts the way it reads.
+---@param opts? { device?: string|false } `device` tags the snapshot's own
+---`info.device` (rendered wherever `Data.info` already renders — no new
+---rendering code needed) — the point being telling apart two snapshots of
+---the same namespace taken on different machines, the case that motivated
+---this: read data, change something on machine A, read again on machine B,
+---compare. Defaults to `vim.uv.os_gethostname()`; pass an explicit string to
+---override, or `false` to record no device at all.
 ---@return string|nil saved_name `nil` when nothing could be captured at all
 ---(no live instance and nothing was ever persisted for `namespace`).
-function M.snapshot(namespace, name)
+function M.snapshot(namespace, name, opts)
   if type(namespace) ~= "string" or namespace == "" then
     return nil
   end
+  opts = opts or {}
 
   local inst = M.get(namespace)
   local cache_opts = (inst and inst._cache_opts) or { dir = DEFAULT_CACHE_DIR }
@@ -1145,6 +1163,19 @@ function M.snapshot(namespace, name)
   local data = store.load_readonly(namespace, cache_opts)
   if not data then
     return nil
+  end
+
+  local device = opts.device
+  if device == nil then
+    device = local_hostname()
+  end
+  if device then
+    -- A copy, not a mutation of `data` in place: `data` is whatever
+    -- `store.load_readonly` handed back, and the live instance (if any)
+    -- must never see a `device` key appear in its own `info`.
+    data = vim.tbl_extend("force", {}, data, {
+      info = vim.tbl_extend("force", {}, data.info or {}, { device = device }),
+    })
   end
 
   local snapshot_name = store.sanitize_snapshot_name(name or os.date("%Y-%m-%dT%H-%M-%S"))
@@ -1190,6 +1221,25 @@ function M.load_snapshot(namespace, name, opts)
     name,
     opts or (inst and inst._cache_opts) or { dir = DEFAULT_CACHE_DIR }
   )
+end
+
+---Diff two named snapshots' function call counts against each other — the
+---"read data, change something, read again, compare" workflow `M.compare`
+---cannot answer (that one reads one dataset's own rolling day buckets, not
+---two independent captures, possibly from different machines via
+---`M.snapshot`'s own `device` tag).
+---@param namespace string
+---@param name_a string  The earlier snapshot's name.
+---@param name_b string  The later snapshot's name.
+---@param opts? Lib.Cache.Opts
+---@return RA.Telemetry.SnapshotComparison|nil `nil` when either snapshot is missing.
+function M.compare_snapshots(namespace, name_a, name_b, opts)
+  local data_a = M.load_snapshot(namespace, name_a, opts)
+  local data_b = M.load_snapshot(namespace, name_b, opts)
+  if not data_a or not data_b then
+    return nil
+  end
+  return report_mod.compare_snapshots(namespace, name_a, name_b, data_a, data_b)
 end
 
 ---@param opts? RA.Telemetry.ReportOpts

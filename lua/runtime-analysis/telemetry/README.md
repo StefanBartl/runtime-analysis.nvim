@@ -498,6 +498,37 @@ mode than a missed one. The only call site is `:RATelemetry snapshot`:
 :RATelemetry snapshots lsp.nvim             " list, newest first
 ```
 
+**Which machine took a snapshot.** `telemetry.snapshot()`'s third argument
+tags the capture with a device — the case this exists for: read data,
+change something, read data again — possibly on a different machine —
+compare. Defaults to `vim.uv.os_gethostname()`, shown wherever `Data.info`
+already renders (no new rendering code):
+
+```lua
+telemetry.snapshot("lsp.nvim", "pre-refactor")                       -- device: this machine's hostname
+telemetry.snapshot("lsp.nvim", "pre-refactor", { device = "laptop" }) -- explicit override
+telemetry.snapshot("lsp.nvim", "pre-refactor", { device = false })    -- no device tag at all
+```
+
+**Comparing two snapshots.** `telemetry.compare()` (above) reads one
+continuously-accumulating dataset's own day buckets — "this week vs last
+week." Two named snapshots are a different question: independent captures,
+arbitrarily far apart, `Data.functions[key].calls` a lifetime total in
+each. `telemetry.compare_snapshots()` diffs them directly, classifying by
+the A→B *delta* rather than raw totals (a lifetime counter only grows, so
+"silent since the beginning" can never fire between two ordered snapshots —
+"no new calls in this period" is the question that actually has an answer):
+
+```lua
+local cmp = telemetry.compare_snapshots("lsp.nvim", "pre-refactor", "post-refactor")
+-- RA.Telemetry.SnapshotComparison|nil -- nil when either name was never saved
+vim.print(require("runtime-analysis.telemetry.report").compare_snapshots_lines(cmp))
+```
+
+```
+:RATelemetry snapshot-compare lsp.nvim pre-refactor post-refactor
+```
+
 **Retention** is LRU — `telemetry.SNAPSHOT_RETENTION` (default `20`), an
 oldest-evicted cap applied after every `telemetry.snapshot()` call, so a
 namespace snapshotted often never accumulates an unbounded set. `keep <= 0`
@@ -535,6 +566,9 @@ require("runtime-analysis.telemetry.command").setup()
 :RATelemetry compare [ns] [days]   " "this week vs last week" — see below
 :RATelemetry startup [top]   " which module a plugin's startup cost sits in
 :RATelemetry cost            " startup cost vs. call count, worst first
+
+:RATelemetryStartAll         " same as :RATelemetry start (bare) -- a standalone alias
+:RATelemetryStopAll          " same as :RATelemetry stop (bare) -- reached for often enough to earn its own name
 ```
 
 `start`/`stop`/`reset`/`open`/`compare` take an optional namespace —

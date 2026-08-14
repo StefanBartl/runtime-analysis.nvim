@@ -28,6 +28,19 @@
 ---                                aggregate (docs/ROADMAP.md §4.5) -- always
 ---                                explicit, nothing ever snapshots on its own
 ---   :RATelemetry snapshots <ns>  list ns's saved snapshots, newest first
+---   :RATelemetry snapshot-compare <ns> <a> <b>  diff two named snapshots'
+---                                call counts directly -- not a calendar
+---                                window like `compare` above, two
+---                                deliberate captures possibly taken on
+---                                different machines (see `snapshot`'s own
+---                                `device` tag)
+---
+--- Two standalone aliases, registered alongside `:RATelemetry` by the same
+--- `setup()` call — `:RATelemetry start`/`stop` (bare) already do exactly
+--- this, these exist only because "every instance" is reached for often
+--- enough to earn its own command name rather than a remembered subcommand:
+---   :RATelemetryStartAll         same as `:RATelemetry start` (bare)
+---   :RATelemetryStopAll          same as `:RATelemetry stop` (bare)
 
 local usercmd = require("lib.nvim.usercmd")
 local notify = require("lib.nvim.notify").create("[runtime-analysis.telemetry]")
@@ -56,6 +69,7 @@ local SUBCOMMANDS = {
   "cost",
   "snapshot",
   "snapshots",
+  "snapshot-compare",
 }
 
 ---@internal
@@ -511,6 +525,21 @@ function M.setup()
         lines[#lines + 1] = ("%s — %s"):format(s.name, os.date("%Y-%m-%d %H:%M:%S", s.saved_at))
       end
       show(lines, ("runtime-analysis.telemetry — snapshots (%s)"):format(rest))
+    elseif first == "snapshot-compare" then
+      local name_a, name_b = args.fargs[3], args.fargs[4]
+      if not rest or rest == "" or not name_a or not name_b then
+        notify.warn("usage: :RATelemetry snapshot-compare <namespace> <name_a> <name_b>")
+        return
+      end
+      local cmp = mod.compare_snapshots(rest, name_a, name_b)
+      if not cmp then
+        notify.warn(("%q or %q not found among %s's saved snapshots"):format(name_a, name_b, rest))
+        return
+      end
+      show(
+        require("runtime-analysis.telemetry.report").compare_snapshots_lines(cmp),
+        "runtime-analysis.telemetry — snapshot compare"
+      )
     elseif first == "compare" then
       -- `rest` is a namespace exactly the way every other subcommand's
       -- second slot already is; a third token, if numeric, overrides
@@ -530,7 +559,7 @@ function M.setup()
     end
   end, {
     nargs = "*",
-    desc = "runtime-analysis.telemetry: report|start|stop|reset|disable|enable|disabled|coverage|export|export-all|open|compare|startup|cost|snapshot|snapshots [namespace] [days]",
+    desc = "runtime-analysis.telemetry: report|start|stop|reset|disable|enable|disabled|coverage|export|export-all|open|compare|startup|cost|snapshot|snapshots|snapshot-compare [namespace] [days]",
     complete = function(arg_lead, cmd_line)
       -- Second token of `start`/`stop`/`reset`/`open`/`compare` is always a
       -- namespace, never another subcommand — narrow completion there
@@ -550,6 +579,7 @@ function M.setup()
         or sub == "compare"
         or sub == "snapshot"
         or sub == "snapshots"
+        or sub == "snapshot-compare"
 
       local out = {}
       if takes_namespace then
@@ -570,6 +600,25 @@ function M.setup()
       end, out)
     end,
   })
+
+  -- Standalone aliases for the bare (no-namespace) start/stop forms above —
+  -- see the module doc-comment for why these exist alongside, not instead
+  -- of, `:RATelemetry start`/`stop`.
+  usercmd.create(
+    "RATelemetryStartAll",
+    function()
+      notify.info(("started %d instance(s)"):format(telemetry().start_all()))
+    end,
+    { desc = "runtime-analysis.telemetry: start every live instance (same as :RATelemetry start)" }
+  )
+
+  usercmd.create(
+    "RATelemetryStopAll",
+    function()
+      notify.info(("stopped %d instance(s)"):format(telemetry().stop_all()))
+    end,
+    { desc = "runtime-analysis.telemetry: stop every live instance (same as :RATelemetry stop)" }
+  )
 end
 
 M.SUBCOMMANDS = SUBCOMMANDS

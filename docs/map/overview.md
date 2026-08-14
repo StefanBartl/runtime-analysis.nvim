@@ -47,6 +47,7 @@ flowchart LR
   nlua_runtime_analysis_telemetry_command_lua --> nlua_runtime_analysis_telemetry_config_lua
   nlua_runtime_analysis_telemetry_command_lua --> nlua_runtime_analysis_telemetry_cost_vs_use_lua
   nlua_runtime_analysis_telemetry_command_lua --> nlua_runtime_analysis_telemetry_renderers
+  nlua_runtime_analysis_telemetry_command_lua --> nlua_runtime_analysis_telemetry_report_lua
   nlua_runtime_analysis_telemetry_command_lua --> nlua_runtime_analysis_telemetry_report_file_lua
   nlua_runtime_analysis_telemetry_command_lua --> nlua_runtime_analysis_telemetry_report_style_lua
   nlua_runtime_analysis_telemetry_command_lua --> nlua_runtime_analysis_telemetry_startup_lua
@@ -64,7 +65,7 @@ flowchart LR
 |---|---|---|---|
 | `bindings` |  |  |  |
 | `runtime-analysis.config` | Configuration entry point — re-exports the defaults in [`DEFAULTS.lua`](DEFAULTS.lua). |  | [src](../../lua/runtime-analysis/config/init.lua) |
-| `runtime-analysis.telemetry` | Opt-in call counting and usage statistics for any Lua/Neovim plugin that points an instance at its own modules. | 26 | [README](../../lua/runtime-analysis/telemetry/README.md) · [src](../../lua/runtime-analysis/telemetry/init.lua) |
+| `runtime-analysis.telemetry` | Opt-in call counting and usage statistics for any Lua/Neovim plugin that points an instance at its own modules. | 28 | [README](../../lua/runtime-analysis/telemetry/README.md) · [src](../../lua/runtime-analysis/telemetry/init.lua) |
 | &nbsp;&nbsp;`renderers` |  |  |  |
 
 ## Drift
