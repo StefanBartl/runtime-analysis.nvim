@@ -12,6 +12,19 @@ scripts/hooks/*   text eol=lf
 # green where nobody is looking, red where the work happens.
 *.lua             text eol=lf
 
+# Markdown/vimdoc too — the same documentation.nvim engine that generates
+# this repo's own docs/map reads these to build the map's "docs"
+# cross-reference index (refs/backlinks per markdown file), which is
+# line-oriented and pattern-matches per line. A `\r` left on every line by
+# a CRLF checkout changes what those patterns see there, so a
+# Windows-edited `.md` produces a different `refs` count than the same
+# content checked out with LF. Found in documentation.nvim's own repo
+# first (2026-08-14, editing docs/COMMANDS.md there made `--check` report
+# its map stale for a reason unrelated to the map being wrong) — this repo
+# generates through the identical engine, so the same trap applies here.
+*.md              text eol=lf
+*.txt             text eol=lf
+
 # Generated map artifacts: keep them out of diffs and language stats, but do
 # not mark them binary — they are reviewed on purpose.
 #
