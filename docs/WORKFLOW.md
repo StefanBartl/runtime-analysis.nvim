@@ -89,16 +89,36 @@ remember to:
 :RATelemetry snapshot my-plugin pre-refactor
 ```
 
-Do the work, let real usage accumulate, then `telemetry.load_snapshot(ns,
-"pre-refactor")` against the current `telemetry.load(ns)` (or, from
-documentation.nvim's side, its own Telemetry Analysis panel's "Compare
-vs:" picker) — the diff is the actual answer to "did this change what
-gets called," not a guess read off two snapshots that both postdate the
-change. Retention is LRU (`telemetry.SNAPSHOT_RETENTION`, default 20,
+Do the work, let real usage accumulate, then snapshot again and diff the
+two directly — `telemetry.compare_snapshots(ns, "pre-refactor",
+"post-refactor")` / `:RATelemetry snapshot-compare ns pre-refactor
+post-refactor` — rather than hand-diffing `telemetry.load_snapshot()`
+calls yourself (or, from documentation.nvim's side, its own Telemetry
+Analysis panel's "Compare vs:" picker, if you'd rather stay in the
+browser). The diff is the actual answer to "did this change what gets
+called," not a guess read off two snapshots that both postdate the
+change.
+
+Read `changed`/`new_functions`/`cold_functions` by what they actually
+measure, not by the day-window intuition `telemetry.compare()` (a
+different function — "this week vs last week," over one dataset's own
+rolling buckets) trains: `Data.functions[key].calls` is a lifetime
+counter that only ever grows, so `cold_functions` here cannot mean
+"never called" — it means "had calls before `pre-refactor`, zero *new*
+ones since," which is the question two ordered snapshots can actually
+answer.
+
+Retention is LRU (`telemetry.SNAPSHOT_RETENTION`, default 20,
 overridable per namespace via `opts.snapshot_retention` on `telemetry.new`)
 — a snapshot worth keeping past that window needs a name that will still
 mean something a dozen snapshots later, since eviction has no way to know
 which ones you actually meant to keep.
+
+Snapshots are device-tagged by default (`vim.uv.os_gethostname()`,
+overridable via a third `telemetry.snapshot(ns, name, {device=...})`
+argument, or `{device=false}` for none) — worth setting explicitly when
+`pre-refactor` and `post-refactor` are captured on different machines,
+since the names alone will not say which ran where later.
 
 ## The static × runtime join: read *this* side's data, not a guess from the other
 
@@ -113,6 +133,17 @@ structurally cannot. Read documentation.nvim's own
 ("If runtime-analysis.nvim is installed…") for the full badge vocabulary
 (`✕`/`!`/`○`/blank) that join renders with — not repeated here, since it
 is that plugin's own rendering, not this one's data.
+
+## Pausing everything to isolate a performance question
+
+`:RATelemetryStartAll`/`:RATelemetryStopAll` — standalone aliases for
+bare `:RATelemetry start`/`stop` (no namespace), which already mean
+"every live instance in this process." Reach for these when the question
+is about the *editor*, not one plugin: stop everything, reproduce the
+slowdown you are chasing, and instrumentation overhead is ruled out as a
+cause for the whole session at once, rather than one `stop <ns>` per
+plugin. `start` again afterward re-attaches every wrapper — cheap, since
+nothing was ever recompiled, only swapped back out.
 
 ## Two live instances, one namespace — a warning, not a crash
 
