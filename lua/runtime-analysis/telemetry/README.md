@@ -297,6 +297,55 @@ lazy-loading concept at all. Detecting which manager is active is easy;
 writing and maintaining an adapter for ones nobody here uses is not worth
 the surface. Use `auto()` directly if you need this on something else.
 
+### `telemetry.setup_all` — bulk backup + reset + re-wrap + restart
+
+`M.setup()`'s catch-up scan wraps a plugin's loaded modules exactly once —
+either right away (already loaded when `setup()` ran) or on its own `User
+LazyLoad`. A submodule that plugin `require`s *later* (a command handler
+pulled in on first use, a UI module loaded on first keypress) is never
+retroactively wrapped: not because `profile_args` is off, but because
+nothing ever installed a wrapper around it at all. `:RATelemetrySetupAll` /
+`:RATelemetrySetupAllFull` exist to re-scan, so a function that has been
+silently invisible all session joins the wrap the next time either runs.
+
+```lua
+local lazy = require("runtime-analysis.telemetry.lazy")
+lazy.candidates()
+-- {
+--   { repo = "StefanBartl/markdown.nvim", namespace = "markdown.nvim",
+--     main = "markdown", settings = { namespace = "markdown.nvim", deep = true, profile_args = true } },
+--   ...
+-- }
+
+require("runtime-analysis.telemetry.setup_all").run({
+  full = false,            -- true forces profile_args + timing for every candidate
+  backup_dir = nil,        -- set to write a pre-reset JSON backup per namespace that has data
+  on_done = function(results) ... end,
+})
+```
+
+`lazy.candidates()` resolves every `opts.telemetry.plugins` entry (the same
+policy table `M.setup()` above received — stored, not re-derived, so a
+caller of `setup_all` never has to pass the list a second time) that lazy.nvim
+can currently point at a *loaded* root module — everything `setup_all.run()`
+needs to act on without re-deriving lazy.nvim's own plugin table itself.
+`lib_nvim` is never a candidate: it wraps through
+`lib.strategies.telemetry_wrap`, not `wrap_loaded()`, so the generic re-scan
+step here does not apply to it.
+
+For each candidate, `setup_all.run()`: flushes a live instance if one
+exists (so a backup reflects calls not yet on disk), backs it up to
+`backup_dir` when given and there is anything to back up, `reset()`s it,
+re-wraps (`wrap_loaded()` if `settings.deep` or `run_opts.full`, else the
+façade-only `wrap()` — same rule `auto()` itself uses), then `start()`s it
+with either the plugin's own configured `profile_args`/`timing`
+(`run_opts.full = false`) or both forced on (`run_opts.full = true`).
+
+`:RATelemetrySetupAll`/`:RATelemetrySetupAllFull` (`docs/COMMANDS.md`) are
+the UI over this: one `vim.ui.input()` prompt for the whole run — never one
+per plugin — asks where to back up, and only appears when at least one
+candidate actually has data to lose.
+
 ### Lifecycle
 
 ```lua
@@ -1163,6 +1212,13 @@ automatically. Deliberately last: strictly more powerful and strictly more
 ways to surprise, notably around `package.loaded` identity. Use explicit
 `wrap()` calls per module.
 
+**Manual mitigation, not the same feature:** `:RATelemetrySetupAll`/`Full`
+re-runs `wrap_loaded()` on demand (`telemetry.setup_all`, above) — it picks
+up whatever is loaded *at the moment it runs*, once, not automatically as
+`require` happens. Good enough for "I just used a feature of this plugin
+for the first time this session, now go make sure its module is wrapped";
+not a substitute for genuinely automatic tree-wide catching.
+
 ## Files
 
 | File | Role |
@@ -1181,4 +1237,6 @@ ways to surprise, notably around `package.loaded` identity. Use explicit
 | `config.lua` | module-level defaults (`report_style`) via `telemetry.setup()` |
 | `reminder.lua` | the time/volume lifecycle trigger |
 | `toggle.lua` | persistent per-namespace enable/disable, independent of an instance's own data |
-| `command.lua` | `:RATelemetry` (opt-in `setup()`) |
+| `lazy.lua` | the lazy.nvim adapter: catch-up scan + `User LazyLoad` autocmd, plus `configured()`/`candidates()` for `setup_all.lua` |
+| `setup_all.lua` | `:RATelemetrySetupAll`/`Full`'s mechanism: backup + reset + re-wrap + restart across every configured, loaded plugin |
+| `command.lua` | `:RATelemetry`, `:RATelemetryStartAll`/`StopAll`/`ResetAll`/`SetupAll`/`SetupAllFull` (opt-in `setup()`) |

@@ -604,6 +604,53 @@ HTML dashboard (§4.4,
 
 Subcommand table: [`docs/BINDINGS.md`](BINDINGS.md#ratelemetry-subcommands).
 
+### Standalone `*All` aliases
+
+`:RATelemetryStartAll`/`StopAll`/`ResetAll` are exactly `:RATelemetry
+start`/`stop`/`reset` with no namespace (already "every live instance") —
+they exist only because that bare form is reached for often enough to earn
+a command name of its own.
+
+`:RATelemetrySetupAll` / `:RATelemetrySetupAllFull` are not aliases of a
+`:RATelemetry` subcommand — they act on `opts.telemetry.plugins`, the same
+per-plugin policy table `require("runtime-analysis").setup({telemetry =
+...})` already threads through `telemetry.lazy.setup()` to auto-wrap each
+plugin as it loads. For every one of those plugins that is loaded right
+now:
+
+1. If it has anything on disk already, back it up. One prompt for the
+   whole run (a directory, created if it does not exist yet) — not one per
+   plugin — appears only when at least one candidate actually has data;
+   declining aborts the entire run rather than resetting some plugins'
+   data without a backup.
+2. `reset()` — drop the aggregate, in memory and on disk.
+3. **Re-wrap.** Even a plugin already fully wrapped this session gets
+   `wrap_loaded()`/`wrap()` called again — a no-op for anything already
+   registered, but it is also what picks up a submodule the plugin required
+   *after* its first wrap snapshot (the catch-up scan at startup, or its own
+   `User LazyLoad` moment). A submodule loaded that way stays permanently
+   unwrapped otherwise: zero calls, no argument data, not because
+   `profile_args` was ever off but because nothing ever hooked that
+   function. **This is the fix if some functions never show argument data
+   while others from the same plugin do** — rerun `:RATelemetrySetupAll`
+   (or `Full`) after using the feature whose module loaded late, and the
+   newly-loaded functions join the wrap.
+4. `start()` — `:RATelemetrySetupAll` uses each plugin's own already
+   -configured `profile_args`/`timing` (for this config, `profile_args =
+   true` by default — see `lua/config/telemetry.lua` in the personal Neovim
+   config, not this repository); `:RATelemetrySetupAllFull` forces both on
+   for every plugin regardless of its individual policy, the `setup_all`
+   equivalent of `:DocMap full`'s LuaLS enrichment — more expensive,
+   invoked on request rather than left on by default.
+
+Only plugins currently *loaded* are candidates — nothing here can wrap a
+module that has not `require`d yet; a not-yet-loaded plugin is still picked
+up the normal way (`telemetry.lazy`'s own `User LazyLoad` autocmd) once it
+does load. `lib.nvim`'s own telemetry aggregate (`opts.telemetry.lib_nvim`)
+is deliberately out of scope — it wraps through
+`lib.strategies.telemetry_wrap`, a different mechanism than the
+`wrap_loaded()` re-scan every other candidate here goes through.
+
 **Only a genuinely empty or recognized argument acts.** An unknown
 subcommand reports what it expected rather than falling through to a
 default — the same rule documentation.nvim's `:DocMap` follows for the

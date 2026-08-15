@@ -37,6 +37,14 @@
 
 local M = {}
 
+---The `opts` handed to the most recent `M.setup()` call -- kept around so
+---`M.candidates()` (in turn, `:RATelemetrySetupAll`/`:RATelemetrySetupAllFull`,
+---telemetry/setup_all.lua) can reuse the exact same plugin policy instead of
+---a caller having to pass the list a second time. `nil` until `M.setup()`
+---has actually run at least once this session.
+---@type RA.Telemetry.LazyOpts?
+local configured
+
 ---@internal
 ---@param namespace string
 ---@param main string
@@ -71,6 +79,8 @@ end
 
 ---@param opts RA.Telemetry.LazyOpts
 function M.setup(opts)
+  configured = opts
+
   local ok_config, lazy_config = pcall(require, "lazy.core.config")
   if not ok_config then
     return
@@ -134,6 +144,72 @@ function M.setup(opts)
       end
     end,
   })
+end
+
+---The `opts` the most recent `M.setup()` call received, unchanged --
+---`nil` before `M.setup()` has run this session.
+---@return RA.Telemetry.LazyOpts?
+function M.configured()
+  return configured
+end
+
+---Every configured plugin (`M.setup()`'s own `opts.plugins`, keyed by repo)
+---that lazy.nvim can currently resolve to a loaded root module -- the list
+---`:RATelemetrySetupAll`/`:RATelemetrySetupAllFull` (telemetry/setup_all.lua)
+---acts on.
+---
+---Deliberately independent of `try_wrap`'s own `started` bookkeeping above:
+---that set exists so the catch-up scan and the `LazyLoad` autocmd never
+---double-wrap the same plugin, which is irrelevant here -- a caller of this
+---function always intends to act again (reset, re-wrap, restart), on
+---purpose, regardless of whether the automatic mechanism already wrapped
+---this plugin once this session.
+---
+---Empty when lazy.nvim is not the plugin manager, `M.setup()` has not run
+---yet, or `opts.plugins` was empty -- the same soft-dependency posture
+---`M.setup()` itself already has.
+---@return RA.Telemetry.SetupAllCandidate[]
+function M.candidates()
+  if not configured or not configured.plugins or next(configured.plugins) == nil then
+    return {}
+  end
+
+  local ok_config, lazy_config = pcall(require, "lazy.core.config")
+  if not ok_config then
+    return {}
+  end
+  local ok_loader, lazy_loader = pcall(require, "lazy.core.loader")
+  if not ok_loader then
+    return {}
+  end
+
+  local telemetry = require("runtime-analysis.telemetry")
+
+  ---@type RA.Telemetry.SetupAllCandidate[]
+  local out = {}
+  for plugin_name, plugin in pairs(lazy_config.plugins) do
+    local repo = type(plugin[1]) == "string" and plugin[1] or nil
+    local settings = repo and configured.plugins[repo]
+    if settings then
+      local main = lazy_loader.get_main(plugin)
+      if main and telemetry.module_loaded(main) then
+        out[#out + 1] = {
+          repo = repo,
+          namespace = settings.namespace,
+          main = main,
+          settings = settings,
+        }
+      end
+    end
+  end
+
+  -- Stable order (by namespace) so a progress callback and a closing report
+  -- read the same way run to run, rather than following `pairs()`'s own
+  -- unspecified iteration order.
+  table.sort(out, function(a, b)
+    return a.namespace < b.namespace
+  end)
+  return out
 end
 
 return M
