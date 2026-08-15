@@ -98,3 +98,60 @@ automatically, the same key shape documentation.nvim's own IR uses.
   documentation.nvim" section, documentation.nvim's own
   [`docs/PIPELINE.md`](https://github.com/StefanBartl/documentation.nvim/blob/main/docs/PIPELINE.md)
   "Telemetry" section for the consumer side of the same join.
+
+## Instrumenting your own Neovim config, not just plugins
+
+`opts.telemetry.plugins` can only ever describe what a plugin manager
+resolves. Your own config is not one of those things — no repo, no spec,
+and usually several unrelated root prefixes rather than one `main` — yet it
+is often the most interesting Lua tree in the session, and the only one
+whose dead code nobody else will ever report on.
+
+`opts.telemetry.extra` is that target, stated outright by the caller:
+
+```lua
+require("runtime-analysis").setup({
+  telemetry = {
+    extra = {
+      {
+        namespace = "nvim-config",
+        mains = { "config", "bindings", "plugins", "autocmds", "lsp" },
+        profile_args = true,
+      },
+    },
+  },
+})
+```
+
+It is then an ordinary namespace everywhere: `:RATelemetry nvim-config`,
+`coverage`, `compare`, `snapshot`, `export`, the HTML dashboard, and
+`:RATelemetry setup|full nvim-config`.
+
+**Wrapped at VimEnter by default, and that default is the point.** When
+`runtime-analysis.setup()` runs it is normally still *inside*
+`lazy.setup()` — before the config's later phases (options, autocmds, LSP,
+keymaps) have required anything. Since `wrap_loaded()` only ever sees what
+is already in `package.loaded`, wrapping at that moment would produce a
+nearly empty namespace: the failure this default exists to prevent, not a
+theoretical one. `wrap_at = "setup"` (already-loaded targets) and
+`"manual"` (command-only) override it per target.
+
+**One instance per target, not per prefix.** Several `mains` share one
+namespace and therefore one cache file, so counts add up instead of two
+instances clobbering each other — the collision `telemetry.new()` warns
+about.
+
+**No lazy.nvim required.** `extra` resolves purely through `package.loaded`;
+the lazy.nvim adapter covers `plugins` only. A namespace is created only
+once at least one of its `mains` is actually loaded, so a target whose
+prefixes are all absent leaves nothing behind rather than an empty
+namespace.
+
+`deep` defaults to **true** here, unlike a plugin's façade-first default: a
+config prefix has no façade worth wrapping instead — `require("bindings")`
+is not where a config's functions live.
+
+**Selecting it later:** a config has no repo, so `:RATelemetry setup <ns>` /
+`:RATelemetry full <ns>` (which take a namespace) are how it is named for a
+re-wrap. That is also the fix when a module first required *after* the wrap
+— a keymap handler pulled in on first press — shows zero calls.
