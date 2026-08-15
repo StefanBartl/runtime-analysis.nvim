@@ -212,3 +212,55 @@ per-call cost at full resolution — `calls` itself stays exact regardless,
 only the sampled modes (timing, argument/error fingerprints) estimate from
 the subset. Reach for `sample` before turning `profile_args` off entirely
 on a function that turns out to be hot.
+
+## Instrumenting your own config, and why it needs one extra decision
+
+Everything above points telemetry at *plugins*. Your own Neovim config is
+usually the tree you change most and understand least — which of those 40
+keymap helpers do you actually press, which of those modules still runs at
+all — and it is the one tree no plugin manager can resolve for you.
+
+Declare it directly, once:
+
+```lua
+telemetry = {
+  extra = {
+    { namespace = "nvim-config",
+      mains = { "config", "bindings", "plugins", "autocmds", "lsp" },
+      profile_args = true },
+  },
+}
+```
+
+`mains` are your own top-level `lua/` directory names, so this list is
+yours and nobody else's. Everything after that is the normal workflow:
+leave it on for a week, then `:RATelemetry nvim-config` and
+`:RATelemetry coverage`.
+
+**The one thing worth understanding before trusting the numbers** is *when*
+the wrap happens. `runtime-analysis.setup()` normally runs inside
+`lazy.setup()`, at which point almost nothing of your config is in
+`package.loaded` yet — and `wrap_loaded()` only ever sees what is already
+there. So `extra` targets are wrapped at **VimEnter** by default, after
+your config has finished loading. If you have moved instrumentation to a
+deliberately late phase of your own, `wrap_at = "manual"` plus an explicit
+`:RATelemetry setup nvim-config` from that phase is the honest version;
+`wrap_at = "setup"` is right only for something already fully loaded.
+
+**A config's blind spot is bigger than a plugin's**, for a structural
+reason: configs lazy-require far more (a `bindings/mappings/*` submodule
+pulled in on first keypress). Anything first required after the wrap stays
+unwrapped and reads as zero calls — indistinguishable at a glance from
+"never used", which is exactly the wrong conclusion. So for a config, make
+the re-wrap a habit rather than an exception:
+
+```
+:RATelemetry setup nvim-config     " re-wrap, keep this target's own policy
+:RATelemetry full nvim-config      " same, forcing arguments + timing on
+```
+
+Use the features you suspect load late at least once in the session first,
+*then* re-wrap. Both commands back up existing data (one prompt) and reset
+before re-wrapping, so treat them as "start a fresh measurement window",
+not as a free refresh — `:RATelemetry snapshot nvim-config` first if the
+old window is worth keeping.
