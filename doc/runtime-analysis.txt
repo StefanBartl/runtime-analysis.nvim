@@ -505,6 +505,18 @@ the rest of this plugin. Command surface: >
 
   :RATelemetryStartAll         standalone alias for :RATelemetry start (bare)
   :RATelemetryStopAll          standalone alias for :RATelemetry stop (bare)
+  :RATelemetryResetAll         standalone alias for :RATelemetry reset (bare)
+
+  :RATelemetrySetupAll         for every plugin opts.telemetry.plugins
+                               configures that is loaded right now: back up
+                               existing data (one prompt for the whole run),
+                               reset, re-wrap (picks up any submodule loaded
+                               after the first wrap -- the fix if some
+                               functions never show argument data), start
+                               with that plugin's own profile_args/timing
+  :RATelemetrySetupAllFull     same as SetupAll, forcing profile_args and
+                               timing on for every plugin regardless of its
+                               own configured policy
 <
 Startup attribution (|:RATelemetry| `startup`) is opt-in, from this
 plugin's own lazy.nvim spec — `init` runs for every plugin before lazy

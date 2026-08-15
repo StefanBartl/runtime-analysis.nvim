@@ -145,6 +145,49 @@ cause for the whole session at once, rather than one `stop <ns>` per
 plugin. `start` again afterward re-attaches every wrapper — cheap, since
 nothing was ever recompiled, only swapped back out.
 
+## "This function never shows argument data" — usually a late `require`, not a setting
+
+`profile_args` is almost never the actual problem once it is already on for
+a plugin (this config's own `lua/config/telemetry.lua` defaults it to `true`
+for every personal plugin) — a function that still shows no `args` bucket
+was very likely never wrapped in the first place, not profiled-without-args.
+`wrap_loaded()` walks `package.loaded` exactly once, at catch-up-scan or
+`User LazyLoad` time; a submodule the plugin `require`s *afterward* — a
+command handler pulled in on first use, a UI module loaded on first
+keypress — is invisible from that point on, permanently, until something
+re-scans. Zero calls, no argument fingerprint, and nothing about it looks
+like an error.
+
+```
+:RATelemetrySetupAll
+```
+
+re-wraps every configured, currently-loaded plugin (backing up and
+resetting its data first — see below), which is exactly the fix: use the
+feature whose module loaded late at least once, then rerun
+`:RATelemetrySetupAll`(`Full`) and the newly-loaded functions join the wrap.
+
+## Bulk backup + reset + restart, across every plugin at once
+
+```
+:RATelemetrySetupAll
+:RATelemetrySetupAllFull
+```
+
+For every plugin `opts.telemetry.plugins` configures that is loaded right
+now: if it already has data, back it up (one `vim.ui.input()` prompt for a
+directory, for the whole run — not one per plugin; declining leaves
+everything untouched rather than resetting some plugins without a backup),
+`reset()`, re-wrap (see above), and restart. Plain `SetupAll` uses each
+plugin's own configured `profile_args`/`timing`; `SetupAllFull` forces both
+on for everyone regardless of individual policy — the bulk equivalent of
+`:DocMap full`'s LuaLS enrichment one repo over: more expensive, invoked
+on request, not left on by default. Reach for this at the start of a
+deliberate measurement period ("I want a clean week of full-detail data
+across everything"), not as a routine habit — `:RATelemetry snapshot`
+(above) is the lighter-weight tool for "capture a point in time without
+touching what's currently running."
+
 ## Two live instances, one namespace — a warning, not a crash
 
 `telemetry.new({ namespace = "x" })` twice in the same process (a plugin

@@ -1401,5 +1401,25 @@ function M.disabled()
   return toggle.disabled_list()
 end
 
+---Is any of `main` itself or `main.*` loaded yet? The same check `M.auto()`
+---already makes before standing up an instance, exposed for a caller (
+---`telemetry.lazy`'s own `M.candidates()`, `:RATelemetrySetupAll`'s source
+---list) that needs to know *whether* wrapping `main` would find anything to
+---wrap without actually calling `M.auto()` and creating an instance to find
+---out.
+---@param main string
+---@return boolean
+M.module_loaded = module_tree_loaded
+
+---The `module_filter` `M.auto()` applies by default: excludes `@types`
+---scaffolding and this module's own telemetry internals (wrapping
+---`fingerprint.of` recurses into itself without bound — see the function's
+---own doc-comment). Exported so any other caller building a `wrap_loaded()`
+---call by hand (`telemetry.setup_all`'s own re-wrap step, chiefly) gets the
+---identical default rather than a second copy that could drift from it.
+---@param name string
+---@return boolean
+M.default_module_filter = default_module_filter
+
 ---@type RA.Telemetry
 return M

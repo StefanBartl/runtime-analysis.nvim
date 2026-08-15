@@ -35,12 +35,33 @@
 ---                                different machines (see `snapshot`'s own
 ---                                `device` tag)
 ---
---- Two standalone aliases, registered alongside `:RATelemetry` by the same
---- `setup()` call — `:RATelemetry start`/`stop` (bare) already do exactly
---- this, these exist only because "every instance" is reached for often
---- enough to earn its own command name rather than a remembered subcommand:
+--- Standalone aliases, registered alongside `:RATelemetry` by the same
+--- `setup()` call — `:RATelemetry start`/`stop`/`reset` (bare) already do
+--- exactly this, these exist only because "every instance" is reached for
+--- often enough to earn its own command name rather than a remembered
+--- subcommand:
 ---   :RATelemetryStartAll         same as `:RATelemetry start` (bare)
 ---   :RATelemetryStopAll          same as `:RATelemetry stop` (bare)
+---   :RATelemetryResetAll         same as `:RATelemetry reset` (bare)
+---
+--- Two more, NOT aliases of a `:RATelemetry` subcommand — see
+--- `runtime-analysis.telemetry.setup_all`'s own module doc-comment for the
+--- full mechanism. Both act on every plugin `opts.telemetry.plugins`
+--- configures (the same list `telemetry.lazy.setup()` already auto-wraps as
+--- each one loads) that is currently loaded:
+---   :RATelemetrySetupAll         back up (prompted once, only if anything
+---                                would be overwritten), reset, re-wrap
+---                                (picks up any submodule loaded after the
+---                                first wrap — see setup_all.lua for why
+---                                this is also the fix for "some functions'
+---                                arguments never show up"), and (re)start
+---                                every configured plugin with ITS OWN
+---                                already-configured profile_args/timing
+---   :RATelemetrySetupAllFull     same, but forces profile_args + timing on
+---                                for every plugin regardless of its own
+---                                configured policy — the `setup_all`
+---                                equivalent of `:DocMap full`'s LuaLS
+---                                enrichment: more expensive, on request only
 
 local usercmd = require("lib.nvim.usercmd")
 local notify = require("lib.nvim.notify").create("[runtime-analysis.telemetry]")
@@ -339,6 +360,90 @@ local function open_report(namespace)
   )
 end
 
+---`:RATelemetrySetupAll` / `:RATelemetrySetupAllFull` — the UI half of
+---`runtime-analysis.telemetry.setup_all`; see that module's own doc-comment
+---for what "setup" actually does to each candidate.
+---
+---**One prompt for the whole run, not one per plugin.** Backing up N
+---plugins' worth of existing data behind N separate `vim.ui.input()`
+---dialogs is the kind of tedium that trains a reader to mash Enter without
+---reading any of them — the same failure mode a repeated confirmation
+---dialog always has. So every candidate with existing data shares one
+---directory, chosen once, before anything is touched; a candidate with
+---nothing on disk needs no backup and is never why the prompt appeared.
+---Declining (`<Esc>`/empty input) aborts the entire run — existing data is
+---either backed up everywhere it exists, or nothing is reset anywhere,
+---never a partial run silently dropping some of it.
+---@internal
+---@param full boolean
+local function do_setup_all(full)
+  local lazy_adapter = require("runtime-analysis.telemetry.lazy")
+  local candidates = lazy_adapter.candidates()
+  if #candidates == 0 then
+    notify.warn(
+      "no configured plugin is loaded yet -- nothing to set up "
+        .. "(see opts.telemetry.plugins passed to runtime-analysis.setup())"
+    )
+    return
+  end
+
+  local mod = telemetry()
+  local any_existing = false
+  for _, c in ipairs(candidates) do
+    if mod.load(c.namespace) then
+      any_existing = true
+      break
+    end
+  end
+
+  ---@param backup_dir string|nil
+  local function proceed(backup_dir)
+    local results = require("runtime-analysis.telemetry.setup_all").run({
+      full = full,
+      backup_dir = backup_dir,
+    })
+
+    local backed_up = 0
+    for _, r in ipairs(results) do
+      if r.backed_up then
+        backed_up = backed_up + 1
+      end
+    end
+
+    notify.info(
+      ("set up %d plugin(s) (%s)%s"):format(
+        #results,
+        full and "full: deep + arguments + timing" or "each plugin's own configured policy",
+        backed_up > 0 and (", backed up %d with existing data to %s"):format(backed_up, backup_dir)
+          or ""
+      )
+    )
+  end
+
+  if not any_existing then
+    proceed(nil)
+    return
+  end
+
+  local default_dir = vim.fn.stdpath("cache") .. "/runtime-analysis.nvim/setup-all-backups"
+  vim.ui.input({
+    prompt = "runtime-analysis.telemetry: back up existing data to (created if missing): ",
+    default = default_dir,
+  }, function(input)
+    if input == nil or vim.trim(input) == "" then
+      notify.warn("setup aborted -- existing telemetry data left untouched")
+      return
+    end
+    local dir = vim.trim(input)
+    local ok_mkdir = pcall(vim.fn.mkdir, dir, "p")
+    if not ok_mkdir or vim.fn.isdirectory(dir) == 0 then
+      notify.error("could not create backup directory: " .. dir)
+      return
+    end
+    proceed(dir)
+  end)
+end
+
 ---Register `:RATelemetry`. Idempotent (`usercmd.create` defaults to `force`).
 function M.setup()
   usercmd.create("RATelemetry", function(args)
@@ -619,6 +724,30 @@ function M.setup()
     end,
     { desc = "runtime-analysis.telemetry: stop every live instance (same as :RATelemetry stop)" }
   )
+
+  usercmd.create(
+    "RATelemetryResetAll",
+    function()
+      for _, inst in ipairs(telemetry().instances()) do
+        inst.reset()
+      end
+      notify.info("collected data cleared for every live instance")
+    end,
+    { desc = "runtime-analysis.telemetry: reset every live instance (same as :RATelemetry reset)" }
+  )
+
+  usercmd.create("RATelemetrySetupAll", function()
+    do_setup_all(false)
+  end, {
+    desc = "runtime-analysis.telemetry: backup+reset+re-wrap+start every configured, loaded plugin "
+      .. "(own profile_args/timing policy)",
+  })
+
+  usercmd.create("RATelemetrySetupAllFull", function()
+    do_setup_all(true)
+  end, {
+    desc = "runtime-analysis.telemetry: same as :RATelemetrySetupAll, forcing profile_args + timing on",
+  })
 end
 
 M.SUBCOMMANDS = SUBCOMMANDS

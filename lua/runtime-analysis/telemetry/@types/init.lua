@@ -258,6 +258,8 @@
 ---@field list_snapshots fun(namespace: string, opts?: Lib.Cache.Opts): RA.Telemetry.SnapshotInfo[]
 ---@field load_snapshot fun(namespace: string, name: string, opts?: Lib.Cache.Opts): RA.Telemetry.Data|nil
 ---@field compare_snapshots fun(namespace: string, name_a: string, name_b: string, opts?: Lib.Cache.Opts): RA.Telemetry.SnapshotComparison|nil
+---@field module_loaded fun(main: string): boolean
+---@field default_module_filter fun(name: string): boolean
 
 ---@class RA.Telemetry.LazyPluginOpts
 ---@field namespace string
@@ -270,5 +272,25 @@
 ---@class RA.Telemetry.LazyOpts
 ---@field plugins table<string, RA.Telemetry.LazyPluginOpts>       # keyed by repo, e.g. "StefanBartl/markdown.nvim"
 ---@field lib_nvim? { profile_args?: boolean, timing?: boolean, persist?: boolean, dir?: string }|false
+
+-- ---------------------------------------------------------------------------
+-- :RATelemetrySetupAll / :RATelemetrySetupAllFull (telemetry/setup_all.lua)
+-- ---------------------------------------------------------------------------
+
+---One configured plugin `telemetry.lazy.candidates()` resolved to something
+---currently loaded and therefore actually wrappable right now -- everything
+---`setup_all.run()` needs to act on it without re-deriving lazy.nvim's own
+---plugin table a second time.
+---@class RA.Telemetry.SetupAllCandidate
+---@field repo string                          # e.g. "StefanBartl/markdown.nvim"
+---@field namespace string                     # the telemetry namespace -- same as RATelemetry.LazyPluginOpts.namespace
+---@field main string                          # root Lua module, resolved via lazy.core.loader.get_main
+---@field settings RA.Telemetry.LazyPluginOpts # this plugin's own configured policy, from RA.Telemetry.LazyOpts.plugins
+
+---One candidate's outcome, in the order `setup_all.run()` processed it.
+---@class RA.Telemetry.SetupAllResult
+---@field namespace string
+---@field had_data boolean   # true when this namespace had at least one function with recorded stats (not merely a cache file on disk -- a freshly flushed, never-called instance still writes one) before this run reset it
+---@field backed_up string?  # the file it was written to, when `run_opts.backup_dir` was set and had_data is true
 
 return {}
