@@ -297,6 +297,61 @@ lazy-loading concept at all. Detecting which manager is active is easy;
 writing and maintaining an adapter for ones nobody here uses is not worth
 the surface. Use `auto()` directly if you need this on something else.
 
+### `extra` — your own config, or anything else a manager cannot resolve
+
+`plugins` above can only describe what lazy.nvim resolves. Your own Neovim
+config is not one of those things: no repo, no spec, and usually several
+unrelated root prefixes rather than one `main`. It is also, often, the most
+interesting Lua tree in the session — and the only one whose dead code
+nobody else will ever report on. `extra` is that target, stated outright:
+
+```lua
+require("runtime-analysis").setup({
+  telemetry = {
+    extra = {
+      {
+        namespace = "nvim-config",
+        mains = { "config", "bindings", "plugins", "autocmds", "lsp" },
+        profile_args = true,
+      },
+    },
+  },
+})
+```
+
+`nvim-config` is then an ordinary namespace everywhere: `:RATelemetry
+nvim-config`, `coverage`, `compare`, `snapshot`, `export`, the HTML
+dashboard, and `:RATelemetry setup|full nvim-config`.
+
+**Not lazy.nvim-dependent.** `extra` resolves through `package.loaded`
+alone; the lazy.nvim guard covers `plugins` only. It works under any plugin
+manager, or none.
+
+**Wrapped at VimEnter by default, and that default is the whole point.**
+When `runtime-analysis.setup()` runs it is normally still *inside*
+`lazy.setup()` — before your config's later phases (options, autocmds, LSP,
+keymaps) have required anything. Since `wrap_loaded()` only ever sees what
+is already in `package.loaded`, wrapping then would yield a nearly empty
+namespace. Override per target with `wrap_at`:
+
+| `wrap_at`    | when                                                       |
+| ------------ | ---------------------------------------------------------- |
+| `"VimEnter"` | default — VimEnter + `vim.schedule`, once the UI is up     |
+| `"setup"`    | immediately; only right for an already-loaded target       |
+| `"manual"`   | never automatically; `:RATelemetry setup\|full <ns>` only  |
+
+One instance per target, not per prefix — several `mains` share one
+namespace and therefore one cache file, so counts add up instead of
+colliding.
+
+`deep` defaults to **true** here (a config prefix has no façade worth
+wrapping instead, unlike a plugin's `init.lua`). Everything else matches
+`plugins`: `profile_args`, `timing`, `persist`, `dir`.
+
+A namespace is only created once at least one of its `mains` is actually
+loaded — a target whose prefixes are all absent leaves nothing behind
+rather than an empty namespace.
+
 ### `telemetry.setup_all` — bulk backup + reset + re-wrap + restart
 
 `M.setup()`'s catch-up scan wraps a plugin's loaded modules exactly once —
@@ -324,22 +379,33 @@ require("runtime-analysis.telemetry.setup_all").run({
 })
 ```
 
-`lazy.candidates()` resolves every `opts.telemetry.plugins` entry (the same
-policy table `M.setup()` above received — stored, not re-derived, so a
-caller of `setup_all` never has to pass the list a second time) that lazy.nvim
-can currently point at a *loaded* root module — everything `setup_all.run()`
-needs to act on without re-deriving lazy.nvim's own plugin table itself.
-`lib_nvim` is never a candidate: it wraps through
+`lazy.candidates()` resolves every `opts.telemetry.plugins` entry that
+lazy.nvim can currently point at a *loaded* root module, plus every
+`opts.telemetry.extra` target with at least one loaded prefix (the same
+policy tables `M.setup()` above received — stored, not re-derived, so a
+caller of `setup_all` never has to pass the list a second time). That is
+everything `setup_all.run()` needs to act on without re-deriving lazy.nvim's
+own plugin table itself. `lib_nvim` is never a candidate: it wraps through
 `lib.strategies.telemetry_wrap`, not `wrap_loaded()`, so the generic re-scan
 step here does not apply to it.
+
+A candidate carries `main` (one root module) and, when it has more than one,
+`mains` — read it as `mains or { main }`. `main` deliberately stayed a
+plain `string` rather than becoming `string|string[]`, so every existing
+reader of the published type keeps working unchanged.
 
 For each candidate, `setup_all.run()`: flushes a live instance if one
 exists (so a backup reflects calls not yet on disk), backs it up to
 `backup_dir` when given and there is anything to back up, `reset()`s it,
-re-wraps (`wrap_loaded()` if `settings.deep` or `run_opts.full`, else the
-façade-only `wrap()` — same rule `auto()` itself uses), then `start()`s it
-with either the plugin's own configured `profile_args`/`timing`
-(`run_opts.full = false`) or both forced on (`run_opts.full = true`).
+re-wraps every one of its roots (`wrap_loaded()` if `settings.deep` or
+`run_opts.full`, else the façade-only `wrap()` — same rule `auto()` itself
+uses), then `start()`s it with either the target's own configured
+`profile_args`/`timing` (`run_opts.full = false`) or both forced on
+(`run_opts.full = true`).
+
+`run_opts.namespace` narrows the whole run to a single candidate — what
+`:RATelemetry setup|full <ns>` passes, and the only way to select an
+`extra` target, which has no repo to name it by.
 
 `:RATelemetrySetupAll`/`:RATelemetrySetupAllFull` (`docs/COMMANDS.md`) are
 the UI over this: one `vim.ui.input()` prompt for the whole run — never one

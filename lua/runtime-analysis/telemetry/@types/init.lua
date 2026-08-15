@@ -269,9 +269,60 @@
 ---@field persist? boolean                              # forwarded to auto()/new() (default true)
 ---@field dir? string                                   # forwarded to auto()/new() -- cache directory override
 
+---A target that is NOT a plugin -- the reader's own Neovim config being the
+---motivating case, and the reason this is not simply another `plugins` entry:
+---nothing about a config is resolvable through a plugin manager. It has no
+---repo, no spec, and no single root module (a config's Lua tree is typically
+---several unrelated top-level prefixes -- `config`, `bindings`, `lsp`, ...),
+---so the caller states its prefixes outright instead of anything here
+---deriving them.
+---
+---   extra = {
+---     {
+---       namespace = "nvim-config",
+---       mains = { "config", "bindings", "lsp", "autocmds" },
+---       profile_args = true,
+---     },
+---   }
+---
+---WHY `mains` IS A LIST AND `LazyPluginOpts` HAS NO EQUIVALENT
+---A plugin is one root module by construction (that is what `lazy.core.
+---loader.get_main` resolves). A config is not, and forcing one entry per
+---prefix would split a single namespace across several candidates -- each
+---resetting the others' data on `setup`, since they would share a cache file.
+---
+---TIMING (the one thing that actually makes this hard)
+---A config's own modules are mostly NOT loaded while `runtime-analysis.
+---setup()` runs -- that call happens inside `lazy.setup()`, before the
+---config's later phases (options, autocmds, lsp, keymaps) have required
+---anything. `wrap_loaded()` only ever sees what is in `package.loaded` at the
+---moment it runs, so wrapping here would catch almost nothing. Hence
+---`wrap_at`: instrumentation is deferred to a point where the config has
+---actually finished loading.
+---@class RA.Telemetry.ExtraTarget
+---@field namespace string                              # e.g. "nvim-config"
+---@field mains string[]                                # root Lua prefixes, e.g. { "config", "bindings" }
+---@field deep? boolean                                 # wrap the whole loaded subtree (default true -- a config has no façade to wrap instead)
+---@field profile_args? boolean
+---@field timing? boolean
+---@field persist? boolean                              # forwarded to new() (default true)
+---@field dir? string                                   # forwarded to new() -- cache directory override
+---@field wrap_at? RA.Telemetry.ExtraWrapAt             # when to wrap (default "VimEnter")
+
+---When an `extra` target is wrapped and started.
+---  * "VimEnter"  -- deferred to VimEnter + `vim.schedule`, i.e. once the UI
+---                   is up and a normal config has finished every startup
+---                   phase it runs. The default, and right for a config.
+---  * "setup"     -- immediately, during `runtime-analysis.setup()`. Only
+---                   correct for a target already fully loaded by then.
+---  * "manual"    -- never automatically; `:RATelemetry setup <ns>` /
+---                   `:RATelemetry full <ns>` are the only triggers.
+---@alias RA.Telemetry.ExtraWrapAt "VimEnter"|"setup"|"manual"
+
 ---@class RA.Telemetry.LazyOpts
----@field plugins table<string, RA.Telemetry.LazyPluginOpts>       # keyed by repo, e.g. "StefanBartl/markdown.nvim"
+---@field plugins? table<string, RA.Telemetry.LazyPluginOpts>       # keyed by repo, e.g. "StefanBartl/markdown.nvim"
 ---@field lib_nvim? { profile_args?: boolean, timing?: boolean, persist?: boolean, dir?: string }|false
+---@field extra? RA.Telemetry.ExtraTarget[]                         # non-plugin targets, chiefly the reader's own config
 
 -- ---------------------------------------------------------------------------
 -- :RATelemetrySetupAll / :RATelemetrySetupAllFull (telemetry/setup_all.lua)
@@ -281,11 +332,17 @@
 ---currently loaded and therefore actually wrappable right now -- everything
 ---`setup_all.run()` needs to act on it without re-deriving lazy.nvim's own
 ---plugin table a second time.
+---Also covers an `extra` (non-plugin) target -- see `repo`/`mains` below for
+---the two fields that differ, both kept backwards-compatible rather than
+---reshaped: `main` stayed `string` (never `string|string[]`) so every
+---existing reader of this type keeps working unchanged, and `mains` is the
+---additive field a multi-prefix target needs.
 ---@class RA.Telemetry.SetupAllCandidate
----@field repo string                          # e.g. "StefanBartl/markdown.nvim"
+---@field repo string?                         # e.g. "StefanBartl/markdown.nvim"; nil for an `extra` target, which has no repo
 ---@field namespace string                     # the telemetry namespace -- same as RATelemetry.LazyPluginOpts.namespace
----@field main string                          # root Lua module, resolved via lazy.core.loader.get_main
----@field settings RA.Telemetry.LazyPluginOpts # this plugin's own configured policy, from RA.Telemetry.LazyOpts.plugins
+---@field main string                          # root Lua module, resolved via lazy.core.loader.get_main; for an `extra` target, its FIRST prefix
+---@field mains string[]?                      # every root prefix, when the target has more than one (`extra` only). Readers should prefer `mains or { main }`.
+---@field settings RA.Telemetry.LazyPluginOpts|RA.Telemetry.ExtraTarget # this target's own configured policy
 
 ---One candidate's outcome, in the order `setup_all.run()` processed it.
 ---@class RA.Telemetry.SetupAllResult

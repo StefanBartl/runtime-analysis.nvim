@@ -172,11 +172,13 @@ See `docs/COMMANDS.md` for the honest limits (only mappings set after
 | `:RATelemetry snapshot <ns> [name]` | save a named, device-tagged capture of `ns`'s current aggregate |
 | `:RATelemetry snapshots <ns>` | list `ns`'s saved snapshots, newest first |
 | `:RATelemetry snapshot-compare <ns> <a> <b>` | diff two named snapshots' call counts directly (not a calendar window like `compare`) |
+| `:RATelemetry setup [ns]` | back up + reset + re-wrap + (re)start — every configured target, or just one. The only way to select an `extra` target such as your own config (`:RATelemetry setup nvim-config`). |
+| `:RATelemetry full [ns]` | same, forcing `profile_args` + `timing` on regardless of the target's own policy |
 | `:RATelemetryStartAll` | standalone alias for `:RATelemetry start` (bare) |
 | `:RATelemetryStopAll` | standalone alias for `:RATelemetry stop` (bare) |
 | `:RATelemetryResetAll` | standalone alias for `:RATelemetry reset` (bare) |
-| `:RATelemetrySetupAll` | for every plugin `opts.telemetry.plugins` configures that is currently loaded: back up existing data (prompted once for a directory, only if anything exists), reset, re-wrap (picks up any submodule loaded after the first wrap), start with that plugin's own configured `profile_args`/`timing`. See `docs/COMMANDS.md`. |
-| `:RATelemetrySetupAllFull` | same as `:RATelemetrySetupAll`, forcing `profile_args`/`timing` on for every plugin regardless of its own configured policy |
+| `:RATelemetrySetupAll` | bare form of `:RATelemetry setup`: for every target `opts.telemetry.plugins`/`opts.telemetry.extra` configures that is currently loaded — back up existing data (prompted once for a directory, only if anything exists), reset, re-wrap (picks up any submodule loaded after the first wrap), start with that target's own configured `profile_args`/`timing`. See `docs/COMMANDS.md`. |
+| `:RATelemetrySetupAllFull` | bare form of `:RATelemetry full` — same as `:RATelemetrySetupAll`, forcing `profile_args`/`timing` on for every target regardless of its own configured policy |
 
 `<Tab>` after `start `/`stop `/`reset `/`open `/`compare ` completes
 namespaces only; `compare`'s own third token (a day count) is not

@@ -34,6 +34,18 @@
 ---                                deliberate captures possibly taken on
 ---                                different machines (see `snapshot`'s own
 ---                                `device` tag)
+---   :RATelemetry setup [ns]      backup+reset+re-wrap+(re)start -- every
+---                                configured target, or just one. Same
+---                                operation as :RATelemetrySetupAll, with a
+---                                namespace to narrow it
+---   :RATelemetry full [ns]       same, forcing arguments + timing on
+---
+--- `setup`/`full` are the forms that reach a target no plugin manager can
+--- resolve -- above all the reader's OWN Neovim config, declared as
+--- `opts.telemetry.extra` (see `RA.Telemetry.ExtraTarget`). A config has no
+--- repo to select it by, so `:RATelemetry full nvim-config` is how it is
+--- named; everything else here (report, compare, coverage, snapshot,
+--- export, the dashboard) already treats it as an ordinary namespace.
 ---
 --- Standalone aliases, registered alongside `:RATelemetry` by the same
 --- `setup()` call — `:RATelemetry start`/`stop`/`reset` (bare) already do
@@ -44,11 +56,11 @@
 ---   :RATelemetryStopAll          same as `:RATelemetry stop` (bare)
 ---   :RATelemetryResetAll         same as `:RATelemetry reset` (bare)
 ---
---- Two more, NOT aliases of a `:RATelemetry` subcommand — see
---- `runtime-analysis.telemetry.setup_all`'s own module doc-comment for the
---- full mechanism. Both act on every plugin `opts.telemetry.plugins`
---- configures (the same list `telemetry.lazy.setup()` already auto-wraps as
---- each one loads) that is currently loaded:
+--- Two more, the bare-form aliases of `:RATelemetry setup`/`full` above —
+--- see `runtime-analysis.telemetry.setup_all`'s own module doc-comment for
+--- the full mechanism. Both act on every target `opts.telemetry.plugins`
+--- and `opts.telemetry.extra` configure (the same list
+--- `telemetry.lazy.setup()` already auto-wraps) that is currently loaded:
 ---   :RATelemetrySetupAll         back up (prompted once, only if anything
 ---                                would be overwritten), reset, re-wrap
 ---                                (picks up any submodule loaded after the
@@ -91,6 +103,8 @@ local SUBCOMMANDS = {
   "snapshot",
   "snapshots",
   "snapshot-compare",
+  "setup",
+  "full",
 }
 
 ---@internal
@@ -376,13 +390,29 @@ end
 ---never a partial run silently dropping some of it.
 ---@internal
 ---@param full boolean
-local function do_setup_all(full)
+---@param namespace string|nil When set, only that candidate is acted on
+---(`:RATelemetry setup|full <ns>`); the whole prompt/backup/report flow is
+---otherwise identical, so both forms share this one function rather than
+---growing a second near-copy of it.
+local function do_setup_all(full, namespace)
   local lazy_adapter = require("runtime-analysis.telemetry.lazy")
   local candidates = lazy_adapter.candidates()
+  if namespace and namespace ~= "" then
+    candidates = vim.tbl_filter(function(c)
+      return c.namespace == namespace
+    end, candidates)
+    if #candidates == 0 then
+      notify.warn(
+        ("%q is not a configured, currently-loaded target -- nothing to set up "):format(namespace)
+          .. "(see opts.telemetry.plugins / opts.telemetry.extra passed to runtime-analysis.setup())"
+      )
+      return
+    end
+  end
   if #candidates == 0 then
     notify.warn(
-      "no configured plugin is loaded yet -- nothing to set up "
-        .. "(see opts.telemetry.plugins passed to runtime-analysis.setup())"
+      "no configured plugin or extra target is loaded yet -- nothing to set up "
+        .. "(see opts.telemetry.plugins / opts.telemetry.extra passed to runtime-analysis.setup())"
     )
     return
   end
@@ -390,7 +420,19 @@ local function do_setup_all(full)
   local mod = telemetry()
   local any_existing = false
   for _, c in ipairs(candidates) do
-    if mod.load(c.namespace) then
+    -- `c.settings.dir`, not `load`'s own default: a target with a custom
+    -- cache directory keeps its data THERE, and checking the default
+    -- instead would report "nothing to lose" for it -- skipping the backup
+    -- prompt before `setup_all.run()` resets exactly the data the prompt
+    -- exists to protect. Same reasoning `setup_all.run()` already applies
+    -- for its own `had_data` check.
+    --
+    -- `nil` when there is no override, NOT `{ dir = nil }`: `M.load` falls
+    -- back to this plugin's own cache root only when `opts` itself is nil,
+    -- and an empty table would instead reach `cache.disk`'s unrelated
+    -- built-in default (lib.nvim's root) -- reading the wrong directory for
+    -- every ordinary target, which is most of them.
+    if mod.load(c.namespace, c.settings.dir and { dir = c.settings.dir } or nil) then
       any_existing = true
       break
     end
@@ -401,6 +443,7 @@ local function do_setup_all(full)
     local results = require("runtime-analysis.telemetry.setup_all").run({
       full = full,
       backup_dir = backup_dir,
+      namespace = namespace,
     })
 
     local backed_up = 0
@@ -410,10 +453,13 @@ local function do_setup_all(full)
       end
     end
 
+    -- "target(s)", not "plugin(s)": an `extra` entry is typically the
+    -- reader's own config, which is not a plugin and reads as a mistake if
+    -- called one.
     notify.info(
-      ("set up %d plugin(s) (%s)%s"):format(
+      ("set up %d target(s) (%s)%s"):format(
         #results,
-        full and "full: deep + arguments + timing" or "each plugin's own configured policy",
+        full and "full: deep + arguments + timing" or "each target's own configured policy",
         backed_up > 0 and (", backed up %d with existing data to %s"):format(backed_up, backup_dir)
           or ""
       )
@@ -645,6 +691,18 @@ function M.setup()
         require("runtime-analysis.telemetry.report").compare_snapshots_lines(cmp),
         "runtime-analysis.telemetry — snapshot compare"
       )
+    elseif first == "setup" or first == "full" then
+      -- `:RATelemetry setup|full [namespace]` -- the same backup/reset/
+      -- re-wrap/start `:RATelemetrySetupAll`/`SetupAllFull` run, narrowed to
+      -- one target when a namespace is given. `full` forces argument
+      -- profiling + timing on regardless of that target's own policy, the
+      -- identical meaning it has in `:RATelemetrySetupAllFull`.
+      --
+      -- This is the form that reaches a NON-plugin target -- chiefly the
+      -- reader's own config, declared as `opts.telemetry.extra` -- since a
+      -- config has no repo to name and could never be selected the way a
+      -- plugin is. `:RATelemetry full nvim-config` is the motivating case.
+      do_setup_all(first == "full", rest)
     elseif first == "compare" then
       -- `rest` is a namespace exactly the way every other subcommand's
       -- second slot already is; a third token, if numeric, overrides
@@ -664,7 +722,7 @@ function M.setup()
     end
   end, {
     nargs = "*",
-    desc = "runtime-analysis.telemetry: report|start|stop|reset|disable|enable|disabled|coverage|export|export-all|open|compare|startup|cost|snapshot|snapshots|snapshot-compare [namespace] [days]",
+    desc = "runtime-analysis.telemetry: report|start|stop|reset|disable|enable|disabled|coverage|export|export-all|open|compare|startup|cost|snapshot|snapshots|snapshot-compare|setup|full [namespace] [days]",
     complete = function(arg_lead, cmd_line)
       -- Second token of `start`/`stop`/`reset`/`open`/`compare` is always a
       -- namespace, never another subcommand — narrow completion there
@@ -685,6 +743,8 @@ function M.setup()
         or sub == "snapshot"
         or sub == "snapshots"
         or sub == "snapshot-compare"
+        or sub == "setup"
+        or sub == "full"
 
       local out = {}
       if takes_namespace then
@@ -737,14 +797,14 @@ function M.setup()
   )
 
   usercmd.create("RATelemetrySetupAll", function()
-    do_setup_all(false)
+    do_setup_all(false, nil)
   end, {
-    desc = "runtime-analysis.telemetry: backup+reset+re-wrap+start every configured, loaded plugin "
+    desc = "runtime-analysis.telemetry: backup+reset+re-wrap+start every configured, loaded target "
       .. "(own profile_args/timing policy)",
   })
 
   usercmd.create("RATelemetrySetupAllFull", function()
-    do_setup_all(true)
+    do_setup_all(true, nil)
   end, {
     desc = "runtime-analysis.telemetry: same as :RATelemetrySetupAll, forcing profile_args + timing on",
   })
