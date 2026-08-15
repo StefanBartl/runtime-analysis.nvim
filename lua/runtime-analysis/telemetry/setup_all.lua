@@ -76,10 +76,16 @@ local function setup_one(candidate, full)
     })
   end
 
-  if candidate.settings.deep or full then
-    inst.wrap_loaded(candidate.main, { module_filter = telemetry.default_module_filter })
-  else
-    inst.wrap(package.loaded[candidate.main] or package.loaded[candidate.main .. ".init"])
+  -- `mains or { main }`: a plugin has exactly one root module, an `extra`
+  -- target (a config) usually several unrelated ones. Both go through the
+  -- same instance -- one namespace, one cache file -- so this is a loop
+  -- rather than a second instance per prefix.
+  for _, main in ipairs(candidate.mains or { candidate.main }) do
+    if candidate.settings.deep or full then
+      inst.wrap_loaded(main, { module_filter = telemetry.default_module_filter })
+    else
+      inst.wrap(package.loaded[main] or package.loaded[main .. ".init"])
+    end
   end
 
   inst.start({
@@ -96,7 +102,12 @@ end
 ---offers `on_done` despite that one genuinely being async: one call site
 ---(`telemetry/command.lua`) reads the return value directly, and matching
 ---the sibling module's shape costs nothing.
----@param run_opts { full?: boolean, backup_dir?: string, on_done?: fun(results: RA.Telemetry.SetupAllResult[]) }
+---@param run_opts { full?: boolean, backup_dir?: string, namespace?: string, on_done?: fun(results: RA.Telemetry.SetupAllResult[]) }
+---`namespace` narrows the run to that single candidate (`:RATelemetry
+---setup|full <ns>`); omitted, every candidate is processed
+---(`:RATelemetrySetupAll`). Filtering here rather than in the caller keeps
+---the backup/reset/re-wrap/start sequence identical for both -- a one-
+---namespace run is the same operation, not a second implementation of it.
 ---@return RA.Telemetry.SetupAllResult[]
 function M.run(run_opts)
   run_opts = run_opts or {}
@@ -106,47 +117,49 @@ function M.run(run_opts)
   ---@type RA.Telemetry.SetupAllResult[]
   local results = {}
   for _, candidate in ipairs(lazy_adapter.candidates()) do
-    local cache_opts = { dir = candidate.settings.dir }
+    if not run_opts.namespace or candidate.namespace == run_opts.namespace then
+      local cache_opts = { dir = candidate.settings.dir }
 
-    -- Flush BEFORE deciding `had_data`: a live instance may hold real calls
-    -- in `pending` that never hit disk yet (this session's own periodic
-    -- flush has not fired), and those must count as "existing data" too --
-    -- silently skipping the backup for them would be worse than the
-    -- alternative this ordering pays for (see the `next(...)` check below).
-    local live = telemetry.get(candidate.namespace)
-    if live then
-      live.flush()
+      -- Flush BEFORE deciding `had_data`: a live instance may hold real calls
+      -- in `pending` that never hit disk yet (this session's own periodic
+      -- flush has not fired), and those must count as "existing data" too --
+      -- silently skipping the backup for them would be worse than the
+      -- alternative this ordering pays for (see the `next(...)` check below).
+      local live = telemetry.get(candidate.namespace)
+      if live then
+        live.flush()
+      end
+
+      -- `candidate.settings.dir` (usually unset -> the real default cache
+      -- dir), not left to `telemetry.load`'s own default: a candidate with a
+      -- custom cache directory must be checked *there*, not wherever most
+      -- other plugins happen to persist to -- the same reasoning
+      -- `documentation.editor.generate_all.autoload` already gives for
+      -- checking a project's own configured `out_dir` rather than a
+      -- hardcoded path.
+      --
+      -- A FILE existing is not the same claim as DATA existing: the flush
+      -- just above writes one unconditionally for a freshly-created instance
+      -- too (zero calls, `functions = {}`) -- `next(existing.functions)`
+      -- distinguishes "genuinely nothing to lose" from "this plugin actually
+      -- has an aggregate," which `had_data`/the backup prompt are actually
+      -- asking about.
+      local existing = telemetry.load(candidate.namespace, cache_opts)
+      local had_data = existing ~= nil and next(existing.functions or {}) ~= nil
+
+      local backed_up
+      if had_data and run_opts.backup_dir then
+        backed_up = write_backup(run_opts.backup_dir, candidate.namespace, existing)
+      end
+
+      setup_one(candidate, run_opts.full == true)
+
+      results[#results + 1] = {
+        namespace = candidate.namespace,
+        had_data = had_data,
+        backed_up = backed_up,
+      }
     end
-
-    -- `candidate.settings.dir` (usually unset -> the real default cache
-    -- dir), not left to `telemetry.load`'s own default: a candidate with a
-    -- custom cache directory must be checked *there*, not wherever most
-    -- other plugins happen to persist to -- the same reasoning
-    -- `documentation.editor.generate_all.autoload` already gives for
-    -- checking a project's own configured `out_dir` rather than a
-    -- hardcoded path.
-    --
-    -- A FILE existing is not the same claim as DATA existing: the flush
-    -- just above writes one unconditionally for a freshly-created instance
-    -- too (zero calls, `functions = {}`) -- `next(existing.functions)`
-    -- distinguishes "genuinely nothing to lose" from "this plugin actually
-    -- has an aggregate," which `had_data`/the backup prompt are actually
-    -- asking about.
-    local existing = telemetry.load(candidate.namespace, cache_opts)
-    local had_data = existing ~= nil and next(existing.functions or {}) ~= nil
-
-    local backed_up
-    if had_data and run_opts.backup_dir then
-      backed_up = write_backup(run_opts.backup_dir, candidate.namespace, existing)
-    end
-
-    setup_one(candidate, run_opts.full == true)
-
-    results[#results + 1] = {
-      namespace = candidate.namespace,
-      had_data = had_data,
-      backed_up = backed_up,
-    }
   end
 
   if run_opts.on_done then

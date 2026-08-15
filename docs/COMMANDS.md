@@ -611,12 +611,14 @@ start`/`stop`/`reset` with no namespace (already "every live instance") —
 they exist only because that bare form is reached for often enough to earn
 a command name of its own.
 
-`:RATelemetrySetupAll` / `:RATelemetrySetupAllFull` are not aliases of a
-`:RATelemetry` subcommand — they act on `opts.telemetry.plugins`, the same
-per-plugin policy table `require("runtime-analysis").setup({telemetry =
-...})` already threads through `telemetry.lazy.setup()` to auto-wrap each
-plugin as it loads. For every one of those plugins that is loaded right
-now:
+`:RATelemetrySetupAll` / `:RATelemetrySetupAllFull` are the bare forms of
+`:RATelemetry setup` / `:RATelemetry full` — they act on
+`opts.telemetry.plugins` **and** `opts.telemetry.extra`, the same policy
+tables `require("runtime-analysis").setup({telemetry = ...})` already
+threads through `telemetry.lazy.setup()`. Pass a namespace to narrow either
+one to a single target (`:RATelemetry full nvim-config`), which is also the
+only way to select an `extra` target — a config has no repo to name it by.
+For every target that is loaded right now:
 
 1. If it has anything on disk already, back it up. One prompt for the
    whole run (a directory, created if it does not exist yet) — not one per
@@ -643,13 +645,67 @@ now:
    equivalent of `:DocMap full`'s LuaLS enrichment — more expensive,
    invoked on request rather than left on by default.
 
-Only plugins currently *loaded* are candidates — nothing here can wrap a
+Only targets currently *loaded* are candidates — nothing here can wrap a
 module that has not `require`d yet; a not-yet-loaded plugin is still picked
 up the normal way (`telemetry.lazy`'s own `User LazyLoad` autocmd) once it
 does load. `lib.nvim`'s own telemetry aggregate (`opts.telemetry.lib_nvim`)
 is deliberately out of scope — it wraps through
 `lib.strategies.telemetry_wrap`, a different mechanism than the
 `wrap_loaded()` re-scan every other candidate here goes through.
+
+### Instrumenting your own Neovim config (`opts.telemetry.extra`)
+
+`opts.telemetry.plugins` can only describe what a plugin manager resolves.
+Your own config is not one of those things — it has no repo, no spec, and
+usually several unrelated root prefixes rather than one `main` — yet it is
+often the most interesting Lua tree in the session, and the only one whose
+dead code nobody else will ever report on. `extra` is that target, stated
+outright:
+
+```lua
+require("runtime-analysis").setup({
+  telemetry = {
+    extra = {
+      {
+        namespace = "nvim-config",
+        -- your config's own top-level lua/ directories
+        mains = { "config", "bindings", "plugins", "autocmds", "lsp" },
+        profile_args = true,
+      },
+    },
+  },
+})
+```
+
+That is the whole setup. `nvim-config` then behaves as an ordinary
+namespace everywhere: `:RATelemetry nvim-config`, `coverage`, `compare`,
+`snapshot`, `export`, the HTML dashboard, and
+`:RATelemetry setup|full nvim-config`.
+
+**It works without lazy.nvim.** `extra` resolves purely through
+`package.loaded`; the lazy.nvim adapter covers `plugins` only.
+
+**Wrapping is deferred to VimEnter by default, and that default matters.**
+When `runtime-analysis.setup()` runs it is usually still *inside*
+`lazy.setup()`, before your config's later phases (options, autocmds, LSP,
+keymaps) have required anything — and `wrap_loaded()` only ever sees what
+is already in `package.loaded`. Wrapping at that moment would produce a
+nearly empty namespace. `wrap_at` overrides it per target:
+
+| `wrap_at`   | when                                                      |
+| ----------- | --------------------------------------------------------- |
+| `"VimEnter"` | default — VimEnter + `vim.schedule`, once the UI is up    |
+| `"setup"`    | immediately, only right for an already-loaded target      |
+| `"manual"`   | never automatically; `:RATelemetry setup\|full <ns>` only |
+
+**The same blind spot every wrap has:** a module first required *after* the
+wrap ran (a keymap handler pulled in on first press) stays unwrapped until
+something re-wraps. `:RATelemetry setup <ns>` is that something, callable
+any time — see point 3 above.
+
+Per-target options: `mains` (required), `namespace` (required), `deep`
+(default **true** here, unlike a plugin's façade-first default),
+`profile_args`, `timing`, `persist`, `dir`, `wrap_at`.
 
 **Only a genuinely empty or recognized argument acts.** An unknown
 subcommand reports what it expected rather than falling through to a
