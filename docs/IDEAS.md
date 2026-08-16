@@ -13,6 +13,7 @@
     - [1.6 `doc-references-missing`, in the other direction](#16-doc-references-missing-in-the-other-direction)
     - [1.7 Endpoint inventory × request history × response shape](#17-endpoint-inventory-request-history-response-shape)
     - [1.8 A live badge in the annotation popup](#18-a-live-badge-in-the-annotation-popup)
+    - [1.9 Multi-language telemetry — importing profiles, not instrumenting them](#19-multi-language-telemetry-importing-profiles-not-instrumenting-them)
   - [2. runtime-analysis × mdview.nvim — mdview as more than a renderer](#2-runtime-analysis-mdviewnvim-mdview-as-more-than-a-renderer)
     - [2.1 Theme parity, and who owns the report's look](#21-theme-parity-and-who-owns-the-reports-look)
     - [2.2 `:MDView preview-tab` — the browser-free tier](#22-mdview-preview-tab-the-browser-free-tier)
@@ -243,6 +244,85 @@ mode, no new panel and no new key binding.
 
 The popup is in-editor, so `ECOSYSTEM.md` §7's artifact constraint does not
 apply. This is surface 1 in that document's own ranking, at its cheapest.
+
+---
+
+### 1.9 Multi-language telemetry — importing profiles, not instrumenting them
+
+documentation.nvim's own `docs/ROADMAP/IDEAS/MULTILANG.md` costs out language
+backends beyond Lua (JS/TS shipped 2026-08-03; C/Python/Rust/Go planned).
+The question this section answers: if that side gains a language, can this
+plugin's telemetry follow it? The honest answer splits the plugin in two,
+and only one half survives the question.
+
+**The request runner (`curl`/`graphql`/`multipart`/`parse`/`runner`/
+`history`/`env`/`assertions`, ~1 700 lines) already does not care.** It
+fires HTTP at whatever is listening. A Go, Rust or Node server behind the
+same endpoint is invisible to it. Zero cost, because there was never a
+Lua-specific assumption in this half to begin with.
+
+**Telemetry (`telemetry/`, ~5 600 lines) cannot port, on the mechanism
+itself, not the amount of work.** `wrap()`/`wrap_loaded()` work by
+*replacing function references inside `package.loaded` in the running
+Neovim process* — real monkey-patching, "OFF COSTS NOTHING" specifically
+because the shipped functions stay the original objects until `start()`
+swaps them (`telemetry/init.lua`'s own header). That requires being inside
+the instrumented process, tables as namespaces, functions as replaceable
+first-class values, and `package.loaded` as the module registry. None of
+that exists for a Go binary, a Python process or a Node server this plugin
+does not run inside. This is not "harder in another language" the way a
+language backend's extractor is — there is no position in those runtimes
+for a Neovim plugin to occupy the way it occupies this one.
+
+**But the persisted shape is already language-neutral.** `RA.Telemetry.Data`
+(`telemetry/@types/init.lua`) is `functions: table<string, FnStats>`,
+`days: table<string, table<string, integer>>`, `modules: table<string,
+string>` — a plain `key → call count` store with day-bucketing and a
+resolved-module-path map. Nothing in `store.lua`, `report.lua`,
+`cost_vs_use.lua`, or the static × runtime join this section's sibling
+ideas (§1.1–§1.3) build on reads *how* a `Data` table was produced. They
+only read the table.
+
+**The buildable version, if this is ever worth doing: an importer, not an
+instrumenter.** Parse an external profiler's own output into
+`RA.Telemetry.Data` shape, offline, after the fact — not live, not
+in-process:
+
+| Language | Source | Rough cost |
+|---|---|---|
+| Go | `pprof` (stdlib, already structured) | ~1 day — best-shaped source of the four |
+| Python | `cProfile`/`pstats` | ~1 day |
+| JS/Node | `--cpu-prof` (`.cpuprofile`, V8/JSON) | 1–2 days |
+| C/C++/Rust | `perf script`, `callgrind` | 2–3 days — most of the cost is symbol demangling, not the format |
+
+Plus roughly 1–2 days to put an import entry point behind the same
+`registry.lua` the live collectors already go through, so `store.lua`/
+`report.lua`/the join do not need to know which path produced a given
+`Data` table.
+
+**The real risk is not parsing, it is key alignment**, and this ecosystem
+has already been bitten by exactly this shape once:
+`core/telemetry_join.lua`'s `M.rows` looked up `ir.nodes[module_id]` with a
+dotted module id against a table keyed by file path, silently empty for
+every `wrap_loaded()` user, for as long as that feature existed before
+being caught (see this repository's own history / documentation.nvim's
+paired note). An importer has the same failure mode one level worse:
+documentation.nvim's static function names have to line up with whatever
+identifier the *foreign* profiler chose to emit (a mangled C++ symbol, a
+Python qualified name with or without the module prefix, a V8 function
+name that may or may not match the source), with no shared convention
+enforcing it the way `package.loaded` keys at least loosely track Lua
+module paths today. Worth a real profile from a real project checked
+against a real documentation.nvim scan before committing to any of the
+four importers above, not assumed to just line up.
+
+**And it is honestly a different product, not a smaller version of this
+one.** No live "still counting" statusline, no in-editor start/stop — the
+target process runs external to Neovim, under a profiler, and the result
+gets imported after the fact. The value (`static × runtime` still joins,
+`cost_vs_use` still works, `bench.lua`-style comparisons stay possible) is
+real; the workflow that makes it visible is not the one this plugin's own
+Lua-in-Neovim telemetry has.
 
 ---
 
