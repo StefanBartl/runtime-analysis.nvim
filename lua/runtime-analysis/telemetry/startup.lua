@@ -314,13 +314,12 @@ function M.autostart()
   if not M.start() then
     return false
   end
-  vim.api.nvim_create_autocmd("UIEnter", {
+  require("lib.nvim.autocmd").create("UIEnter", function()
+    M.stop()
+  end, {
     once = true,
-    group = vim.api.nvim_create_augroup("runtime_analysis_startup", { clear = true }),
+    group = require("lib.nvim.autocmd").group("runtime_analysis_startup", true),
     desc = "runtime-analysis.telemetry.startup: stop timing once startup is over",
-    callback = function()
-      M.stop()
-    end,
   })
   return true
 end

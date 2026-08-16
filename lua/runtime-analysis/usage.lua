@@ -129,19 +129,21 @@ function M.start(opts)
   original_keymap_set = vim.keymap.set
   vim.keymap.set = wrap_keymap_set
 
+  -- Raw augroup rather than autocmd.group(): M.stop() below deletes it by id
+  -- and M.start() may run again later, and autocmd.group()'s name->id cache
+  -- would keep handing back the deleted id instead of a fresh one.
   augroup = vim.api.nvim_create_augroup("runtime_analysis_usage", { clear = true })
-  vim.api.nvim_create_autocmd("CmdlineLeave", {
+  require("lib.nvim.autocmd").create("CmdlineLeave", function()
+    if vim.v.event.abort or vim.fn.getcmdtype() ~= ":" then
+      return
+    end
+    local name = command_name(vim.fn.getcmdline())
+    if name then
+      record_command(name)
+    end
+  end, {
     group = augroup,
     desc = "runtime-analysis.usage: count a typed command, unless the cmdline was aborted",
-    callback = function()
-      if vim.v.event.abort or vim.fn.getcmdtype() ~= ":" then
-        return
-      end
-      local name = command_name(vim.fn.getcmdline())
-      if name then
-        record_command(name)
-      end
-    end,
   })
 
   return true

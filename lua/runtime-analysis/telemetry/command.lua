@@ -275,17 +275,10 @@ local function export(path, pdf_callback)
 
   local payload = { exported_at = os.time(), reports = mod.report_all() }
 
-  local ok, encoded = pcall(vim.json.encode, payload)
+  local ok = require("lib.nvim.fs.json").write(target, payload)
   if not ok then
     return nil
   end
-
-  local file = io.open(target, "w")
-  if not file then
-    return nil
-  end
-  file:write(encoded)
-  file:close()
   return target
 end
 
@@ -472,22 +465,34 @@ local function do_setup_all(full, namespace)
   end
 
   local default_dir = vim.fn.stdpath("cache") .. "/runtime-analysis.nvim/setup-all-backups"
-  vim.ui.input({
-    prompt = "runtime-analysis.telemetry: back up existing data to (created if missing): ",
-    default = default_dir,
-  }, function(input)
+
+  local function on_input(input)
     if input == nil or vim.trim(input) == "" then
       notify.warn("setup aborted -- existing telemetry data left untouched")
       return
     end
     local dir = vim.trim(input)
-    local ok_mkdir = pcall(vim.fn.mkdir, dir, "p")
+    local ok_mkdir = require("lib.nvim.fs.mkdirp")(dir)
     if not ok_mkdir or vim.fn.isdirectory(dir) == 0 then
       notify.error("could not create backup directory: " .. dir)
       return
     end
     proceed(dir)
-  end)
+  end
+
+  local ok_kit, kit = pcall(require, "lib.nvim.ui.kit")
+  if ok_kit then
+    kit.input({
+      title = "runtime-analysis.telemetry: back up existing data to (created if missing): ",
+      default = default_dir,
+      on_submit = on_input,
+    })
+  else
+    vim.ui.input({
+      prompt = "runtime-analysis.telemetry: back up existing data to (created if missing): ",
+      default = default_dir,
+    }, on_input)
+  end
 end
 
 ---Register `:RATelemetry`. Idempotent (`usercmd.create` defaults to `force`).

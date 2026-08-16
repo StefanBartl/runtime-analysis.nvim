@@ -64,18 +64,7 @@ end
 ---@param lines string[]
 ---@return boolean ok, string|nil err
 function M.write(path, lines)
-  local dir = vim.fn.fnamemodify(path, ":h")
-  local ok_mkdir = pcall(vim.fn.mkdir, dir, "p")
-  if not ok_mkdir then
-    return false, "failed to create directory: " .. dir
-  end
-
-  local ok, err = pcall(function()
-    local file = assert(io.open(path, "w"))
-    file:write(table.concat(lines, "\n"))
-    file:write("\n")
-    file:close()
-  end)
+  local ok, err = require("lib.nvim.fs.write.to_file")(path, table.concat(lines, "\n"))
   if not ok then
     return false, tostring(err)
   end

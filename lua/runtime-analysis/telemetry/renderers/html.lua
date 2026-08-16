@@ -293,8 +293,8 @@ function M.render(reports)
     total_wrapped = total_wrapped + report.wrapped
   end
 
-  local ok_json, rows_json = pcall(vim.json.encode, all_rows)
-  if not ok_json then
+  local rows_json = require("lib.lua.json").encode(all_rows)
+  if not rows_json then
     rows_json = "[]"
   end
   -- A namespace or function key containing a literal `</script>` (however

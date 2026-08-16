@@ -411,14 +411,14 @@ local function browse_history(ra)
     return
   end
 
-  vim.ui.select(entries, {
-    prompt = "runtime-analysis: request history (newest first)",
-    ---@param e RA.History.Entry
-    format_item = function(e)
-      local outcome = e.status and tostring(e.status) or (e.note or "?")
-      return ("%s  %-10s %-6s %s"):format(os.date("%Y-%m-%d %H:%M", e.at), outcome, e.method, e.url)
-    end,
-  }, function(choice)
+  ---@param e RA.History.Entry
+  local function format_item(e)
+    local outcome = e.status and tostring(e.status) or (e.note or "?")
+    return ("%s  %-10s %-6s %s"):format(os.date("%Y-%m-%d %H:%M", e.at), outcome, e.method, e.url)
+  end
+
+  ---@param choice RA.History.Entry?
+  local function on_select(choice)
     if not choice then
       return
     end
@@ -428,7 +428,27 @@ local function browse_history(ra)
     -- more (see history.lua's own doc-comment for why headers and body
     -- were never recorded to begin with).
     ra.open_request({ ("%s %s"):format(choice.method, choice.url), "" })
-  end)
+  end
+
+  local ok_kit, kit = pcall(require, "lib.nvim.ui.kit")
+  if ok_kit then
+    -- respect_override: defer to the reader's own configured picker
+    -- (telescope/fzf-lua/snacks/...) when one has replaced vim.ui.select,
+    -- same as the plain vim.ui.select call below would have — kit's own
+    -- chooser is only the fallback when nothing else is installed.
+    kit.select({
+      selection = entries,
+      title = "runtime-analysis: request history (newest first)",
+      format_item = format_item,
+      respect_override = true,
+      on_select = on_select,
+    })
+  else
+    vim.ui.select(entries, {
+      prompt = "runtime-analysis: request history (newest first)",
+      format_item = format_item,
+    }, on_select)
+  end
 end
 
 ---`:RA env [name]` (docs/ROADMAP.md §2.1). With `name`, selects it directly
@@ -457,9 +477,11 @@ local function select_environment(name)
     return
   end
 
-  vim.ui.select(names, {
-    prompt = ("runtime-analysis: select environment (current: %s)"):format(env.current() or "none"),
-  }, function(choice)
+  local prompt = ("runtime-analysis: select environment (current: %s)"):format(
+    env.current() or "none"
+  )
+
+  local function on_select(choice)
     if not choice then
       return
     end
@@ -469,7 +491,14 @@ local function select_environment(name)
     else
       notify.error(err)
     end
-  end)
+  end
+
+  local ok_kit, kit = pcall(require, "lib.nvim.ui.kit")
+  if ok_kit then
+    kit.select({ selection = names, title = prompt, respect_override = true, on_select = on_select })
+  else
+    vim.ui.select(names, { prompt = prompt }, on_select)
+  end
 end
 
 ---`:RA import` (docs/ROADMAP.md §2.3) — parses a `curl` command line into a
@@ -851,13 +880,14 @@ function M.setup(ra)
   })
 
   -- Flat aliases — see the module doc-comment for why these stay alongside
-  -- the `:RA` verb above rather than being replaced by it.
-  vim.api.nvim_create_user_command("RARequest", function()
+  -- the `:RA` verb above rather than being replaced by it (composer).
+  local usercmd = require("lib.nvim.usercmd")
+  usercmd.create("RARequest", function()
     ra.open_request()
   end, {
     desc = "Open a new HTTP request buffer (alias: :RA request)",
   })
-  vim.api.nvim_create_user_command("RASend", function()
+  usercmd.create("RASend", function()
     send_current_buffer(ra)
   end, {
     desc = "Send the current buffer as an HTTP request (alias: :RA send)",

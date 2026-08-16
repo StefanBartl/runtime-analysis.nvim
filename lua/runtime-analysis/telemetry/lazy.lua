@@ -60,6 +60,7 @@
 ---     prevent. `wrap_at = "setup"|"manual"` overrides it per target.
 
 local notify = require("lib.nvim.notify").create("[runtime-analysis.telemetry]")
+local autocmd = require("lib.nvim.autocmd")
 local config_validate = require("runtime-analysis.config.validate")
 
 -- The exact fields each of `RA.Telemetry.LazyOpts`, `LazyPluginOpts` and
@@ -261,13 +262,12 @@ local function setup_extra(extra)
   if vim.v.vim_did_enter == 1 then
     vim.schedule(wrap_deferred)
   else
-    vim.api.nvim_create_autocmd("VimEnter", {
+    autocmd.create("VimEnter", function()
+      vim.schedule(wrap_deferred)
+    end, {
       once = true,
-      group = vim.api.nvim_create_augroup("runtime_analysis_telemetry_extra", { clear = true }),
+      group = autocmd.group("runtime_analysis_telemetry_extra", true),
       desc = "runtime-analysis.telemetry: wrap+start each configured `extra` target",
-      callback = function()
-        vim.schedule(wrap_deferred)
-      end,
     })
   end
 end
@@ -341,15 +341,14 @@ function M.setup(opts)
     try_wrap(plugin_name)
   end
 
-  vim.api.nvim_create_autocmd("User", {
+  autocmd.create("User", function(args)
+    if type(args.data) == "string" then
+      try_wrap(args.data)
+    end
+  end, {
     pattern = "LazyLoad",
-    group = vim.api.nvim_create_augroup("runtime_analysis_telemetry_lazyload", { clear = true }),
+    group = autocmd.group("runtime_analysis_telemetry_lazyload", true),
     desc = "runtime-analysis.telemetry: wrap+start an instance for each plugin as it loads",
-    callback = function(args)
-      if type(args.data) == "string" then
-        try_wrap(args.data)
-      end
-    end,
   })
 end
 
