@@ -10,7 +10,9 @@
 ---   :RATelemetry lsp.nvim        report for one namespace
 ---   :RATelemetry start [ns]      start every instance, or just one
 ---   :RATelemetry stop [ns]       stop every instance, or just one
----   :RATelemetry reset [ns]      drop collected data, every instance or just one
+---   :RATelemetry reset [ns]      back up (prompted once, only if anything
+---                                would be lost), then drop collected data --
+---                                every instance, or just one
 ---   :RATelemetry disable [ns]    stop + persist "off" across restarts
 ---   :RATelemetry enable [ns]     clear a persisted disable, resume now
 ---   :RATelemetry disabled        list namespaces currently disabled
@@ -55,6 +57,15 @@
 ---   :RATelemetryStartAll         same as `:RATelemetry start` (bare)
 ---   :RATelemetryStopAll          same as `:RATelemetry stop` (bare)
 ---   :RATelemetryResetAll         same as `:RATelemetry reset` (bare)
+---
+--- `reset` (both the bare form and `ResetAll`) asks the same one-prompt-for-
+--- the-whole-run backup question `:RATelemetrySetupAll` below already does,
+--- via the identical `setup_all.write_backup` routine — see `do_reset_all`
+--- for why this earned the same treatment instead of resetting silently:
+--- dropping a namespace's whole aggregate is exactly the kind of action
+--- that deserves the chance to keep a copy first. Declining
+--- (`<Esc>`/empty input) aborts the reset entirely, same semantics as
+--- `do_setup_all`.
 ---
 --- Two more, the bare-form aliases of `:RATelemetry setup`/`full` above —
 --- see `runtime-analysis.telemetry.setup_all`'s own module doc-comment for
@@ -495,6 +506,115 @@ local function do_setup_all(full, namespace)
   end
 end
 
+---`:RATelemetry reset [ns]` / `:RATelemetryResetAll` — same one-prompt-for-
+---the-whole-run backup question `do_setup_all` above already asks, applied
+---to a plain reset instead of the fuller backup+reset+re-wrap+start
+---sequence: a namespace's whole aggregate is gone either way, and `reset`
+---deserves the same chance to keep a copy first that `setup`/`full` already
+---have. Reuses `setup_all.write_backup` for the actual backup write rather
+---than a second copy of that JSON-encoding logic.
+---
+---Unlike `do_setup_all`, this walks LIVE instances (`mod.instances()`), not
+---`telemetry.lazy.candidates()` — `reset` has always acted on whatever is
+---currently running in this session, configured or not, and that scope does
+---not change just because a backup step was added in front of it.
+---@internal
+---@param namespace string|nil When set, only that instance is reset
+---(`:RATelemetry reset <ns>`); omitted, every live instance is (bare
+---`:RATelemetry reset` / `:RATelemetryResetAll`).
+local function do_reset_all(namespace)
+  local mod = telemetry()
+  local setup_all = require("runtime-analysis.telemetry.setup_all")
+
+  local list = mod.instances()
+  if namespace and namespace ~= "" then
+    local inst = mod.get(namespace)
+    if not inst then
+      notify.warn(("no telemetry instance for namespace %q"):format(namespace))
+      return
+    end
+    list = { inst }
+  end
+
+  if #list == 0 then
+    notify.info("no telemetry instances -- nothing to reset")
+    return
+  end
+
+  -- Flush BEFORE deciding `any_existing`, same reasoning `do_setup_all`
+  -- gives for its own candidate loop: calls already collected but not yet
+  -- flushed to disk must count as "existing data" too, or a backup taken
+  -- right after would silently miss them.
+  local any_existing = false
+  for _, inst in ipairs(list) do
+    inst.flush()
+    local existing = mod.load(inst.namespace, inst._cache_opts)
+    if existing and next(existing.functions or {}) ~= nil then
+      any_existing = true
+      break
+    end
+  end
+
+  ---@param backup_dir string|nil
+  local function proceed(backup_dir)
+    local backed_up = 0
+    for _, inst in ipairs(list) do
+      if backup_dir then
+        local existing = mod.load(inst.namespace, inst._cache_opts)
+        if existing and next(existing.functions or {}) ~= nil then
+          if setup_all.write_backup(backup_dir, inst.namespace, existing) then
+            backed_up = backed_up + 1
+          end
+        end
+      end
+      inst.reset()
+    end
+
+    notify.info(
+      ("collected data cleared for %d instance(s)%s"):format(
+        #list,
+        backed_up > 0 and (", backed up %d with existing data to %s"):format(backed_up, backup_dir)
+          or ""
+      )
+    )
+  end
+
+  if not any_existing then
+    proceed(nil)
+    return
+  end
+
+  local default_dir = vim.fn.stdpath("cache") .. "/runtime-analysis.nvim/reset-backups"
+
+  local function on_input(input)
+    if input == nil or vim.trim(input) == "" then
+      notify.warn("reset aborted -- existing telemetry data left untouched")
+      return
+    end
+    local dir = vim.trim(input)
+    local ok_mkdir = require("lib.nvim.fs.mkdirp")(dir)
+    if not ok_mkdir or vim.fn.isdirectory(dir) == 0 then
+      notify.error("could not create backup directory: " .. dir)
+      return
+    end
+    proceed(dir)
+  end
+
+  local ok_kit, kit = pcall(require, "lib.nvim.ui.kit")
+  if ok_kit then
+    kit.input({
+      title = "runtime-analysis.telemetry: back up existing data to (created if missing): ",
+      default = default_dir,
+      on_submit = on_input,
+    })
+  else
+    vim.ui.input({
+      prompt = "runtime-analysis.telemetry: back up existing data to (created if missing): ",
+      default = default_dir,
+    }, on_input)
+  end
+end
+
 ---Register `:RATelemetry`. Idempotent (`usercmd.create` defaults to `force`).
 function M.setup()
   usercmd.create("RATelemetry", function(args)
@@ -502,7 +622,13 @@ function M.setup()
     local first = args.fargs[1]
     local rest = args.fargs[2]
 
-    if first == "start" or first == "stop" or first == "reset" then
+    if first == "reset" then
+      -- Its own branch, not folded into start/stop below: unlike those two,
+      -- a reset may prompt for a backup directory first (`do_reset_all`),
+      -- and that async-ish confirm flow doesn't fit the other two's
+      -- immediate-and-done shape.
+      do_reset_all(rest)
+    elseif first == "start" or first == "stop" then
       -- A bare `rest` is a namespace, e.g. `:RATelemetry stop markdown.nvim`
       -- — every other subcommand that takes one puts it in the same slot, so
       -- this stays consistent with `:RATelemetry <namespace>` (report).
@@ -515,25 +641,17 @@ function M.setup()
         if first == "start" then
           inst.start()
           notify.info(("started %s"):format(rest))
-        elseif first == "stop" then
+        else
           inst.stop()
           notify.info(("stopped %s"):format(rest))
-        else
-          inst.reset()
-          notify.info(("collected data cleared for %s"):format(rest))
         end
         return
       end
 
       if first == "start" then
         notify.info(("started %d instance(s)"):format(mod.start_all()))
-      elseif first == "stop" then
-        notify.info(("stopped %d instance(s)"):format(mod.stop_all()))
       else
-        for _, inst in ipairs(mod.instances()) do
-          inst.reset()
-        end
-        notify.info("collected data cleared")
+        notify.info(("stopped %d instance(s)"):format(mod.stop_all()))
       end
     elseif first == "disable" or first == "enable" then
       -- Unlike start/stop/reset, a namespace here does NOT need a live
@@ -790,16 +908,12 @@ function M.setup()
     { desc = "runtime-analysis.telemetry: stop every live instance (same as :RATelemetry stop)" }
   )
 
-  usercmd.create(
-    "RATelemetryResetAll",
-    function()
-      for _, inst in ipairs(telemetry().instances()) do
-        inst.reset()
-      end
-      notify.info("collected data cleared for every live instance")
-    end,
-    { desc = "runtime-analysis.telemetry: reset every live instance (same as :RATelemetry reset)" }
-  )
+  usercmd.create("RATelemetryResetAll", function()
+    do_reset_all(nil)
+  end, {
+    desc = "runtime-analysis.telemetry: reset every live instance, prompting once for a backup "
+      .. "directory if anything would be lost (same as :RATelemetry reset)",
+  })
 
   usercmd.create("RATelemetrySetupAll", function()
     do_setup_all(false, nil)

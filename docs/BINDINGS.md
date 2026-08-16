@@ -158,7 +158,7 @@ See `docs/COMMANDS.md` for the honest limits (only mappings set after
 | `:RATelemetry <ns>` | report for one namespace |
 | `:RATelemetry start [ns]` | every instance, or just one |
 | `:RATelemetry stop [ns]` | every instance, or just one |
-| `:RATelemetry reset [ns]` | every instance, or just one |
+| `:RATelemetry reset [ns]` | back up (prompted once for a directory, only if anything exists), then drop the aggregate — every instance, or just one |
 | `:RATelemetry disable [ns]` | stop + persist "off" across restarts |
 | `:RATelemetry enable [ns]` | clear a persisted disable, resume now |
 | `:RATelemetry disabled` | list namespaces currently disabled |
@@ -176,7 +176,7 @@ See `docs/COMMANDS.md` for the honest limits (only mappings set after
 | `:RATelemetry full [ns]` | same, forcing `profile_args` + `timing` on regardless of the target's own policy |
 | `:RATelemetryStartAll` | standalone alias for `:RATelemetry start` (bare) |
 | `:RATelemetryStopAll` | standalone alias for `:RATelemetry stop` (bare) |
-| `:RATelemetryResetAll` | standalone alias for `:RATelemetry reset` (bare) |
+| `:RATelemetryResetAll` | standalone alias for `:RATelemetry reset` (bare) — same backup prompt |
 | `:RATelemetrySetupAll` | bare form of `:RATelemetry setup`: for every target `opts.telemetry.plugins`/`opts.telemetry.extra` configures that is currently loaded — back up existing data (prompted once for a directory, only if anything exists), reset, re-wrap (picks up any submodule loaded after the first wrap), start with that target's own configured `profile_args`/`timing`. See `docs/COMMANDS.md`. |
 | `:RATelemetrySetupAllFull` | bare form of `:RATelemetry full` — same as `:RATelemetrySetupAll`, forcing `profile_args`/`timing` on for every target regardless of its own configured policy |
 
