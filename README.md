@@ -12,6 +12,10 @@
 > that plugin's `docs/ECOSYSTEM.md` is the architecture this pairing is part
 > of. documentation.nvim knows what exists and is documented; this plugin
 > knows what actually happens when it runs.
+>
+> [`docmap-desktop`](https://github.com/StefanBartl/docmap-desktop) is the
+> third leg — the same static × runtime join, read outside Neovim entirely,
+> for anyone not sitting in the editor.
 
 ## Table of Contents
 
