@@ -50,8 +50,8 @@ local function write_backup(dir, namespace, data)
   local path = dir .. "/" .. store.sanitize(namespace) .. "-" .. os.date("%Y%m%d-%H%M%S") .. ".json"
   local payload = { backed_up_at = os.time(), namespace = namespace, data = data }
 
-  local ok_encode, encoded = pcall(vim.json.encode, payload)
-  if not ok_encode then
+  local encoded = require("lib.lua.json").encode(payload)
+  if not encoded then
     return nil
   end
 
