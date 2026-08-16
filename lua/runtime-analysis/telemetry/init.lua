@@ -76,6 +76,7 @@ local report_mod = require("runtime-analysis.telemetry.report")
 local store = require("runtime-analysis.telemetry.store")
 local telemetry_config = require("runtime-analysis.telemetry.config")
 local toggle = require("runtime-analysis.telemetry.toggle")
+local config_validate = require("runtime-analysis.config.validate")
 
 local M = {}
 
@@ -93,6 +94,21 @@ local DEFAULTS = {
   flush_interval_ms = 60000,
   max_arg_values = 32,
   persist = true,
+}
+
+-- The exact fields `RA.Telemetry.Options` accepts — see the
+-- `config_validate.check` call at the top of `M.new` below.
+local KNOWN_NEW_OPTS = {
+  "namespace",
+  "dir",
+  "retention_days",
+  "flush_interval_ms",
+  "remind_after",
+  "persist",
+  "max_arg_values",
+  "report_file",
+  "info",
+  "snapshot_retention",
 }
 
 -- `cache.disk`'s own hardcoded default is `stdpath("cache")/lib.nvim/cache` —
@@ -277,6 +293,8 @@ end
 ---@param opts RA.Telemetry.Options
 ---@return RA.Telemetry.Instance
 function M.new(opts)
+  config_validate.check(opts, KNOWN_NEW_OPTS, "runtime-analysis.telemetry.new()", notify)
+
   opts = opts or {}
   local namespace = type(opts.namespace) == "string" and opts.namespace or "unnamed"
 
@@ -630,7 +648,15 @@ function M.new(opts)
 
     local n, mods = 0, 0
     for _, name in ipairs(names) do
-      local key_prefix = (name == prefix) and nil or name:sub(#dot + 1)
+      -- Not `(name == prefix) and nil or name:sub(...)`: `b = nil` is falsy,
+      -- so that ternary idiom falls through to the `or` branch even when
+      -- `name == prefix` is true. Harmless today only because `join_key`
+      -- treats `nil` and `""` identically -- an explicit `if` says what is
+      -- actually meant instead of relying on that downstream coincidence.
+      local key_prefix
+      if name ~= prefix then
+        key_prefix = name:sub(#dot + 1)
+      end
       -- `name` here IS the real `package.loaded` module path -- unlike a
       -- plain `wrap()` prefix (a caller-chosen label), this one is exact by
       -- construction, so every key wrap_loaded() produces is resolvable.

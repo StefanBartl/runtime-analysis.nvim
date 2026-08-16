@@ -3,7 +3,7 @@
 > **Generated** by `documentation`. Do not edit by hand — run `:DocMap`
 > (or `nvim --headless -l scripts/gen_map.lua`) to regenerate.
 
-**3 modules** · 2 namespaces · 33 helper files
+**3 modules** · 2 namespaces · 34 helper files
 
 The [interactive map](index.html) has filtering, full descriptions and
 source links; this page is the version the code host renders directly.
@@ -33,6 +33,7 @@ in both directions, with load-time and lazy requires told apart.
 
 ```mermaid
 flowchart LR
+  nlua_runtime_analysis_config_validate_lua["runtime-analysis.config.validate"]
   nlua_runtime_analysis_telemetry_command_lua["runtime-analysis.telemetry.command"]
   nlua_runtime_analysis_telemetry_config_lua["runtime-analysis.telemetry.config"]
   nlua_runtime_analysis_telemetry_cost_vs_use_lua["runtime-analysis.telemetry.cost_vs_use"]
@@ -55,6 +56,7 @@ flowchart LR
   nlua_runtime_analysis_telemetry_command_lua --> nlua_runtime_analysis_telemetry_report_style_lua
   nlua_runtime_analysis_telemetry_command_lua --> nlua_runtime_analysis_telemetry_setup_all_lua
   nlua_runtime_analysis_telemetry_command_lua --> nlua_runtime_analysis_telemetry_startup_lua
+  nlua_runtime_analysis_telemetry_lazy_lua --> nlua_runtime_analysis_config_validate_lua
   nlua_runtime_analysis_telemetry_registry_lua --> nlua_runtime_analysis_telemetry_fingerprint_lua
   nlua_runtime_analysis_telemetry_renderers --> nlua_runtime_analysis_telemetry_report_file_lua
   nlua_runtime_analysis_telemetry_report_lua --> nlua_runtime_analysis_telemetry_store_lua
