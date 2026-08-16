@@ -70,6 +70,7 @@ local specs = {
   "telemetry_html_spec.lua",
   "lazy_spec.lua",
   "setup_all_spec.lua",
+  "config_validate_spec.lua",
 }
 
 --- Straight to stdout rather than through `print` — the same reason

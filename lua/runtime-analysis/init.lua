@@ -31,9 +31,15 @@
 --- its API; lib.nvim keeps a thin caller, `lib.strategies.telemetry_wrap`,
 --- for instrumenting its own `require("lib")` aggregate specifically.
 
+local notify = require("lib.nvim.notify").create("[runtime-analysis]")
+
 local M = {}
 
 local DEFAULTS = require("runtime-analysis.config").DEFAULTS
+
+-- The exact top-level keys `M.setup(opts)` reads — see the
+-- `runtime-analysis.config.validate` call at the top of `M.setup` below.
+local KNOWN_OPTS = { "split", "request_filetype", "deps_popup", "telemetry" }
 
 ---@type { split: string, request_filetype: string }
 M.opts = vim.deepcopy(DEFAULTS)
@@ -61,6 +67,13 @@ end
 ---Plugin entry point.
 ---@param opts? { split?: string, request_filetype?: string, telemetry?: RA.Telemetry.LazyOpts, deps_popup?: boolean }
 function M.setup(opts)
+  require("runtime-analysis.config.validate").check(
+    opts,
+    KNOWN_OPTS,
+    "runtime-analysis.setup()",
+    notify
+  )
+
   M.opts = vim.tbl_deep_extend("force", vim.deepcopy(DEFAULTS), opts or {})
 
   require("runtime-analysis.bindings.usrcmds").setup(M)

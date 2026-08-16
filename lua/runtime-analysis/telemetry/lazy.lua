@@ -59,6 +59,59 @@
 ---     produce a nearly empty namespace — the failure this default exists to
 ---     prevent. `wrap_at = "setup"|"manual"` overrides it per target.
 
+local notify = require("lib.nvim.notify").create("[runtime-analysis.telemetry]")
+local config_validate = require("runtime-analysis.config.validate")
+
+-- The exact fields each of `RA.Telemetry.LazyOpts`, `LazyPluginOpts` and
+-- `ExtraTarget` accepts -- see `validate_opts` below, called once at the top
+-- of `M.setup()`.
+local KNOWN_LAZY_OPTS = { "plugins", "lib_nvim", "extra" }
+local KNOWN_PLUGIN_OPTS = { "namespace", "deep", "profile_args", "timing", "persist", "dir" }
+local KNOWN_EXTRA_OPTS =
+  { "namespace", "mains", "deep", "profile_args", "timing", "persist", "dir", "wrap_at" }
+local KNOWN_LIB_NVIM_OPTS = { "profile_args", "timing", "persist", "dir" }
+
+---Unknown-key validation for `opts` and everything nested inside it that has
+---its own fixed field set -- `opts.plugins` and `opts.extra` are keyed/
+---indexed collections of such tables, not fixed-schema themselves, so only
+---their *entries* are checked, never the collection keys/indices.
+---@internal
+---@param opts RA.Telemetry.LazyOpts
+local function validate_opts(opts)
+  config_validate.check(opts, KNOWN_LAZY_OPTS, "runtime-analysis.telemetry.lazy.setup()", notify)
+
+  if type(opts.lib_nvim) == "table" then
+    config_validate.check(
+      opts.lib_nvim,
+      KNOWN_LIB_NVIM_OPTS,
+      "runtime-analysis.telemetry.lazy.setup() opts.lib_nvim",
+      notify
+    )
+  end
+
+  if type(opts.plugins) == "table" then
+    for repo, settings in pairs(opts.plugins) do
+      config_validate.check(
+        settings,
+        KNOWN_PLUGIN_OPTS,
+        ("runtime-analysis.telemetry.lazy.setup() opts.plugins[%q]"):format(tostring(repo)),
+        notify
+      )
+    end
+  end
+
+  if type(opts.extra) == "table" then
+    for i, target in ipairs(opts.extra) do
+      config_validate.check(
+        target,
+        KNOWN_EXTRA_OPTS,
+        ("runtime-analysis.telemetry.lazy.setup() opts.extra[%d]"):format(i),
+        notify
+      )
+    end
+  end
+end
+
 local M = {}
 
 ---The `opts` handed to the most recent `M.setup()` call -- kept around so
@@ -221,6 +274,8 @@ end
 
 ---@param opts RA.Telemetry.LazyOpts
 function M.setup(opts)
+  validate_opts(opts)
+
   configured = opts
 
   if type(opts.extra) == "table" then
