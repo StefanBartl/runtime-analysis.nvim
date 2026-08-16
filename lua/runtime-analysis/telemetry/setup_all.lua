@@ -38,12 +38,16 @@
 
 local M = {}
 
----@internal
+---Write one namespace's data out as a timestamped backup file. Exported (not
+---`---@internal`) — `telemetry/command.lua`'s own `do_reset_all` reuses this
+---exact routine for `:RATelemetry reset`/`:RATelemetryResetAll`'s backup
+---step rather than growing a second copy of it; only the "which candidates,
+---which prompt" logic around it differs between setup and a bare reset.
 ---@param dir string
 ---@param namespace string
 ---@param data RA.Telemetry.Data
 ---@return string|nil written
-local function write_backup(dir, namespace, data)
+function M.write_backup(dir, namespace, data)
   local store = require("runtime-analysis.telemetry.store")
   local report_file = require("runtime-analysis.telemetry.report_file")
 
@@ -149,7 +153,7 @@ function M.run(run_opts)
 
       local backed_up
       if had_data and run_opts.backup_dir then
-        backed_up = write_backup(run_opts.backup_dir, candidate.namespace, existing)
+        backed_up = M.write_backup(run_opts.backup_dir, candidate.namespace, existing)
       end
 
       setup_one(candidate, run_opts.full == true)

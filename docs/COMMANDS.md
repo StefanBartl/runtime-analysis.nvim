@@ -308,10 +308,11 @@ not a small addition to a request-only history.
 
 ## `:RA history clear`
 
-Clears the current project's history outright. No confirmation prompt —
-the same posture `:RATelemetry reset` already takes for clearing
-telemetry counts, and for the same reason: this data is disposable and
-locally-scoped, not something a confirmation dialog meaningfully protects.
+Clears the current project's history outright. No confirmation prompt, no
+backup offer — unlike `:RATelemetry reset`'s conditional "back up first?"
+prompt (only shown when there is telemetry data to lose), this data is
+disposable and locally-scoped enough that neither a confirmation dialog nor
+a backup step meaningfully protects anything worth the friction.
 
 ## `:RA env [name]`
 
@@ -610,6 +611,14 @@ Subcommand table: [`docs/BINDINGS.md`](BINDINGS.md#ratelemetry-subcommands).
 start`/`stop`/`reset` with no namespace (already "every live instance") —
 they exist only because that bare form is reached for often enough to earn
 a command name of its own.
+
+`reset` (bare and `ResetAll` alike) asks the same single "back up first?"
+question `:RATelemetrySetupAll` below already does, before dropping
+anything: one prompt for a directory (created if it does not exist), shown
+only if at least one live instance actually has data on disk or pending in
+memory. Declining (`<Esc>`/empty input) aborts the reset entirely — nothing
+is cleared. A namespace with nothing collected never triggers the prompt at
+all (`:RATelemetry reset <ns>` on an empty instance just resets, silently).
 
 `:RATelemetrySetupAll` / `:RATelemetrySetupAllFull` are the bare forms of
 `:RATelemetry setup` / `:RATelemetry full` — they act on

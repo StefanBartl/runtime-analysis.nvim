@@ -673,7 +673,7 @@ require("runtime-analysis.telemetry.command").setup()
 :RATelemetry lsp.nvim        " report for one namespace
 :RATelemetry start [ns]      " every instance, or just one
 :RATelemetry stop [ns]       " every instance, or just one
-:RATelemetry reset [ns]      " every instance, or just one
+:RATelemetry reset [ns]      " back up (prompted once, only if anything would be lost), then drop -- every instance, or just one
 :RATelemetry coverage
 :RATelemetry export [path]   " JSON; Markdown if .md; PDF if .pdf (needs pdfport.nvim)
 :RATelemetry export-all <dir>  " one Markdown file per namespace found ON DISK into <dir>
@@ -1304,5 +1304,5 @@ not a substitute for genuinely automatic tree-wide catching.
 | `reminder.lua` | the time/volume lifecycle trigger |
 | `toggle.lua` | persistent per-namespace enable/disable, independent of an instance's own data |
 | `lazy.lua` | the lazy.nvim adapter: catch-up scan + `User LazyLoad` autocmd, plus `configured()`/`candidates()` for `setup_all.lua` |
-| `setup_all.lua` | `:RATelemetrySetupAll`/`Full`'s mechanism: backup + reset + re-wrap + restart across every configured, loaded plugin |
+| `setup_all.lua` | `:RATelemetrySetupAll`/`Full`'s mechanism: backup + reset + re-wrap + restart across every configured, loaded plugin; its `write_backup` is also what `:RATelemetry reset`/`ResetAll` reuses for their own, simpler backup-then-reset |
 | `command.lua` | `:RATelemetry`, `:RATelemetryStartAll`/`StopAll`/`ResetAll`/`SetupAll`/`SetupAllFull` (opt-in `setup()`) |

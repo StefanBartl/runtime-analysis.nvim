@@ -483,7 +483,9 @@ the rest of this plugin. Command surface: >
   :RATelemetry lsp.nvim        report for one namespace
   :RATelemetry start [ns]      every instance, or just one
   :RATelemetry stop [ns]       every instance, or just one
-  :RATelemetry reset [ns]      every instance, or just one
+  :RATelemetry reset [ns]      back up (one prompt, only if anything would
+                               be lost), then drop collected data -- every
+                               instance, or just one
   :RATelemetry disable [ns]    stop + persist "off" across restarts
   :RATelemetry enable [ns]     clear a persisted disable, resume now
   :RATelemetry disabled        list namespaces currently disabled
@@ -505,7 +507,8 @@ the rest of this plugin. Command surface: >
 
   :RATelemetryStartAll         standalone alias for :RATelemetry start (bare)
   :RATelemetryStopAll          standalone alias for :RATelemetry stop (bare)
-  :RATelemetryResetAll         standalone alias for :RATelemetry reset (bare)
+  :RATelemetryResetAll         standalone alias for :RATelemetry reset
+                               (bare) -- same backup prompt
 
   :RATelemetrySetupAll         for every plugin opts.telemetry.plugins
                                configures that is loaded right now: back up
