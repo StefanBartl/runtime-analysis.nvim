@@ -320,6 +320,22 @@ current counts, `:RA usage stop` ends collection. Built on
 `runtime-analysis.telemetry` itself, pointed at the editor instead of code.
 Full reasoning: [`docs/COMMANDS.md`](docs/COMMANDS.md).
 
+```vim
+:RA loaded snapshot documentation
+:RA loaded snapshots documentation
+```
+
+`runtime-analysis.loaded` reads `package.loaded` live — every function
+directly on a module's table right now, not what the source merely
+declares. `:RA loaded snapshot <prefix> [name]` persists that read for
+every currently-loaded module under `<prefix>` (itself, plus anything
+`prefix .`-prefixed) as a named snapshot, so it can be viewed later or from
+a different process entirely — documentation.nvim's `:DocMap serve` server
+mode is the consumer this was built for, since a browser tab has no live
+`package.loaded` of its own to read. `:RA loaded snapshots <prefix>` lists
+what's saved for a prefix, newest first. Full reasoning:
+[`docs/FEATURES/LOADED.md`](docs/FEATURES/LOADED.md).
+
 ## Setup
 
 ```lua

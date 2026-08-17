@@ -573,6 +573,46 @@ count that, but the mapping that triggered it will not be. A buffer-local
 mapping sharing the same mode+lhs as a different mapping elsewhere is
 combined into one count, not tracked per buffer.
 
+## `:RA loaded snapshot <prefix> [name]` and `:RA loaded snapshots <prefix>`
+
+`docs/FEATURES/FINISHED.md` §5.4: persisted, named captures of
+`runtime-analysis.loaded`'s live read, so it can be viewed later, or from a
+process that never itself loaded the code in question —
+documentation.nvim's `:DocMap serve` Loaded Analysis panel is the consumer
+this was built for, since a browser tab answering `GET /api/loaded` has no
+live `package.loaded` of its own to read and, unlike its Telemetry panel
+counterpart, has no "latest" fallback to reach for instead.
+
+```vim
+:RA loaded snapshot documentation
+:RA loaded snapshot documentation nightly
+:RA loaded snapshots documentation
+```
+
+`:RA loaded snapshot <prefix> [name]` walks `package.loaded` for every key
+equal to `prefix` or starting `prefix .` — the identical scoping
+`wrap_loaded(prefix)` already uses, so the same prefix that instruments a
+plugin also snapshots it — and saves `{ [module_id] = M.functions(module_id) }`
+for every match under `name` (default: a timestamp). Warns rather than
+erroring when nothing is loaded under `prefix` at all. **One identifier,
+not two, unlike telemetry:** a telemetry namespace can genuinely differ
+from the module prefix it wraps, but a loaded snapshot has nothing to name
+except the prefix it was captured under, so there is no separate namespace
+argument to keep in sync with it.
+
+`:RA loaded snapshots <prefix>` lists every snapshot saved for `prefix`,
+newest first — the same shape `:RATelemetry snapshots <ns>` already
+returns. Storage deliberately parallels `telemetry/store.lua` (same
+`lib.nvim.cache.disk` primitive, same retention/eviction policy — capped at
+`loaded.SNAPSHOT_RETENTION`, 20, oldest evicted first) without reusing it
+directly: a loaded snapshot is a module→function-keys map, not a
+call-count aggregate, and the two concerns stay on separate cache-key
+prefixes (`"loaded/"` vs. telemetry's own) so they never collide on disk.
+
+Module: [`lua/runtime-analysis/loaded.lua`](../lua/runtime-analysis/loaded.lua)
+(`M.snapshot`, `M.list_snapshots`, `M.load_snapshot`). Feature-level
+overview: [`docs/FEATURES/LOADED.md`](FEATURES/LOADED.md).
+
 ### Why `:RARequest`/`:RASend` exist as separate flat commands, not only `:RA request`/`:RA send`
 
 `:RA`, built via `lib.nvim.usercmd.composer`, is the verb-first shape

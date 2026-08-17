@@ -28,6 +28,8 @@ All four are registered unconditionally by `require("runtime-analysis").setup()`
 | `:RA inspect <module>` | a `package.loaded` key, `<Tab>`-completed live | Walks a live module table: functions, tables, metatables, what's shadowed through `__index`. See `docs/COMMANDS.md`. |
 | `:RA usage` | none | Report keymap/command press counts collected since `:RA usage start`. See `docs/COMMANDS.md`. |
 | `:RA usage start` / `:RA usage stop` | none | Start/stop counting — opt-in, local-only, records what you pressed rather than what the code did. |
+| `:RA loaded snapshot <prefix> [name]` | module prefix, optional snapshot name | Persists a named capture of every currently-loaded module under `<prefix>` (`runtime-analysis.loaded`). See `docs/COMMANDS.md`. |
+| `:RA loaded snapshots <prefix>` | module prefix | Lists saved loaded snapshots for `<prefix>`, newest first. See `docs/COMMANDS.md`. |
 | `:RARequest` | none | Flat alias for `:RA request` — see below for why both exist. |
 | `:RASend` | none | Flat alias for `:RA send`. |
 | `:RATelemetry [args]` | see below | Opt-in call counting and usage statistics for any plugin. Full reference: [`lua/runtime-analysis/telemetry/README.md`](../lua/runtime-analysis/telemetry/README.md). |
@@ -35,11 +37,12 @@ All four are registered unconditionally by `require("runtime-analysis").setup()`
 Built via [`lib.nvim.usercmd.composer`](https://github.com/StefanBartl/lib.nvim/blob/main/lua/lib/nvim/usercmd/composer/README.md)
 — the same verb-first shape `:DocMap`, `:MDView` and `:Replace` already use
 (`<Tab>` after `:RA ` completes `request`/`send`/`yank`/`cancel`/`history`/
-`env`/`import`/`export`/`provenance`/`inspect`/`usage`; `:RA history <Tab>`
-completes `clear`, `:RA env <Tab>` completes whatever names this project's
-env files currently define, `:RA inspect <Tab>` completes whatever is
-actually in `package.loaded` right now, `:RA usage <Tab>` completes
-`start`/`stop`). `:RATelemetry` stays a
+`env`/`import`/`export`/`provenance`/`inspect`/`usage`/`loaded`; `:RA
+history <Tab>` completes `clear`, `:RA env <Tab>` completes whatever names
+this project's env files currently define, `:RA inspect <Tab>` completes
+whatever is actually in `package.loaded` right now, `:RA usage <Tab>`
+completes `start`/`stop`, `:RA loaded <Tab>` completes `snapshot`/
+`snapshots`). `:RATelemetry` stays a
 second, separate compound command rather than folding under `:RA telemetry
 ...`, the same split documentation.nvim draws between `:DocMap`
 (writes/verifies) and `:DocBrowse` (only reads) — here between "runs a
@@ -149,6 +152,21 @@ cost-vs-use report already reads, pointed at editor input instead of code.
 See `docs/COMMANDS.md` for the honest limits (only mappings set after
 `start`, only function-callback rhs, no per-buffer split). Module:
 [`lua/runtime-analysis/usage.lua`](../lua/runtime-analysis/usage.lua).
+
+### Persisted loaded snapshots (`:RA loaded snapshot` / `:RA loaded snapshots`)
+
+Named, persisted captures of `runtime-analysis.loaded`'s live
+`package.loaded` read, so it can be viewed later, or from a process that
+never itself loaded the code in question — documentation.nvim's `:DocMap
+serve` Loaded Analysis panel is the consumer this was built for. `:RA
+loaded snapshot <prefix> [name]` scopes the walk to `prefix` (and anything
+`prefix .`-prefixed), the same scoping `wrap_loaded(prefix)` already uses;
+`:RA loaded snapshots <prefix>` lists what's saved, newest first. Same
+`lib.nvim.cache.disk` storage and retention/eviction policy as telemetry's
+own named snapshots, on a separate cache-key prefix so the two never
+collide. See `docs/COMMANDS.md` and
+[`docs/FEATURES/LOADED.md`](FEATURES/LOADED.md) for the full reasoning.
+Module: [`lua/runtime-analysis/loaded.lua`](../lua/runtime-analysis/loaded.lua).
 
 ### `:RATelemetry` subcommands
 
