@@ -96,6 +96,17 @@ local html_renderer = require("runtime-analysis.telemetry.renderers.html")
 
 local M = {}
 
+---One backup directory for every prompt that offers one -- `:RATelemetry
+---setup|full`/`:RATelemetrySetupAll*` and `:RATelemetry reset`/
+---`:RATelemetryResetAll` used to suggest two different sibling dirs, which
+---scattered backups of the same data across the cache root depending on
+---which command happened to ask. It sits under the telemetry cache dir
+---(`DEFAULT_CACHE_DIR` in `telemetry/init.lua`) so a backup lives next to
+---the data it is a copy of. Still only a *default*: the prompt is editable
+---and any answer is honoured.
+local DEFAULT_BACKUP_DIR = vim.fn.stdpath("cache")
+  .. "/runtime-analysis.nvim/cache/telemetry/Backups"
+
 local SUBCOMMANDS = {
   "report",
   "start",
@@ -475,8 +486,6 @@ local function do_setup_all(full, namespace)
     return
   end
 
-  local default_dir = vim.fn.stdpath("cache") .. "/runtime-analysis.nvim/setup-all-backups"
-
   local function on_input(input)
     if input == nil or vim.trim(input) == "" then
       notify.warn("setup aborted -- existing telemetry data left untouched")
@@ -495,13 +504,13 @@ local function do_setup_all(full, namespace)
   if ok_kit then
     kit.input({
       title = "runtime-analysis.telemetry: back up existing data to (created if missing): ",
-      default = default_dir,
+      default = DEFAULT_BACKUP_DIR,
       on_submit = on_input,
     })
   else
     vim.ui.input({
       prompt = "runtime-analysis.telemetry: back up existing data to (created if missing): ",
-      default = default_dir,
+      default = DEFAULT_BACKUP_DIR,
     }, on_input)
   end
 end
@@ -584,8 +593,6 @@ local function do_reset_all(namespace)
     return
   end
 
-  local default_dir = vim.fn.stdpath("cache") .. "/runtime-analysis.nvim/reset-backups"
-
   local function on_input(input)
     if input == nil or vim.trim(input) == "" then
       notify.warn("reset aborted -- existing telemetry data left untouched")
@@ -604,13 +611,13 @@ local function do_reset_all(namespace)
   if ok_kit then
     kit.input({
       title = "runtime-analysis.telemetry: back up existing data to (created if missing): ",
-      default = default_dir,
+      default = DEFAULT_BACKUP_DIR,
       on_submit = on_input,
     })
   else
     vim.ui.input({
       prompt = "runtime-analysis.telemetry: back up existing data to (created if missing): ",
-      default = default_dir,
+      default = DEFAULT_BACKUP_DIR,
     }, on_input)
   end
 end
