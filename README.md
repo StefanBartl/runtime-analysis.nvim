@@ -415,7 +415,7 @@ plugin's counts against its static analysis — the design doc that scoped it
 "Mode 7"; it landed as the **eighth** entry in the real `MODES` list, since
 Endpoints took position seven first (see `ECOSYSTEM.md` step 8 for that
 renumbering). `:DocBrowse loaded` — the declared-vs-loaded diff,
-[`docs/ROADMAP.md`](docs/ROADMAP.md) §5.3 — followed as the ninth.
+[`docs/FINISHED.md`](docs/FEATURES/FINISHED.md) — followed as the ninth.
 
 The same join now also answers outside Neovim entirely:
 [`docmap-desktop`](https://github.com/StefanBartl/docmap-desktop) runs
@@ -427,14 +427,19 @@ that project's namespace, an honest "no host"/"no data" message otherwise.
 
 ## What's not here yet
 
-See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full, phased backlog.
+**The queue is not in this repository.** Since 2026-08-20 there is one plan
+for all three — `documentation.nvim`, `docmap-desktop` and this one — because
+the same task used to appear in five documents in three different states:
+[`docmap-desktop/docs/PLAN.md`](https://github.com/StefanBartl/docmap-desktop/blob/main/docs/PLAN.md),
+split into quick wins, medium and large.
 
 ## Where this is going
 
-- [`docs/ROADMAP.md`](docs/ROADMAP.md) — this plugin's own backlog, phased
-  into quick wins / medium / longer-term work, plus documented rejections.
+- [`docs/ROADMAP.md`](docs/ROADMAP.md) — where this plugin is going, in
+  prose: the blind spot of static analysis is the job, and the three limits
+  that are not up for negotiation. Direction, not schedule.
 - [`docs/FINISHED.md`](docs/FEATURES/FINISHED.md) — the decision record behind
-  everything that has shipped out of `docs/ROADMAP.md` — what, and why.
+  everything that has shipped — what, and why.
 - [`docs/IDEAS.md`](docs/IDEAS.md) — ideas that only exist *between* plugins:
   runtime-analysis × documentation.nvim × mdview.nvim × lib.nvim.
 - [`doc/runtime-analysis.txt`](doc/runtime-analysis.txt) — `:help
