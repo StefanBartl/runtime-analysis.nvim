@@ -12,6 +12,10 @@
 --- side — neither plugin gains a poller, a socket, or a timer it did not
 --- already have.
 ---
+--- The **browser** tier of mdview. `renderers/preview_tab.lua` is the other
+--- one — same plugin, no relay, no binary, and a snapshot instead of a live
+--- file. See that file's header for which to reach for when.
+---
 --- Soft dependency, never hard: `pcall(require, "mdview")`, every call here
 --- pcall-guarded, degrade to `false, err` rather than throwing. Same
 --- discipline `lib.nvim.progress.styles.fidget` documents for fidget.nvim —

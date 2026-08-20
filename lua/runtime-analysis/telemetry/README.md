@@ -762,7 +762,7 @@ a subcommand — the same shape `lib.nvim.progress` already uses for its
 
 ```lua
 require("runtime-analysis.telemetry").setup({
-  report_style = "auto",   -- "auto" | "kit" | "mdview" | "file" | "html"
+  report_style = "auto",   -- "auto" | "kit" | "preview-tab" | "mdview" | "file" | "html"
 })
 ```
 
@@ -801,6 +801,45 @@ Honest limits:
   `report_style = "mdview"` may pause briefly for that download; failures
   (no network, no `curl`) are mdview's own to report, and this bridge just
   degrades to `"kit"`.
+
+## `report_style = "preview-tab"` — the browser-free tier
+
+The same plugin, its **in-editor** half: a real buffer in its own tab, no
+relay, no browser, nothing downloaded. It sits between the two styles it was
+built from:
+
+| | `"kit"` | `"preview-tab"` | `"mdview"` |
+|---|---|---|---|
+| Needs mdview.nvim | no | yes | yes |
+| Downloads a relay binary | no | **no** | on first use |
+| Scrolls, searches, yanks | poorly (a float) | yes | yes (the browser's) |
+| Live-updates on flush | no | no | yes |
+
+**What mdview adds here, measured rather than assumed.** Its preview opens
+the mirror with `conceallevel = 2`, so the markdown Treesitter parser hides
+the `**`, the backticks and the link brackets — the report *reads as prose*
+rather than as its own source. The read-only scratch buffer and the tab are
+things this bridge could have done itself; the conceal is the part worth
+depending on another plugin for.
+
+**A snapshot, not a dashboard.** `"mdview"` is live because the relay watches
+a file on disk and telemetry rewrites that file on every flush. This mirrors
+a *buffer* and nothing re-reads it afterwards, so you get the report as of
+the moment you opened it — the same promise `"kit"` already makes. Run
+`:RATelemetry open` again for a newer one.
+
+**It writes nothing**, which is the whole difference from `"file"`. `"file"`
+is for keeping a report; this is for reading one.
+
+**An unavailable `"preview-tab"` degrades to `"kit"`, never to `"mdview"`.**
+Both tiers come from the same plugin, so degrading sideways would answer "no
+browser, no binary" with a browser tab and a binary download.
+
+**`"auto"` is unchanged and still means mdview-or-kit.** The case for making
+the cheaper tier the default is real — but `"auto"` is what every existing
+configuration already resolves to, and quietly moving those readers from a
+browser tab to an editor tab is a changed answer to a question they settled
+once.
 
 ## HTML dashboard (docs/ROADMAP.md §4.4)
 
@@ -1297,7 +1336,8 @@ not a substitute for genuinely automatic tree-wide catching.
 | `cost_vs_use.lua` | joins `startup.lua`'s per-root cost against a namespace's own `resolved_modules()`, on real module paths only — never a name guess |
 | `report.lua` | report building + rendering (terminal lines and Markdown), incl. the memoization hint |
 | `report_file.lua` | where a rendered Markdown *or* HTML report lives on disk, and writing one there |
-| `report_style.lua` | resolve `report_style` ("auto"/"kit"/"mdview"/"file"/"html") to a concrete destination |
+| `report_style.lua` | resolve `report_style` ("auto"/"kit"/"preview-tab"/"mdview"/"file"/"html") to a concrete destination |
+| `renderers/preview_tab.lua` | the in-editor tier of mdview: a real buffer in its own tab, no relay, no binary |
 | `renderers/mdview.lua` | bridges a report to a browser tab via mdview.nvim's `:MDView standalone` |
 | `renderers/html.lua` | the sortable/filterable HTML dashboard (§4.4) — a small, self-contained page, not documentation.nvim's own renderer reused |
 | `config.lua` | module-level defaults (`report_style`) via `telemetry.setup()` |

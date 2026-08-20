@@ -199,9 +199,10 @@ function M.check()
   local ok_mdview = pcall(require, "mdview")
   if ok_mdview then
     h_ok('mdview.nvim — report_style "auto"/"mdview" can open a live browser report')
+    h_ok('mdview.nvim — report_style "preview-tab" can open an in-editor report tab')
   else
     h_info("mdview.nvim not installed", {
-      'report_style "auto" falls back to the in-editor kit float.',
+      'report_style "auto" and "preview-tab" both fall back to the in-editor kit float.',
       "Everything else (:RARequest, :RASend, :RATelemetry) works without it.",
     })
   end
