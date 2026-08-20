@@ -12,6 +12,7 @@
     - [1.5 Runtime evidence as a *check input*, not just a view](#15-runtime-evidence-as-a-check-input-not-just-a-view)
     - [1.6 `doc-references-missing`, in the other direction](#16-doc-references-missing-in-the-other-direction)
     - [1.7 Endpoint inventory × request history × response shape](#17-endpoint-inventory-request-history-response-shape)
+    - [1.7b API traffic as a measurement — both directions](#17b-api-traffic-as-a-measurement--both-directions)
     - [1.8 A live badge in the annotation popup](#18-a-live-badge-in-the-annotation-popup)
     - [1.9 Multi-language telemetry — importing profiles, not instrumenting them](#19-multi-language-telemetry-importing-profiles-not-instrumenting-them)
   - [2. runtime-analysis × mdview.nvim — mdview as more than a renderer](#2-runtime-analysis-mdviewnvim-mdview-as-more-than-a-renderer)
@@ -232,6 +233,108 @@ Deliberately *not* a schema validator. The useful, cheap version is "this route
 is documented as returning an object and returned an array", not JSON Schema.
 
 ---
+
+### 1.7b API traffic as a measurement — both directions
+
+**Requested 2026-08-20, and it is the largest single idea in this document**
+— large enough that recording it as an extension of §1.7 understates it.
+§1.7 asks what an endpoint *returned* and compares it against the doc block.
+This asks what the traffic *cost*, and it applies to two directions that are
+usually treated as unrelated:
+
+**Outbound — the project calls somebody else's API, or downloads a file.**
+Response size, content type, how long it took, the resulting rate, how many
+redirects were followed, whether compression was in play, and whether the
+declared `Content-Type` matched what actually arrived.
+
+**Inbound — the project's own endpoints answer a request.** Bytes returned,
+status, duration, and **how many attempts it took before the thing
+succeeded** — which is the number in this whole idea that nothing else
+anywhere reports and that everybody has wanted at least once.
+
+#### Why the two belong in one feature
+
+They are the same measurement pointed in opposite directions, and the
+existing seam already separates them the right way: documentation.nvim's
+`core/endpoints.lua` knows the routes this project *declares*, and
+`deps.lua`'s `requires_external`/`calls_external` know the services it
+*reaches for*. One collector, keyed by which side of that line a call sits
+on, fills both.
+
+#### What it must not record, decided before anything is built
+
+**Metadata and shapes, never payloads.** A request body carries credentials,
+tokens and personal data; a response body carries whatever the service
+returned about somebody. Recording sizes, durations, status codes, content
+types and *the shape of a JSON response* (its keys and their types, which is
+what §1.7 already wants) gives every question below an answer while storing
+nothing that would be a disclosure if the file were committed — and this
+plugin's captures **are** committed, in `telemetry/<ns>/snapshots/`.
+
+That is not a caveat to add later. It is the difference between a feature
+somebody can turn on and one their security review turns off.
+
+#### What it answers that nothing else does
+
+- **Retries to success.** "This endpoint needed 3 attempts in 40% of
+  sessions" is a reliability fact no test suite reports, because a test that
+  eventually passes reports one pass.
+- **Percentiles, not averages.** p50/p95/max per endpoint. An average hides
+  precisely the case anybody cares about, which is the same reason the
+  Analysis tab ranks rather than aggregates.
+- **A size budget.** "This endpoint returned 40 MB across 12 calls" is
+  actionable in a way "12 calls" is not.
+- **The error taxonomy.** Status classes, plus which errors were transient
+  (a later attempt succeeded) and which were terminal. Those are different
+  problems and today they look alike.
+- **Content-type honesty.** Declared versus actual, on both sides. Cheap to
+  record and surprisingly often wrong.
+
+#### The Quicks that fall out of it
+
+Quicks is the tab that states the tree in sentences, and this data produces
+its kind of verdict directly — negatives first, each carrying what was
+measured:
+
+- *"3 of your 14 endpoints were never called in any recorded session."*
+  (Which is §6.2's finding, now with a denominator.)
+- *"Your slowest endpoint is 40× the median."*
+- *"1 endpoint needed more than one attempt in most sessions."*
+- *"2 endpoints returned a different shape than their `@return` says."*
+
+Each is checkable, each names its blind spot the way every other Quicks
+verdict does — "recorded sessions" is not "all traffic", and the sentence has
+to say so.
+
+#### Where it is shown
+
+The API area of the generated page and of `docmap-desktop`, beside the
+endpoint inventory that is already there. **The static artifact cannot hold
+it** — traffic changes between runs, exactly as call counts do — so it
+arrives the way telemetry already does: `/api/*` on demand, never baked in.
+That constraint is settled, and this feature inherits it rather than
+reopening it.
+
+#### Why this is the path to a profiler, not a detour
+
+The reason to write this down as one idea rather than three: **an HTTP call
+is just an instrumented call with a size attached.** The collector shape it
+needs — count, duration distribution, bytes, outcome, keyed by an identity —
+is the same shape a function profiler needs. Building it for HTTP first gives
+the harder half (a distribution rather than a counter; an outcome rather than
+a hit) a small, well-bounded first consumer, and what comes out is a
+benchmark/profiler tool that happened to start with the API panel.
+
+The existing telemetry is a *counter* per function. This is the step from
+counting to measuring, and it is the step that changes what this plugin is.
+
+#### It is also where the test harness plugs in
+
+A future test-harness plugin runs the code; this records what the code did
+while running. Crossing the two gives **HTTP coverage** — which endpoints a
+test run actually exercised — the exact parallel of `fn.tested` for
+functions, and a number nobody currently has. Worth naming now so the
+collector is not built in a way that assumes a human triggered the traffic.
 
 ### 1.8 A live badge in the annotation popup
 
