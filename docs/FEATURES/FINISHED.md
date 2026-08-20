@@ -1,7 +1,7 @@
 # runtime-analysis.nvim — finished work
 
 What shipped, and the trade-off behind it — the decision record
-[`docs/ROADMAP.md`](ROADMAP.md) deliberately is not.
+[`docs/ROADMAP.md`](../ROADMAP.md) deliberately is not.
 
 **The convention this file exists to keep:** when an item in `docs/ROADMAP.md`
 ships, it is removed from there — not left behind as a struck-through "Done"
@@ -352,7 +352,7 @@ small, self-contained page reusing the same *design tokens* (CSS custom
 properties — colors, spacing, light/dark via `prefers-color-scheme` and
 `data-theme`) and visual language (badges, section labels, the toolbar
 search input), written fresh for telemetry's own data. New module:
-[`lua/runtime-analysis/telemetry/renderers/html.lua`](../lua/runtime-analysis/telemetry/renderers/html.lua)
+[`lua/runtime-analysis/telemetry/renderers/html.lua`](../../lua/runtime-analysis/telemetry/renderers/html.lua)
 — a few hundred lines, not a few thousand, and no dependency from this
 plugin's own report onto documentation.nvim's internal, IR-specific
 module.
@@ -401,7 +401,7 @@ has kept since its first version.
 
 **GraphQL**, the cheap half the roadmap entry itself predicted: new
 top-level module
-[`lua/runtime-analysis/graphql.lua`](../lua/runtime-analysis/graphql.lua).
+[`lua/runtime-analysis/graphql.lua`](../../lua/runtime-analysis/graphql.lua).
 `X-Request-Type: GraphQL` marks a body as query text, optionally followed
 by a blank-line-separated JSON variables block (REST Client's own rule);
 `M.resolve` turns it into the real `{"query": ..., "variables": {...}}`
@@ -414,7 +414,7 @@ is sharing" holds for GraphQL requests too.
 
 **Multipart/form-data**, the real argument-construction problem the entry
 named: new top-level module
-[`lua/runtime-analysis/multipart.lua`](../lua/runtime-analysis/multipart.lua).
+[`lua/runtime-analysis/multipart.lua`](../../lua/runtime-analysis/multipart.lua).
 A part whose entire content is a bare `< ./path` line means "read this
 local file's real bytes", resolved relative to the request buffer's own
 directory when it has one, the cwd otherwise. Two genuinely different
@@ -451,7 +451,7 @@ Walks a live `package.loaded[module]` table and renders it: functions
 `provenance.lua`, §5.2, already uses for a single function), nested
 tables (their own shape), metatables, and which direct keys *shadow* a
 table `__index`. New top-level module
-[`lua/runtime-analysis/inspect.lua`](../lua/runtime-analysis/inspect.lua),
+[`lua/runtime-analysis/inspect.lua`](../../lua/runtime-analysis/inspect.lua),
 wired up as `:RA inspect <module>` (`<Tab>`-completing live against
 `package.loaded`, the same dynamic-completer shape `:RA env` already
 uses for environment names).
@@ -740,7 +740,7 @@ plugin's own telemetry wraps are answerable precisely; everything else
 its own output rather than pretending otherwise.
 
 New top-level module,
-[`lua/runtime-analysis/provenance.lua`](../lua/runtime-analysis/provenance.lua):
+[`lua/runtime-analysis/provenance.lua`](../../lua/runtime-analysis/provenance.lua):
 `M.inspect(path)` takes a dotted string — `"vim.notify"`,
 `"lib.nvim.notify.create"` — since a `:RA`-style command can only ever take
 a string, never a live table reference. Resolution tries two strategies in
@@ -813,7 +813,7 @@ alone), local-only (no account, no upload, the same "deliberately not
 building" posture telemetry's own table already states), and it grows no
 "share this" feature.
 
-New module, [`lua/runtime-analysis/usage.lua`](../lua/runtime-analysis/usage.lua),
+New module, [`lua/runtime-analysis/usage.lua`](../../lua/runtime-analysis/usage.lua),
 built as a thin instrumentation layer over `runtime-analysis.telemetry`
 rather than a second counting mechanism: one real telemetry instance
 underneath, `inst.wrap_fn` wrapping a keymap's callback exactly once — at
@@ -842,7 +842,7 @@ soft-dependency fallback `:RATelemetry`'s own `show` helper already uses);
 `:RA usage start`/`:RA usage stop` toggle collection explicitly.
 
 Tested against the real entry points, not stubs, in
-[`docs/TESTS/usage_spec.lua`](../docs/TESTS/usage_spec.lua): a real
+[`docs/TESTS/usage_spec.lua`](../TESTS/usage_spec.lua): a real
 `vim.keymap.set` callback stays callable and gets counted; a real typed
 command line, committed via `nvim_feedkeys`, is counted through a genuine
 `CmdlineLeave`; `stop()` restores the true `vim.keymap.set`. One case is
@@ -881,7 +881,7 @@ against `startup.lua`'s own per-root totals joins on the one thing both
 features already track honestly.
 
 New module,
-[`lua/runtime-analysis/telemetry/cost_vs_use.lua`](../lua/runtime-analysis/telemetry/cost_vs_use.lua):
+[`lua/runtime-analysis/telemetry/cost_vs_use.lua`](../../lua/runtime-analysis/telemetry/cost_vs_use.lua):
 `M.build`/`M.build_all` take pre-fetched inputs (a namespace's
 `resolved_modules()`, its `total_calls`, and a `startup.report()`) rather
 than live instances or `startup.lua` itself — a pure join, testable with
@@ -942,7 +942,7 @@ So the existing adapter turned out to be zero percent of this mechanism,
 not half, and `telemetry/lazy.lua` is untouched by this entry.
 
 What actually works, and what shipped: new standalone module
-[`lua/runtime-analysis/telemetry/startup.lua`](../lua/runtime-analysis/telemetry/startup.lua),
+[`lua/runtime-analysis/telemetry/startup.lua`](../../lua/runtime-analysis/telemetry/startup.lua),
 which wraps the global `require` and times every **cache miss** — an actual
 module load, never a `package.loaded` hit (that costs one table index, is
 not a load, and recording it would bury the real ones). Nesting falls out
@@ -1172,7 +1172,7 @@ response arrives, a mismatch surfaced via the quickfix list — the roadmap
 entry's own stated scope held exactly: one directive, one thing it checks,
 not the general assertion language it explicitly warned against becoming.
 
-New module, [`lua/runtime-analysis/assertions.lua`](../lua/runtime-analysis/assertions.lua):
+New module, [`lua/runtime-analysis/assertions.lua`](../../lua/runtime-analysis/assertions.lua):
 `extract`/`strip`, pure logic over a request block's own lines, with no
 knowledge of buffers, sends, or the quickfix list at all — `extract` finds
 at most one directive anywhere in the block (a second is a real, named
@@ -1222,7 +1222,7 @@ matters more held up while building it: import is real argument parsing
 (a genuine, if bounded, tokenizer), export is a formatter over data this
 plugin already has in hand.
 
-New module, [`lua/runtime-analysis/curl.lua`](../lua/runtime-analysis/curl.lua).
+New module, [`lua/runtime-analysis/curl.lua`](../../lua/runtime-analysis/curl.lua).
 No shared shell-tokenizer existed anywhere in lib.nvim (checked before
 writing one) — `usercmd.composer`'s own tail-splitting is a plain
 `gmatch("%S+")` with no quote awareness at all, so this module's own
@@ -1313,7 +1313,7 @@ repository's own root now lists it). Both optional, merged per environment
 name with the private file's own keys winning on overlap, so a project
 committing only the shared file still gives every reader working defaults.
 
-New module, [`lua/runtime-analysis/env.lua`](../lua/runtime-analysis/env.lua):
+New module, [`lua/runtime-analysis/env.lua`](../../lua/runtime-analysis/env.lua):
 `load_all`/`list_names`/`current`/`set_current`/`resolve`. The active
 environment is **session state, not saved state** — the same "a fact about
 this editing session, not worth writing to disk" posture `:RA cancel`'s own
@@ -1434,7 +1434,7 @@ roadmap entry's own open question, decided as part of shipping it rather
 than left for later: **request-only**, response bodies not stored at all
 (not even behind an opt-in — "if at all" turned into "not this time").
 
-New module, [`lua/runtime-analysis/history.lua`](../lua/runtime-analysis/history.lua):
+New module, [`lua/runtime-analysis/history.lua`](../../lua/runtime-analysis/history.lua):
 `record`/`list`/`clear`, namespaced per project the same way the roadmap
 entry specified, capped at `MAX_ENTRIES` (200, exported specifically so a
 test could reference it instead of duplicating the magic number) with the
@@ -1539,7 +1539,7 @@ Verified rather than assumed: `vim.filetype.match({ filename = "x.http" })`
 already answers `"http"` in stock Neovim, no plugin involved at all. The one
 real gap was `*.rest` (IntelliJ HTTP Client's own extension for the
 identical file shape), which Neovim does not resolve natively — closed with
-[`ftdetect/runtime-analysis.lua`](../ftdetect/runtime-analysis.lua), a
+[`ftdetect/runtime-analysis.lua`](../../ftdetect/runtime-analysis.lua), a
 three-line `vim.filetype.add({ extension = { rest = "http" } })`. Sourced
 automatically by Neovim's own `:filetype on` (every `ftdetect/*.lua` on the
 runtimepath is), independent of whether `require("runtime-analysis").setup()`
@@ -1613,7 +1613,7 @@ taking on.
 
 `nvim --headless -l scripts/telemetry.lua report lib.nvim` — read a
 namespace off disk with no editor session. Shipped as
-[`scripts/telemetry.lua`](../scripts/telemetry.lua): `report <namespace>` and
+[`scripts/telemetry.lua`](../../scripts/telemetry.lua): `report <namespace>` and
 `export <namespace> <path>` (`--since`/`--top`/`--sort`/`--dir`), built
 entirely on `telemetry.load()` + `report.build()`, exactly as predicted — a
 script and an argument parser, no new analysis. `export`'s `.md`-vs-anything-
@@ -1642,7 +1642,7 @@ index into `arg` instead of slicing it via `table.unpack`.
 
 Is `curl` present, is `lib.nvim` the version this expects, is the telemetry
 cache directory writable, is mdview available for `report_style = "auto"`.
-Shipped as [`lua/runtime-analysis/health.lua`](../lua/runtime-analysis/health.lua),
+Shipped as [`lua/runtime-analysis/health.lua`](../../lua/runtime-analysis/health.lua),
 modeled on documentation.nvim's own `editor/health.lua`: reports resolved
 configuration (live telemetry instances, persistently disabled namespaces,
 the cache directory and whether it is writable) rather than only
@@ -1651,7 +1651,7 @@ presence/absence.
 ### Vimdoc
 
 Both sibling plugins had one; this had a README and nothing `:help` could
-find. Shipped as [`doc/runtime-analysis.txt`](../doc/runtime-analysis.txt),
+find. Shipped as [`doc/runtime-analysis.txt`](../../doc/runtime-analysis.txt),
 `doc/tags` gitignored (generated by `:helptags`, not committed — the same
 convention documentation.nvim and mdview.nvim both already use).
 
@@ -1659,14 +1659,14 @@ convention documentation.nvim and mdview.nvim both already use).
 
 A `docs/COMMANDS.md`, once there are more than three commands —
 documentation.nvim's is the model. Both shipped in the same pass:
-[`docs/COMMANDS.md`](COMMANDS.md) and [`docs/BINDINGS.md`](BINDINGS.md), the
+[`docs/COMMANDS.md`](../COMMANDS.md) and [`docs/BINDINGS.md`](../BINDINGS.md), the
 latter required by `NEW_PROJECT.md`'s own checklist and not existing at all
 before this.
 
 ### Compound `:RA [subcommand]` usercommand
 
 Per `NEW_PROJECT.md` §5's own preferred shape. Shipped as
-[`lua/runtime-analysis/bindings/usrcmds.lua`](../lua/runtime-analysis/bindings/usrcmds.lua),
+[`lua/runtime-analysis/bindings/usrcmds.lua`](../../lua/runtime-analysis/bindings/usrcmds.lua),
 built on `lib.nvim.usercmd.composer` (the same module `:DocMap`/`:MDView`
 use): `:RA request` / `:RA send`, `<Tab>`-completed. Later the same day,
 gained a third route, `:RA yank` (§2.2 above).
