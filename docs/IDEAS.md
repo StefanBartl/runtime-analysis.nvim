@@ -1,5 +1,12 @@
 # runtime-analysis.nvim — cross-plugin feature ideas
 
+> **Begründungsdokument, keine Warteschlange.** Was als Nächstes gebaut wird,
+> steht seit 2026-08-20 in **einem** Plan für alle drei Repositories:
+> [`docmap-desktop/docs/PLAN.md`](https://github.com/StefanBartl/docmap-desktop/blob/main/docs/PLAN.md).
+> Hier steht, *warum* eine Idee so zugeschnitten ist, was sie kostet und was
+> dagegen spricht — §7 („Deliberately not") ist der wertvollste Teil davon
+> und gilt unverändert weiter.
+
 ## Table of content
 
   - [Intro](#intro)
