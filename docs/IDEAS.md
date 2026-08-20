@@ -631,7 +631,39 @@ on-thesis housekeeping idea available.
 
 ---
 
-### 3.4 A shared project key, so the three plugins agree what "this project" is
+### 3.4 ~~A shared project key~~ — decided 2026-08-20, and the decision is `lib.nvim.fs.project_key`
+
+> **Decided, and the first divergence closed.** There was never a real
+> competition: this entry already named `lib.nvim.fs.project_key`, it lives
+> in the dependency all three share, and request history keys on it today.
+> What was missing was the sentence and one plugin actually agreeing.
+>
+> `documentation.nvim` now normalises `opts.root` through
+> `lib.nvim.fs.normkey` — `project_key`'s own normalisation — instead of an
+> inline forward-slash-and-trim (engine commit on 2026-08-20). Its registry
+> keys live handles on the same function, so the plugin also agrees with
+> *itself*.
+>
+> **The divergence was measured, not suspected.** With an explicitly passed
+> root — every headless run, every CI job, every project `docmap-desktop`
+> hands over — `e:/repo` and `E:/repo` were two different repositories: two
+> registry entries, two scans, two watchers, and nothing joinable against a
+> sibling plugin keyed the other way.
+>
+> **Two things checked before changing it**, because a key change is the
+> expensive kind: no absolute path is serialized into `module_map.json`
+> (`ir.root` is the *repository-relative* source directory), so no committed
+> artifact anywhere goes stale; and `normkey` degrades correctly under
+> `standalone/vim_shim.lua`, which has no `fs_realpath` — exercised against
+> the shim's actual `uv` surface rather than argued about, which is how the
+> one real gap turned up: `normkey` does not trim a trailing separator, and
+> under Neovim `fs_realpath` had been hiding that.
+>
+> Still open, and cheap now rather than expensive later: telemetry
+> namespaces are *plugin names*, not project keys, and mdview scopes a
+> session by `cwd`. Both are deliberate today; neither has to change until
+> something wants the combined per-project view this entry was protecting.
+
 
 Request history (`ROADMAP.md` §1.3) wants per-project scoping. documentation.nvim
 scopes an artifact per repository. mdview scopes a session per `cwd`. lib.nvim
