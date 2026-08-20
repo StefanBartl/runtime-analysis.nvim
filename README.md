@@ -342,8 +342,30 @@ what's saved for a prefix, newest first. Full reasoning:
 require("runtime-analysis").setup({
   split = "vsplit",           -- default; "split" for a horizontal one
   request_filetype = "http",  -- default
+  deps_popup = true,          -- default
+  telemetry = { ... },        -- opt-in; see Telemetry below
 })
 ```
+
+Four top-level keys, and that is the whole list.
+
+| Key | Default | What it decides |
+|---|---|---|
+| `split` | `"vsplit"` | Where the response pane opens relative to the request buffer. `"split"` for a horizontal one. |
+| `request_filetype` | `"http"` | Filetype set on a new `:RARequest` buffer. `http` rather than a plugin-specific name, because VS Code's REST Client and IntelliJ's HTTP Client already claim it and this buffer's syntax matches theirs — so existing highlighting for either tool works here unmodified. |
+| `deps_popup` | `true` | The one-time "which CLI tools does this plugin want, and why" popup on the first `setup()` after install. `false` disables it for this plugin specifically, in the spec itself — no `vim.g` needed. |
+| `telemetry` | absent | Auto-instrument every plugin as it loads. Absent means no auto-instrumentation at all, the same as never calling `telemetry.auto()`. See [Telemetry](#telemetry). |
+
+**A misspelled key gets one warning, not silence.** `setup()` validates its
+keys before merging anything and names the closest real one — `deps_popups`
+comes back as *unknown, did you mean "deps_popup"?* Fail-open by design: it
+warns and continues, never blocks `setup()`. The same check runs on
+`telemetry.new()` and the lazy.nvim adapter's own options, which is where it
+matters most, since those tables are deeper.
+
+Without it a typo'd option vanishes into whatever the default already was,
+with nothing anywhere saying the key was never read — which is the failure
+this exists for, not tidiness.
 
 ## Telemetry
 
@@ -411,7 +433,7 @@ See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full, phased backlog.
 
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — this plugin's own backlog, phased
   into quick wins / medium / longer-term work, plus documented rejections.
-- [`docs/FINISHED.md`](docs/FINISHED.md) — the decision record behind
+- [`docs/FINISHED.md`](docs/FEATURES/FINISHED.md) — the decision record behind
   everything that has shipped out of `docs/ROADMAP.md` — what, and why.
 - [`docs/IDEAS.md`](docs/IDEAS.md) — ideas that only exist *between* plugins:
   runtime-analysis × documentation.nvim × mdview.nvim × lib.nvim.
