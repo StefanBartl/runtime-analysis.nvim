@@ -100,7 +100,7 @@ each one would answer differently with runtime evidence attached.
 
 ---
 
-### 1.1 Churn × call count — the refactoring queue, finally ordered
+### 1.1 Churn × call count — **built 2026-08-20**, `documentation.nvim` `103ceb7`
 
 `core/churn.lua` ranks modules by **change frequency × complexity**, Tornhill's
 signal, and its own header states the weakness honestly: it is a scalarization,
@@ -118,9 +118,23 @@ collection on either side — churn already ships, counts already persist,
 on this machine may be the hot path for every other user of the plugin. The
 render has to say "not called in **your** sessions", never "unused".
 
+**Shipped as a column on `:DocMap churn`, and the ranking does not move.**
+That was the one design question this entry did not raise and it turned out
+to be the important one: folding calls into the score would make a ranking
+that reads as a property of the code into one that is partly a property of
+whoever last ran it — two developers, two orders for one repository, neither
+wrong. So the column separates the rows and the sort stays put, which is
+§1.5's rule one step weaker. The wording requirement above is asserted by a
+spec that was checked to go red when "unused" is substituted.
+
+Measured against `documentation.nvim`'s own 41 recorded sessions:
+`editor.browse.view`, complexity 383, top of the ranking, *47 calls, none in
+the last week*; `core.check` one row below it, *37 722 calls, 4 839 this
+week*. Two rows that rendered identically the day before.
+
 ---
 
-### 1.2 Auto-coverage × telemetry — the four-cell table nobody has
+### 1.2 Auto-coverage × telemetry — **built 2026-08-20**, `documentation.nvim` `103ceb7`
 
 `core/coverage.lua` derives whether a function is *tested* by counting bare-name
 mentions in the test tree, and documents its blind spot: a function exercised
@@ -138,6 +152,19 @@ evidence, exactly the way `dead-function` suppression is a false-positive list
 sorted by evidence. It also **repairs coverage.lua's own stated blind spot** in
 one direction: an indirectly-exercised function that telemetry saw being called
 is no longer invisible.
+
+**Shipped as `:DocMap untested`** — only the bottom-left cell, since the other
+three either need no list or belong to `dead-function`, which already has
+suppression rules a second verdict would eventually disagree with.
+
+**And the first real run corrected how the cell reads.** Against
+`documentation.nvim` it returns fifteen functions led by
+`check.declared_param_names` at 33 843 calls — internal helpers reached
+through public entry points that specs *do* call. The list is documented as
+"no spec names it" rather than "untested", because that is what it measures
+and it is still worth acting on: a name in a spec is what makes a failure
+localise to the function that caused it. Filtering those out would have
+thrown away the true reading to protect a slogan.
 
 ---
 
@@ -736,10 +763,13 @@ Ranked by *value per unit of work*, not by ambition:
    binary-download pause from the default path.
 2. **§1.8 the live call-count badge in the annotation popup.** One line of
    render, in the place a reader already looks.
-3. **§1.1 churn × call count.** No new collection on either side; separates
-   "refactor this" from "delete this", which nothing currently does.
-4. **§1.2 auto-coverage × telemetry.** Produces the hot-and-untested queue, and
-   repairs `coverage.lua`'s own stated blind spot as a side effect.
+3. ~~**§1.1 churn × call count.**~~ — **built 2026-08-20.** The rating held:
+   no new collection on either side, and it separates "refactor this" from
+   "delete this", which nothing did before.
+4. ~~**§1.2 auto-coverage × telemetry.**~~ — **built 2026-08-20**, same day and
+   for the same reason. Both of these were cheap because the join layer they
+   needed (`telemetry_join.lua`) had already been paid for by §1.5 and the
+   Telemetry browse mode.
 5. **§3.4 the shared project key.** Not a feature at all — a decision, cheap
    now and expensive at every later point.
 
