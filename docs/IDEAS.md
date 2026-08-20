@@ -447,7 +447,29 @@ right reason: it would duplicate mdview's themes and immediately drift.
 
 ---
 
-### 2.2 `:MDView preview-tab` — the browser-free tier
+### 2.2 ~~`:MDView preview-tab` — the browser-free tier~~ — built 2026-08-20
+
+> **Shipped** as `report_style = "preview-tab"`. It was the cheapest idea in
+> this section and it stayed cheap. Three things the build decided that this
+> entry did not say:
+>
+> - **The win is `conceallevel`, not the buffer.** Measured against
+>   `mdview.adapter.preview_tab` rather than assumed: it opens the mirror
+>   with conceal on, so the markdown parser hides the `**` and the backticks
+>   and the report reads as prose. A read-only scratch buffer in a tab is
+>   something this repo could have written itself in twenty lines; the
+>   conceal is what made depending on another plugin worth it.
+> - **The adapter, not `:MDView preview-tab`.** The command toggles the
+>   *current* buffer, which makes it unusable for a report style twice over:
+>   it would depend on which buffer the reader happened to be in, and
+>   getting there means displacing what they were looking at.
+> - **`"auto"` was left alone.** Making the cheaper tier the default is a
+>   real argument and it lost to a better one: `"auto"` is what every
+>   existing configuration already resolves to.
+>
+> See `lua/runtime-analysis/telemetry/README.md` § *`report_style =
+> "preview-tab"`* for the table of what each tier costs.
+
 
 `preview-tab` renders Markdown **inside Neovim**, no relay, no browser, no
 binary download. That is a fifth `report_style` sitting there unused, and it is

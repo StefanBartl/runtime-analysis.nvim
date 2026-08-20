@@ -22,7 +22,7 @@
 ---   :RATelemetry export-all <dir>  one Markdown file per namespace found on
 ---                                disk into <dir> -- unlike `export`, not
 ---                                limited to this session's live instances
----   :RATelemetry open [ns]       render + open externally (report_style: auto/kit/mdview/file/html)
+---   :RATelemetry open [ns]       render + open (report_style: auto/kit/preview-tab/mdview/file/html)
 ---   :RATelemetry compare [ns] [days]  this window vs the one before it (default 7d)
 ---   :RATelemetry startup [top]   which module a plugin's startup cost sits in
 ---   :RATelemetry cost            startup cost vs. call count, worst first
@@ -90,6 +90,7 @@ local usercmd = require("lib.nvim.usercmd")
 local notify = require("lib.nvim.notify").create("[runtime-analysis.telemetry]")
 local report_file = require("runtime-analysis.telemetry.report_file")
 local resolve_report_style = require("runtime-analysis.telemetry.report_style")
+local preview_tab_renderer = require("runtime-analysis.telemetry.renderers.preview_tab")
 local telemetry_config = require("runtime-analysis.telemetry.config")
 local mdview_renderer = require("runtime-analysis.telemetry.renderers.mdview")
 local html_renderer = require("runtime-analysis.telemetry.renderers.html")
@@ -326,6 +327,18 @@ local function open_report(namespace)
       local ok, err = mdview_renderer.open(lines, path)
       if not ok then
         notify.warn(("mdview open failed (%s) — falling back to the kit float"):format(err))
+        show(kit_lines, title)
+      end
+    elseif style == "preview-tab" then
+      -- `lines`, not `kit_lines`: this is the Markdown report, rendered by
+      -- mdview's conceal rather than flattened for a float. The float's own
+      -- lines are what the fallback below uses, which is the whole reason
+      -- both are passed in.
+      local ok, err = preview_tab_renderer.open(lines, title)
+      if not ok then
+        notify.warn(
+          ("in-editor preview failed (%s) — falling back to the kit float"):format(err)
+        )
         show(kit_lines, title)
       end
     elseif style == "file" then

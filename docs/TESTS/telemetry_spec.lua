@@ -1748,6 +1748,44 @@ return function(H)
   end
 
   -- -------------------------------------------------------------------------
+  -- "preview-tab" -- the in-editor tier of the same plugin. Two decisions
+  -- worth a test rather than a comment, because both are about where a
+  -- request goes when it cannot be honoured:
+  --
+  --   * it degrades to the float, never sideways to "mdview". Both tiers
+  --     come from mdview.nvim, so a sideways degrade would answer "no
+  --     browser, no binary" with a browser tab and a binary download.
+  --   * "auto" is unchanged. Moving every existing configuration from a
+  --     browser tab to an editor tab is a changed answer to a question those
+  --     readers settled once.
+  -- -------------------------------------------------------------------------
+  do
+    local resolve_style = require("runtime-analysis.telemetry.report_style")
+    local preview_tab = require("runtime-analysis.telemetry.renderers.preview_tab")
+
+    local available, why = preview_tab.available()
+    H.eq(available, false, "mdview.nvim is not on rtp in this test run")
+    H.ok(why ~= nil, "...and says which half is missing")
+
+    H.eq(resolve_style("preview-tab"), "kit", "an unavailable preview-tab degrades to the float")
+    H.eq(resolve_style("auto"), "kit", "auto is untouched by the new style")
+
+    local ok, err = preview_tab.open({ "# x" }, "preview_tab_open_test")
+    H.eq(ok, false, "open() fails cleanly rather than raising when mdview is absent")
+    H.ok(err ~= nil, "...with an explanatory error")
+
+    -- The buffer is the thing that could be left behind, and an invisible
+    -- leaked scratch buffer is exactly the kind of failure nobody notices.
+    local named = 0
+    for _, b in ipairs(vim.api.nvim_list_bufs()) do
+      if vim.api.nvim_buf_get_name(b):find("preview_tab_open_test", 1, true) then
+        named = named + 1
+      end
+    end
+    H.eq(named, 0, "a failed open leaves no buffer behind")
+  end
+
+  -- -------------------------------------------------------------------------
   -- telemetry.setup({ report_style = ... }): the one module-level default,
   -- separate from telemetry.new(opts) -- see config.lua for why.
   -- -------------------------------------------------------------------------
