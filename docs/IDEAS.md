@@ -715,7 +715,44 @@ Not a feature seam so much as a discipline one, but two items are real.
 
 ---
 
-### 4.1 `proc_trace` and `:RAInspect` are the same technique twice
+### 4.1 ~~`proc_trace` and `:RAInspect` are the same technique twice~~ — decided 2026-08-20: **no shared registry**
+
+> **The proposal was a shared wrapper-registry convention in `lib.nvim`** — an
+> identifiable marker on every installed wrapper — so provenance could answer
+> for all three instances of this technique instead of one. Decided against,
+> and the reasons are recorded because they are what would have to stop being
+> true for it to be worth revisiting.
+>
+> **There is one consumer, and §4.2 next door is explicit that pushing work
+> down waits for a second.** `proc_trace` never asks who wrapped anything; it
+> wraps and restores. It would be a *producer* of registry entries, and
+> `runtime-analysis.provenance` would still be the only thing reading them.
+>
+> **The case that would justify it is the one a convention cannot reach.**
+> The genuinely hard question is a third-party plugin monkey-patching
+> `vim.notify` — and a convention in `lib.nvim` does not reach a plugin that
+> has never heard of `lib.nvim`. The registry would have made the two
+> wrappers this ecosystem already controls exact, and left the hard case
+> exactly where it is.
+>
+> **And those two did not need it.** The telemetry registry already answers
+> precisely. `proc_trace` already publishes `is_active()` and wraps four
+> *known* paths — so `:RA provenance vim.fn.system` now names it exactly,
+> with no new convention, no change in `lib.nvim`, and about thirty lines
+> here. That is the whole gap §4.1 was pointing at, closed from the consumer
+> side where the knowledge belongs.
+>
+> One thing the build corrected on the way: the report's closing caveat said
+> "this only knows about this plugin's own wraps", which stopped being true
+> the moment a second exact source existed — a reader shown *wrapped by
+> proc_trace* would have been contradicted by the very next line. It now
+> appears only when nothing answered exactly.
+>
+> **What would reopen this:** a second consumer of "who wrapped this" — a
+> health check, or the desktop app asking across a session — or a wrapper in
+> this ecosystem that is neither of the two above and cannot publish its own
+> state.
+
 
 `lib.nvim.system.proc_trace` wraps `vim.fn.system`; telemetry's registry wraps
 arbitrary table fields; `runtime-analysis.provenance` (`ROADMAP.md` §5.2,
