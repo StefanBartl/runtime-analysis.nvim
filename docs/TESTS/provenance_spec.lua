@@ -154,4 +154,64 @@ return function(H)
       "lines: the best-effort caveat is shown when unwrapped"
     )
   end
+
+  -- ---------------------------------------------------------------------
+  -- `lib.nvim.system.proc_trace` — the second wrapper this can name exactly.
+  --
+  -- **This is what `docs/IDEAS.md` §4.1 asked for, reached without what it
+  -- proposed.** That entry wanted a shared wrapper-registry convention in
+  -- `lib.nvim` so provenance could answer for every instance of this
+  -- technique. It was decided against — one consumer, and the case that
+  -- would justify it (a third-party monkey-patch) is exactly the one a
+  -- convention cannot reach. `proc_trace` already publishes `is_active()`,
+  -- so the two wrappers this ecosystem controls are answerable with no new
+  -- convention at all.
+  --
+  -- Driven through a real `start()`/`stop()` rather than a stubbed flag: the
+  -- claim is about what is actually installed on `vim.fn.system` right now,
+  -- and a stub would assert the branch instead of the fact.
+  -- ---------------------------------------------------------------------
+  do
+    local ok_trace, trace = pcall(require, "lib.nvim.system.proc_trace")
+    if not ok_trace or type(trace.start) ~= "function" then
+      ok(true, "provenance: no proc_trace in this lib.nvim — skipping")
+    else
+      local function reported()
+        local info = assert(provenance.inspect("vim.fn.system"))
+        return info.proc_trace, table.concat(provenance.lines(info), "\n")
+      end
+
+      local before, before_lines = reported()
+      eq(before, false, "provenance: not claimed before proc_trace runs")
+      ok(
+        before_lines:find("best%-effort", 1, false) ~= nil,
+        "provenance: ...and the caveat is shown, since nothing answered exactly"
+      )
+
+      trace.start({ threshold_ms = 5000 })
+      local during, during_lines = reported()
+      trace.stop()
+
+      eq(during, true, "provenance: named exactly while proc_trace is active")
+      ok(during_lines:find("proc_trace", 1, true) ~= nil, "provenance: ...and the report says so")
+      -- The condition that had to widen when a second exact source arrived.
+      -- Left as it was, a reader shown "wrapped by proc_trace" would have
+      -- been told in the next line that nothing here knows about wraps other
+      -- than this plugin's — contradicting the line above it.
+      eq(
+        during_lines:find("best%-effort", 1, false),
+        nil,
+        "provenance: no best-effort caveat once something answered exactly"
+      )
+
+      local after = reported()
+      eq(after, false, "provenance: released again after stop()")
+
+      -- A path proc_trace never touches must never be claimed, active or not.
+      trace.start({ threshold_ms = 5000 })
+      local other = assert(provenance.inspect("vim.trim"))
+      trace.stop()
+      eq(other.proc_trace, false, "provenance: only the four paths it actually wraps")
+    end
+  end
 end

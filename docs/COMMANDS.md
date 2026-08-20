@@ -485,18 +485,31 @@ where a module boundary sits inside a longer path, the same "a wrong guess
 is worse than no answer" stance `:RA import`'s own unrecognized-`curl`-flag
 handling already takes.
 
-Two different answers, and the output is explicit about which one it is
-giving:
+**Three answers, and the output is explicit about which one it is giving:**
 
 - **This plugin's own telemetry wrapper: exact.** `runtime-analysis.telemetry
   .registry` is the one shared wrap layer every instance goes through, so
   it genuinely knows every subscribing namespace by name.
-- **Anyone else's wrapper — `lib.nvim.system.proc_trace`, any of the many
-  plugins that monkey-patch `vim.notify` — best-effort.** There is no
-  registry for a third-party wrap, so the only honest signal is
-  `debug.getinfo`'s own source location: *where* the function currently
-  resolving there was actually defined, not *who* put it there or *when*.
-  The output says so explicitly whenever it falls back to this.
+- **`lib.nvim.system.proc_trace`: exact.** It wraps four *known* paths
+  (`vim.fn.system`, `vim.fn.systemlist`, `vim.system`, `vim.fn.jobstart`)
+  and publishes `is_active()`, so this is a fact rather than an inference —
+  and the line names how to undo it.
+- **Anyone else's wrapper — any of the many plugins that monkey-patch
+  `vim.notify` — best-effort.** There is no registry for a third-party wrap,
+  so the only honest signal is `debug.getinfo`'s own source location:
+  *where* the function currently resolving there was actually defined, not
+  *who* put it there or *when*. The caveat is printed **only** in this case,
+  because a report that both names a wrapper and then says nothing is known
+  about wrappers contradicts itself.
+
+**No shared wrapper registry, and that was a decision rather than an
+omission.** `docs/IDEAS.md` §4.1 proposed one in `lib.nvim` so every
+instance of this technique could be named. It was declined: there is one
+consumer of the answer, and the case that would justify a convention — a
+third-party monkey-patch — is precisely the one a convention cannot reach,
+since such a plugin has never heard of `lib.nvim`. The two wrappers this
+ecosystem does control turned out to be answerable without it. See that
+entry for what would reopen the question.
 
 ## `:RA inspect <module>`
 
