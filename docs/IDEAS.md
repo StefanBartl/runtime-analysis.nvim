@@ -336,7 +336,31 @@ test run actually exercised — the exact parallel of `fn.tested` for
 functions, and a number nobody currently has. Worth naming now so the
 collector is not built in a way that assumes a human triggered the traffic.
 
-### 1.8 A live badge in the annotation popup
+### 1.8 ~~A live badge in the annotation popup~~ — built 2026-08-20
+
+> **Shipped**, in `documentation.nvim`'s LSP hover rather than in a popup of
+> its own — `K` on a function now reads
+> `**3** incoming calls · **1** outgoing call · called **412**× in the last 7
+> days`. Nearly free, as this entry predicted, and it found two real defects
+> on the way that were worth more than the feature:
+>
+> - **The join matched almost nothing.** `telemetry_join.rows` built its IR
+>   key from a telemetry key's last segment (`scan_full`) while the IR names
+>   functions as written (`M.scan_full`) — so every exported function in
+>   every Lua module came back as "no telemetry data". The *module* half of
+>   this exact bug had been found and fixed before; the *function* half
+>   survived that fix. `:DocBrowse telemetry`, `doc_usage_summary` and
+>   `dead-function`'s telemetry suppression were all affected.
+> - **A second repository in one session got no call hierarchy at all.** The
+>   client's `reuse_client` predicate matched on name alone, so the second
+>   root attached to the first one's client and every request silently
+>   resolved against the wrong tree.
+>
+> One correction to this entry: `(7d)` is not in `Data.functions`, which
+> counts all-time. It is derivable from `Data.days`' calendar buckets, which
+> is where `Row.calls_recent` now comes from — and the seven-day figure is
+> what makes the *cold path* readable, a state the total alone cannot show.
+
 
 The smallest possible item in this section, listed because it is nearly free
 and would be felt daily: documentation.nvim's annotation popup already renders
