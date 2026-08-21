@@ -336,9 +336,7 @@ local function open_report(namespace)
       -- both are passed in.
       local ok, err = preview_tab_renderer.open(lines, title)
       if not ok then
-        notify.warn(
-          ("in-editor preview failed (%s) — falling back to the kit float"):format(err)
-        )
+        notify.warn(("in-editor preview failed (%s) — falling back to the kit float"):format(err))
         show(kit_lines, title)
       end
     elseif style == "file" then
