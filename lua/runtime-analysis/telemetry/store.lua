@@ -112,6 +112,23 @@ function M.load_readonly(namespace, opts)
   return normalize(raw)
 end
 
+---Where this namespace's counters actually live.
+---
+---Built here rather than read from `cache.disk`, which keeps its path
+---construction private. That is a duplicated rule, so it is asserted rather
+---than trusted: `telemetry_flush_spec.lua` saves through `M.save` and checks
+---that the file this returns is the one that appeared.
+---
+---For telling a reader where their data went. Nothing in this module reads
+---it — a caller that wants the *data* calls `M.load`.
+---@param namespace string
+---@param opts? Lib.Cache.Opts
+---@return string
+function M.data_path(namespace, opts)
+  local dir = (opts and opts.dir) or (vim.fn.stdpath("cache") .. "/lib.nvim/cache")
+  return dir .. "/" .. M.cache_key(namespace) .. ".json"
+end
+
 ---@param namespace string
 ---@param data RA.Telemetry.Data
 ---@param opts? Lib.Cache.Opts

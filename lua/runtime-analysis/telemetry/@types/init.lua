@@ -218,6 +218,7 @@
 ---@field resolved_modules fun(): table<string, string>
 ---@field reset fun(): nil
 ---@field flush fun(): boolean
+---@field data_path fun(): string                     # the file this instance's counters are written to, for telling a reader where their data went
 ---@field wrapped_keys fun(): string[]
 
 ---@class RA.Telemetry.AutoOpts
