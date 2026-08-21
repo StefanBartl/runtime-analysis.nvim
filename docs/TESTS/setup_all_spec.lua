@@ -79,7 +79,11 @@ return function(H)
     ok(by_ns[ns_loaded] ~= nil, "candidates(): a configured, currently-loaded plugin is included")
     eq(by_ns[ns_notloaded], nil, "candidates(): a configured but NOT-loaded plugin is excluded")
     if by_ns[ns_loaded] then
-      eq(by_ns[ns_loaded].main, "fakesetupall_loaded", "candidates(): resolves the real main module")
+      eq(
+        by_ns[ns_loaded].main,
+        "fakesetupall_loaded",
+        "candidates(): resolves the real main module"
+      )
       eq(
         by_ns[ns_loaded].repo,
         "someorg/setupall-loaded.nvim",
@@ -170,7 +174,11 @@ return function(H)
     package.loaded["fakesetupall_loaded"].f("plain-mode-call")
     telemetry.get(ns_loaded).flush()
     local data = store.load(ns_loaded, { dir = tmpdir })
-    eq(data.functions.f.args, nil, "run({full=false}): respects the plugin's own profile_args=false")
+    eq(
+      data.functions.f.args,
+      nil,
+      "run({full=false}): respects the plugin's own profile_args=false"
+    )
 
     setup_all.run({ full = true })
     package.loaded["fakesetupall_loaded"].f("full-mode-call")
