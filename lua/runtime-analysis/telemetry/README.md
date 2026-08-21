@@ -467,7 +467,7 @@ t.lines({ top = 20 })                                 -- rendered strings
 t.coverage()                                          -- { called, uncalled }
 t.resolved_modules()                                  -- { [key] = real Lua module path }
 t.reset()                                             -- clear memory + disk
-t.flush()                                             -- persist now
+t.flush()                                             -- persist now, keep recording
 ```
 
 `sort` is `"calls"` (default), `"name"` or `"time"`. `since` accepts `"7d"`,
@@ -673,6 +673,7 @@ require("runtime-analysis.telemetry.command").setup()
 :RATelemetry lsp.nvim        " report for one namespace
 :RATelemetry start [ns]      " every instance, or just one
 :RATelemetry stop [ns]       " every instance, or just one
+:RATelemetry flush [ns]      " write what is collected so far, WITHOUT stopping -- every instance, or just one
 :RATelemetry reset [ns]      " back up (prompted once, only if anything would be lost), then drop -- every instance, or just one
 :RATelemetry coverage
 :RATelemetry export [path]   " JSON; Markdown if .md; PDF if .pdf (needs pdfport.nvim)
@@ -693,6 +694,42 @@ other one running. Omit it to act on every instance at once. `<Tab>` after
 (not the subcommand list again). `compare`'s own third, purely positional
 token overrides the default 7-day window — `:RATelemetry compare
 markdown.nvim 14`.
+
+### When is my data actually on disk?
+
+The question this subsystem is asked most, so: **continuously, not only at
+the end.** Three separate moments write the cache file, and every one of them
+*merges* into what is already there rather than replacing it:
+
+| When | What triggers it |
+| --- | --- |
+| every 60 s while running | the periodic flush (`flush_interval_ms`; `0` disables it) |
+| on `stop` | `inst.stop()` flushes before it restores the wrappers |
+| on quitting Neovim | a `VimLeavePre` autocmd, per instance |
+| whenever you say so | `:RATelemetry flush [ns]`, or `inst.flush()` |
+
+`:RATelemetry flush` exists for one case only, and it is worth naming
+precisely: you want the file to be current **now** rather than within the
+minute — before copying it, before comparing two machines, before closing the
+laptop — and you do not want to end the run to get it. Without it the command
+people reach for is `stop`, which costs them the wrappers and the session's
+continuity to buy a write that was already coming.
+
+**Across restarts, counts add up.** Quit Neovim in the middle of a recording
+and nothing is lost: the exit flush writes, and the next session's first
+flush merges on top of it — same namespace, same file, `sessions` counts up.
+Two Neovim processes running at once merge the same way, which is what the
+merge-on-write in `store` is for.
+
+What does *not* survive a restart is the **running** state itself. There is
+no persisted "on": whether telemetry is recording again after a restart
+depends on whatever wired it up — `telemetry.lazy` (wraps at `VimEnter`),
+`:RATelemetry setup|full`, or your own `t.start()` in a config. There *is* a
+persisted **off** (`:RATelemetry disable <ns>`), deliberately asymmetric:
+switching something off is a decision worth remembering, and switching it on
+is what your config already says every time it loads. So after a restart you
+may have to start the recording again — but you never have to start the
+*data* again.
 
 `export`'s format is inferred from the target path's own extension rather
 than a separate flag — this command's argument parsing stays positional

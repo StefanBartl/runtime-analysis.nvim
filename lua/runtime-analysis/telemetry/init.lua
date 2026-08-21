@@ -781,6 +781,19 @@ function M.new(opts)
     return running
   end
 
+  ---The file this instance's counters are written to.
+  ---
+  ---Exists so a command can *say* where the data went. "Is it saved?" is the
+  ---question this whole subsystem gets asked most, and answering it with a
+  ---path is cheaper than answering it with a paragraph about flush
+  ---intervals. Meaningful even with `persist = false`, where it is the file
+  ---that would be written if persistence were on — the caller knows which
+  ---mode it configured.
+  ---@return string
+  function inst.data_path()
+    return store.data_path(namespace, cache_opts)
+  end
+
   -- -------------------------------------------------------------------------
   -- Public: data
   -- -------------------------------------------------------------------------

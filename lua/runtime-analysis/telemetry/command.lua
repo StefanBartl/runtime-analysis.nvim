@@ -10,6 +10,14 @@
 ---   :RATelemetry lsp.nvim        report for one namespace
 ---   :RATelemetry start [ns]      start every instance, or just one
 ---   :RATelemetry stop [ns]       stop every instance, or just one
+---   :RATelemetry flush [ns]      write what has been collected so far to
+---                                disk, without stopping anything -- every
+---                                instance, or just one. Counters are also
+---                                flushed on a timer (`flush_interval_ms`,
+---                                60s by default), on `stop`, and on
+---                                `VimLeavePre`, so this is for the moment
+---                                you want the file to be current *now*
+---                                rather than within the minute
 ---   :RATelemetry reset [ns]      back up (prompted once, only if anything
 ---                                would be lost), then drop collected data --
 ---                                every instance, or just one
@@ -108,10 +116,23 @@ local M = {}
 local DEFAULT_BACKUP_DIR = vim.fn.stdpath("cache")
   .. "/runtime-analysis.nvim/cache/telemetry/Backups"
 
+---What every backup prompt asks, naming the file it is about to write.
+---
+---A directory is what the prompt takes, and the file name is not the
+---reader's to choose — `setup_all.write_backup` builds it as
+---`<namespace>-YYYYMMDD-HHMMSS.json` so two backups of the same namespace
+---never collide and the newest sorts last. That was already true and
+---invisible: the prompt asked for a path and said nothing about what would
+---appear there, which reads like "pick a filename" and answers a question
+---nobody could otherwise answer without opening the directory afterwards.
+local BACKUP_PROMPT = "runtime-analysis.telemetry: back up existing data to "
+  .. "(created if missing; files are <namespace>-YYYYMMDD-HHMMSS.json): "
+
 local SUBCOMMANDS = {
   "report",
   "start",
   "stop",
+  "flush",
   "reset",
   "disable",
   "enable",
@@ -514,13 +535,13 @@ local function do_setup_all(full, namespace)
   local ok_kit, kit = pcall(require, "lib.nvim.ui.kit")
   if ok_kit then
     kit.input({
-      title = "runtime-analysis.telemetry: back up existing data to (created if missing): ",
+      title = BACKUP_PROMPT,
       default = DEFAULT_BACKUP_DIR,
       on_submit = on_input,
     })
   else
     vim.ui.input({
-      prompt = "runtime-analysis.telemetry: back up existing data to (created if missing): ",
+      prompt = BACKUP_PROMPT,
       default = DEFAULT_BACKUP_DIR,
     }, on_input)
   end
@@ -621,13 +642,13 @@ local function do_reset_all(namespace)
   local ok_kit, kit = pcall(require, "lib.nvim.ui.kit")
   if ok_kit then
     kit.input({
-      title = "runtime-analysis.telemetry: back up existing data to (created if missing): ",
+      title = BACKUP_PROMPT,
       default = DEFAULT_BACKUP_DIR,
       on_submit = on_input,
     })
   else
     vim.ui.input({
-      prompt = "runtime-analysis.telemetry: back up existing data to (created if missing): ",
+      prompt = BACKUP_PROMPT,
       default = DEFAULT_BACKUP_DIR,
     }, on_input)
   end
@@ -661,7 +682,9 @@ function M.setup()
           notify.info(("started %s"):format(rest))
         else
           inst.stop()
-          notify.info(("stopped %s"):format(rest))
+          -- Naming the file, because `stop` is where "is it saved?" gets
+          -- asked and a path answers it outright. `stop` flushes.
+          notify.info(("stopped %s — written to %s"):format(rest, inst.data_path()))
         end
         return
       end
@@ -669,7 +692,50 @@ function M.setup()
       if first == "start" then
         notify.info(("started %d instance(s)"):format(mod.start_all()))
       else
-        notify.info(("stopped %d instance(s)"):format(mod.stop_all()))
+        notify.info(
+          ("stopped %d instance(s), each written to its cache file"):format(mod.stop_all())
+        )
+      end
+    elseif first == "flush" then
+      -- Write now, keep recording. The periodic flush already does this
+      -- every `flush_interval_ms`, and `stop`/`VimLeavePre` do it too — so
+      -- this command buys one thing only: certainty at a chosen moment,
+      -- without ending the run to get it. That is worth a command name
+      -- because the alternative people actually reach for is `stop`, which
+      -- costs them the wrappers and the session's continuity.
+      if rest and rest ~= "" then
+        local inst = mod.get(rest)
+        if not inst then
+          notify.warn(("no telemetry instance for namespace %q"):format(rest))
+          return
+        end
+        if inst.flush() then
+          notify.info(("flushed %s — %s"):format(rest, inst.data_path()))
+        else
+          notify.error(("could not write %s"):format(inst.data_path()))
+        end
+        return
+      end
+
+      -- `mod.flush_all()` exists and is deliberately not used here: it
+      -- returns only the number that succeeded, so "no instance is running"
+      -- and "every write failed" both come back as 0. For a command whose
+      -- entire job is confirming that a write happened, those are the two
+      -- answers that must not be spelled the same.
+      local written, failed = 0, 0
+      for _, inst in ipairs(mod.instances()) do
+        if inst.flush() then
+          written = written + 1
+        else
+          failed = failed + 1
+        end
+      end
+      if written == 0 and failed == 0 then
+        notify.warn("no live telemetry instance to flush")
+      elseif failed > 0 then
+        notify.error(("flushed %d instance(s), %d could not be written"):format(written, failed))
+      else
+        notify.info(("flushed %d instance(s)"):format(written))
       end
     elseif first == "disable" or first == "enable" then
       -- Unlike start/stop/reset, a namespace here does NOT need a live

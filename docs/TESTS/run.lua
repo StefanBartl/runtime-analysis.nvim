@@ -68,6 +68,7 @@ local specs = {
   "graphql_spec.lua",
   "multipart_spec.lua",
   "telemetry_html_spec.lua",
+  "telemetry_flush_spec.lua",
   "lazy_spec.lua",
   "setup_all_spec.lua",
   "config_validate_spec.lua",
