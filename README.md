@@ -24,6 +24,7 @@
 - [Commands](#commands)
 - [Setup](#setup)
 - [Telemetry](#telemetry)
+- [Stall detection](#stall-detection)
 - [Integration with documentation.nvim](#integration-with-documentationnvim)
 - [The static × runtime join](#the-static--runtime-join)
 - [What's not here yet](#whats-not-here-yet)
@@ -32,9 +33,11 @@
 
 ## Overview
 
-Runtime truth, paired with documentation.nvim's static truth. Two features
-today: an in-editor HTTP request runner, and `runtime-analysis.telemetry` —
-opt-in call counting and usage statistics, moved here from lib.nvim.
+Runtime truth, paired with documentation.nvim's static truth. Three features
+today: an in-editor HTTP request runner, `runtime-analysis.telemetry` — opt-in
+call counting and usage statistics, moved here from lib.nvim — and
+`runtime-analysis.startup`, which finds out what is blocking Neovim's main
+loop.
 
 ## Installation
 
@@ -336,6 +339,17 @@ mode is the consumer this was built for, since a browser tab has no live
 what's saved for a prefix, newest first. Full reasoning:
 [`docs/FEATURES/LOADED.md`](docs/FEATURES/LOADED.md).
 
+### `:RA startup …`
+
+| Command | What it does |
+|---|---|
+| `:RA startup start` | Watch for main-loop stalls; report after 12s. |
+| `:RA startup watch` | Same, but keep measuring until `:RA startup report`. |
+| `:RA startup report` | Stop measuring and show the timeline. |
+| `:RA startup probe` | Print (and yank) the `--cmd` line that measures a startup. |
+
+See [Stall detection](#stall-detection) for what the output means.
+
 ## Setup
 
 ```lua
@@ -389,6 +403,116 @@ scripts/telemetry.lua report <namespace>` (or `export <namespace> <path>`,
 anything else for JSON) reads straight off disk via `telemetry.load()`, no
 live instance required — useful for CI, a cron job, or "what did last week
 look like" without opening Neovim at all.
+
+## Stall detection
+
+`runtime-analysis.startup` answers "why did Neovim just freeze for half a
+second", including during startup — where the usual tools cannot help.
+
+### Why not `--startuptime` or `:profile`
+
+`nvim --startuptime` stops writing at the first screen redraw. The freeze
+people actually complain about tends to arrive *after* that, so the log ends
+before the interesting part.
+
+`:profile` instruments Vimscript and Lua calls, and is therefore blind to
+libuv callbacks — which is exactly where filesystem work, subprocesses and LSP
+message handling live. A `vim.fn.system(...):wait()` inside an autocommand
+does not show up as anything.
+
+### How it works
+
+A libuv timer measures **its own lateness**. If it asks to run every 20ms and
+comes back 900ms late, the loop was blocked for 900ms — no matter what blocked
+it: Lua, C, a subprocess, the OS. Nothing needs instrumenting, and nothing can
+hide from it.
+
+That alone only gives you a symptom, so every event that could plausibly
+explain a block is stamped on the same clock: each lazy.nvim plugin load,
+`VimEnter`, `VeryLazy`, `LspAttach` and LSP progress. A `STALL` line covers
+`[at - blocked, at]`, so the events listed directly above it are the suspects.
+
+Plugin lines carry lazy's own load time **and why it loaded**, which is usually
+the part that cracks a case:
+
+```
+  +  0.68 s  event   VeryLazy
+  +  0.89 s  ***** STALL  blocked    209 ms  (from +0.68 s)
+  +  1.03 s  plugin  sandbox.nvim (65 ms)  <- VeryLazy
+  +  1.08 s  plugin  gopath.nvim (62 ms)  <- VeryLazy
+  +  2.50 s  plugin  telescope.nvim (74 ms)  <- require 'telescope' from init.lua
+```
+
+`<- VeryLazy` means the spec asked for it. `<- require '<mod>' from <file>`
+means some other file pulled the plugin in and defeated its own lazy-loading —
+and only the second kind is a bug you can fix. A plugin declaring
+`cmd = "Telescope"` and still loading at startup looks perfectly innocent in
+`:Lazy`; this is where it becomes visible.
+
+### Measuring a freeze you can reproduce
+
+```vim
+:RA startup start     " watches for 12s, then reports
+:RA startup watch     " watches until you ask for the report
+:RA startup report    " stop and show the timeline
+```
+
+The report arrives as a notification and is written to `ra-startup.log` in the
+current directory.
+
+### Measuring startup itself
+
+The timer has to be ticking before your config is sourced, which a lazily
+loaded plugin cannot arrange for itself. Use the bootstrap probe:
+
+```sh
+nvim --cmd "luafile /path/to/runtime-analysis.nvim/probe/startup.lua" file.lua
+```
+
+`:RA startup probe` prints that line with the path filled in and yanks it, so
+there is nothing to retype.
+
+The probe puts the plugin on `package.path` from its own location — no
+runtimepath, no plugin manager, no configuration involved — and hands over to
+the module. Options can be passed ahead of it:
+
+```sh
+nvim --cmd "lua vim.g.ra_startup = { duration_ms = 30000, stall_ms = 200 }"      --cmd "luafile /path/to/runtime-analysis.nvim/probe/startup.lua" file.lua
+```
+
+### Options
+
+| Option | Default | Meaning |
+|---|---|---|
+| `interval_ms` | `20` | How often the timer asks to run. |
+| `stall_ms` | `80` | Only lateness at or above this counts as a stall. |
+| `duration_ms` | `12000` | Auto-report after this long; `0` measures until stopped. |
+| `log_file` | `"ra-startup.log"` | Written on report; `""` writes none. |
+| `notify` | `true` | Show the report as a notification. |
+
+### Lua API
+
+```lua
+local startup = require("runtime-analysis.startup")
+
+startup.start({ duration_ms = 0 })  -- measure until told otherwise
+startup.is_running()                --> boolean
+local lines, count, total_ms = startup.lines()
+startup.report()                    -- stop, notify, write the log
+startup.reset()                     -- drop everything collected
+startup.probe_command()             --> the --cmd line, path filled in
+```
+
+### Reading the numbers
+
+Two things worth knowing before drawing conclusions from a single run:
+
+- **Startup timing scatters.** Runs of an identical config vary by hundreds of
+  milliseconds, mostly from filesystem cache and, on Windows, the AV filter
+  driver. Compare medians of three runs, not single numbers.
+- **A stall is not always the plugin named above it.** The line is the leading
+  suspect, not a verdict — a load time of 40ms under a 300ms block means
+  something else contributed too.
 
 ## Integration with documentation.nvim
 

@@ -876,6 +876,42 @@ function M.setup(ra)
           do_loaded_snapshots(ctx.args.prefix)
         end,
       },
+      {
+        path = { "startup", "start" },
+        desc = "Start watching for main-loop stalls (reports after 12s)",
+        run = function()
+          if require("runtime-analysis.startup").start() then
+            notify.info("watching for main-loop stalls — reproduce the hang now")
+          end
+        end,
+      },
+      {
+        path = { "startup", "watch" },
+        desc = "Like `startup start`, but keeps measuring until `startup report`",
+        run = function()
+          if require("runtime-analysis.startup").start({ duration_ms = 0 }) then
+            notify.info("watching until `:RA startup report`")
+          end
+        end,
+      },
+      {
+        path = { "startup", "report" },
+        desc = "Stop measuring and show the stall timeline",
+        run = function()
+          require("runtime-analysis.startup").report()
+        end,
+      },
+      {
+        path = { "startup", "probe" },
+        desc = "Print the --cmd line that measures a startup from the very beginning",
+        run = function()
+          local cmd = require("runtime-analysis.startup").probe_command()
+          notify.info("measure a startup with: " .. cmd)
+          -- Yanked as well: this is a long path nobody wants to retype.
+          pcall(vim.fn.setreg, '"', cmd)
+          pcall(vim.fn.setreg, "+", cmd)
+        end,
+      },
     },
   })
 
