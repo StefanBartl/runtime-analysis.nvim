@@ -125,6 +125,8 @@ own section states.
 through), best-effort for anyone else's (a `debug.getinfo` source
 location). New top-level module:
 [`lua/runtime-analysis/provenance.lua`](../lua/runtime-analysis/provenance.lua).
+`<path>` completes level by level (composer argtype `RA_PROVENANCE_PATH`),
+against loaded state only -- Tab never triggers a `require`.
 See `docs/COMMANDS.md` for the full reasoning.
 
 ### Live module inspection (`:RA inspect <module>`)

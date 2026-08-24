@@ -90,6 +90,113 @@ composer.register_type("RA_LOADED_MODULE", {
   end,
 })
 
+-- `:RA provenance <Tab>`. Same live-read posture as the two above, but the
+-- resolution it has to mirror is `provenance.resolve_container`'s, which is a
+-- two-step: split the dotted path at its LAST dot into container + field, then
+-- resolve the container either as a `_G` walk or as `require(container_path)`.
+--
+-- **The completer deliberately does not do the `require()` half.** Tab is not
+-- a command, and completing `lib.nvim.` by `require`-ing every candidate would
+-- load modules — running their top-level code, registering their autocmds — as
+-- a side effect of a keypress. documentation.nvim skips its module completion
+-- until a scan has already happened for the same reason. So this reads only
+-- what is already there: the `_G` walk (pure table indexing) and
+-- `package.loaded` (what `require` has *already* returned). A module that is
+-- not loaded yet does not complete; typing its path out by hand still works,
+-- because `inspect` does call `require`.
+--
+-- Both function and table fields are offered. Functions are the actual target;
+-- tables are the way down to one, so completing `lib.nvim` then `.` then Tab
+-- walks the tree a level at a time.
+composer.register_type("RA_PROVENANCE_PATH", {
+  -- Soft on purpose. `provenance.inspect` already distinguishes "no dot in the
+  -- path", "container does not resolve", "no such field" and "that field is a
+  -- table, not a function" — four specific, actionable messages. Validating
+  -- here would replace whichever one applies with a generic rejection.
+  validate = function(raw)
+    return true, raw, nil
+  end,
+  complete = function(arg_lead)
+    arg_lead = arg_lead or ""
+
+    ---Resolve a dotted container path without ever calling `require`.
+    ---Mirrors `provenance.resolve_container`, minus its `require` branch.
+    ---@param container_path string
+    ---@return table|nil
+    local function loaded_container(container_path)
+      local ok, walked = pcall(function()
+        local cur = _G
+        for part in container_path:gmatch("[^.]+") do
+          if type(cur) ~= "table" then
+            return nil
+          end
+          cur = cur[part]
+        end
+        return cur
+      end)
+      if ok and type(walked) == "table" then
+        return walked
+      end
+      local mod = package.loaded[container_path]
+      if type(mod) == "table" then
+        return mod
+      end
+      return nil
+    end
+
+    ---Every dotted path we can offer as a *container* to descend into.
+    ---@param lead string
+    ---@return string[]
+    local function container_candidates(lead)
+      local seen, out = {}, {}
+      local function add(name)
+        if not seen[name] and name:find(lead, 1, true) == 1 then
+          seen[name] = true
+          out[#out + 1] = name
+        end
+      end
+      for name, mod in pairs(package.loaded) do
+        if type(mod) == "table" then
+          add(name)
+        end
+      end
+      for name, value in pairs(_G) do
+        if type(value) == "table" and type(name) == "string" then
+          add(name)
+        end
+      end
+      table.sort(out)
+      return out
+    end
+
+    local container_path, partial = arg_lead:match("^(.+)%.([^.]*)$")
+    if not container_path then
+      return container_candidates(arg_lead)
+    end
+
+    local container = loaded_container(container_path)
+    if not container then
+      -- The container is not loaded (or is not a table). The lead may still be
+      -- the prefix of a longer loaded path -- `lib.nv` on the way to
+      -- `lib.nvim.notify` -- so fall back to matching whole paths.
+      return container_candidates(arg_lead)
+    end
+
+    local out = {}
+    for key, value in pairs(container) do
+      if
+        type(key) == "string"
+        and (type(value) == "function" or type(value) == "table")
+        and key:find(partial, 1, true) == 1
+      then
+        out[#out + 1] = container_path .. "." .. key
+      end
+    end
+    table.sort(out)
+    return out
+  end,
+})
+
 local M = {}
 
 -- Pending-request tracking (docs/ROADMAP.md §1.1). One token per send;
@@ -823,7 +930,7 @@ function M.setup(ra)
       {
         path = { "provenance" },
         desc = "Who wrapped a function right now — e.g. :RA provenance vim.notify",
-        args = { { name = "path", type = "STRING" } },
+        args = { { name = "path", type = "RA_PROVENANCE_PATH" } },
         run = function(ctx)
           do_provenance(ctx.args.path)
         end,

@@ -214,4 +214,55 @@ return function(H)
       eq(other.proc_trace, false, "provenance: only the four paths it actually wraps")
     end
   end
+
+  -- ------------------------------------------------ `:RA provenance` completion
+  --
+  -- The argtype registered in `bindings/usrcmds.lua`. Two things matter and
+  -- neither is visible from the candidate list alone: that it splits the
+  -- dotted path the way `inspect` does, and that Tab never loads a module.
+
+  require("runtime-analysis").setup({})
+
+  local function candidates(lead)
+    return vim.fn.getcompletion("RA provenance " .. lead, "cmdline")
+  end
+
+  local loaded_before = vim.tbl_count(package.loaded)
+
+  local top = candidates("")
+  ok(#top > 0, "provenance completion: offers containers with an empty lead")
+  ok(vim.tbl_contains(top, "vim"), "provenance completion: `vim` is offered as a container")
+
+  local fields = candidates("vim.not")
+  ok(
+    vim.tbl_contains(fields, "vim.notify"),
+    "provenance completion: completes a function field to its full dotted path"
+  )
+  for _, c in ipairs(fields) do
+    eq(c:sub(1, 7), "vim.not", "provenance completion: every candidate keeps the typed prefix")
+  end
+
+  -- A table field is offered too -- it is the way down to a function.
+  ok(
+    vim.tbl_contains(candidates("vim.f"), "vim.fn"),
+    "provenance completion: table fields are offered as the path onward"
+  )
+
+  eq(
+    #candidates("definitely_not_a_module.field"),
+    0,
+    "provenance completion: an unresolvable container yields nothing, not a guess"
+  )
+
+  -- The one that would be a real bug rather than a cosmetic one: completing
+  -- must never `require`, or pressing Tab would run arbitrary module top-level
+  -- code (autocmd registration included) as a side effect of a keypress.
+  candidates("lib.")
+  candidates("runtime-analysis.")
+  candidates("vim.")
+  eq(
+    vim.tbl_count(package.loaded),
+    loaded_before,
+    "provenance completion: a completion sweep loads no module"
+  )
 end

@@ -485,6 +485,19 @@ where a module boundary sits inside a longer path, the same "a wrong guess
 is worse than no answer" stance `:RA import`'s own unrecognized-`curl`-flag
 handling already takes.
 
+**`<Tab>` completes the path, one level at a time.** Type `vim.` and Tab
+lists `vim`'s function and table fields; complete a table, type `.`, Tab
+again. Both kinds are offered because a table is the way down to a function.
+
+The completion resolves containers the way `inspect` does with one deliberate
+exception: **it never calls `require`.** Completing `lib.nvim.` by requiring
+every candidate would load modules -- running their top-level code, registering
+their autocmds -- as a side effect of pressing Tab. So completion reads only
+the global-table walk (pure indexing) and `package.loaded` (what `require` has
+*already* returned). A module that has not been loaded yet therefore does not
+appear; typing its path out by hand still works, because `inspect` does call
+`require`.
+
 **Three answers, and the output is explicit about which one it is giving:**
 
 - **This plugin's own telemetry wrapper: exact.** `runtime-analysis.telemetry

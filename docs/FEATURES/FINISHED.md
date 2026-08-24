@@ -772,6 +772,31 @@ to compare against where they expected the function to live. `M.lines`
 appends the caveat explicitly whenever `telemetry.wrapped` is false, rather
 than leaving the reader to infer the limits of what they're looking at.
 
+**Completion (added 2026-08-24, closing the cross-plugin autocompletion
+audit's entry for this command).** `<path>` was registered as a bare `STRING`
+with no completer -- the audit flagged it as a real gap while noting it was
+non-trivial, since the argument is a dotted path that has to be split into
+container and field. New composer argtype `RA_PROVENANCE_PATH` in
+`bindings/usrcmds.lua`: it mirrors `resolve_container`'s two-step and offers
+both function and table fields, because a table is the way down to a function
+-- complete `vim.`, Tab, complete a table, `.`, Tab again.
+
+**It mirrors resolution with one deliberate exception: it never calls
+`require`.** Completing `lib.nvim.` by requiring every candidate would load
+modules -- top-level code, autocmd registration -- as a side effect of a
+keypress, which is the same hazard documentation.nvim avoids by skipping its
+module completion until a scan has already run. So the completer reads only
+the global-table walk (pure indexing) and `package.loaded`. An unloaded module
+does not complete; typing it out by hand still works, because `inspect` does
+require. Verified at runtime: `package.loaded`'s size is unchanged across a
+completion sweep.
+
+Validation stays soft (`STRING`-equivalent, accept anything) on purpose:
+`inspect` already returns four distinct, actionable errors -- no dot,
+unresolvable container, missing field, non-function target -- and validating
+at the composer level would replace whichever applies with a generic
+rejection.
+
 New command: `:RA provenance <path>`, under the request runner's own `:RA`
 verb rather than a new top-level command — this plugin does not yet have a
 dedicated "runtime inspection" command surface (that's §5.1's, still
