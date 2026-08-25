@@ -21,6 +21,19 @@ M.DEFAULTS = {
   -- this plugin specifically, right here in the spec passed to setup() —
   -- no vim.g needed. See README.
   deps_popup = true,
+
+  -- `telemetry` is the fourth accepted option (see `KNOWN_OPTS` in
+  -- `runtime-analysis.init`), and it deliberately has **no default here**.
+  -- Auto-instrumentation is opt-in: the absence of the key is what means "do
+  -- not instrument", exactly as if `telemetry.auto()` were never called. A
+  -- default table would switch it on for everyone who never asked.
+  --
+  -- Its own defaults — retention_days, flush_interval_ms, max_arg_values,
+  -- persist — live with the implementation, in
+  -- `runtime-analysis.telemetry`, and apply once a caller passes the key.
+  -- Named here so this file is a complete answer to "what does setup()
+  -- accept", which it was not while the option existed only in the type
+  -- annotation.
 }
 
 return M
