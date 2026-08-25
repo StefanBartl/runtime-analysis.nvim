@@ -1,56 +1,53 @@
-# runtime-analysis.nvim — Ausblick
+# runtime-analysis.nvim — the outlook
 
-**Was dieses Plugin ist, in einem Satz:** es misst, was zur Laufzeit
-tatsächlich passiert — und ist damit die Gegenprobe zu einem statischen
-Analysator, der nur sehen kann, was im Text steht.
+**What this plugin is, in one sentence:** it measures what actually happens
+at runtime — and is thereby the counter-check to a static analyzer, which can
+only see what is written in the text.
 
-Diese Datei war bis 2026-08-20 leer. Was hier fehlte, ist die Richtung; die
-Herleitung jeder einzelnen Idee steht seit jeher in
-[`IDEAS.md`](IDEAS.md), was gebaut wurde in
+This file was empty until 2026-08-20. What was missing here is the direction;
+the derivation of every single idea has always been in
+[`IDEAS.md`](IDEAS.md), and what was built is in
 [`FEATURES/FINISHED.md`](FEATURES/FINISHED.md).
 
-> **Die Warteschlange steht woanders.** Was als Nächstes gebaut wird — hier
-> *und* in `documentation.nvim` und `docmap-desktop` — steht seit
-> 2026-08-20 in **einem** Plan:
+> **The queue lives elsewhere.** What gets built next — here *and* in
+> `documentation.nvim` and `docmap-desktop` — has been in **one** plan since
+> 2026-08-20:
 > [`docmap-desktop/docs/PLAN.md`](https://github.com/StefanBartl/docmap-desktop/blob/main/docs/PLAN.md).
 
-## Wo es hingeht
+## Where this is going
 
-**Der blinde Fleck der statischen Analyse ist die Aufgabe.** Eine Funktion,
-die als Callback-Wert gebunden oder über dynamischen Dispatch erreicht wird,
-hat keine Aufrufstelle, die sie nennt — für einen Parser existiert sie
-nicht, und die Telemetrie sieht sie laufen. Jede nützliche Kreuzung mit
-`documentation.nvim` folgt aus dieser einen Asymmetrie: Churn × Aufrufzahl
-trennt „refaktorieren" von „löschen", Coverage × Telemetrie ergibt die
-Warteschlange *heiß und ungetestet*, und der Hover sagt, wie oft eine
-Funktion in den letzten sieben Tagen wirklich betreten wurde.
+**Static analysis's blind spot is the job.** A function that is bound as a
+callback value, or reached through dynamic dispatch, has no call site naming
+it — to a parser it does not exist, and the telemetry sees it run. Every
+useful intersection with `documentation.nvim` follows from that one
+asymmetry: churn × call count separates "refactor" from "delete", coverage ×
+telemetry yields the queue of *hot and untested*, and the hover says how
+often a function was really entered over the last seven days.
 
-**Vom Zählen zum Messen.** Aufrufzahlen sind der Anfang; Zeiten und Formen
-sind der Weg zu einem Profiler. Für API-Verkehr ist die Grenze vorab
-gezogen und sie ist nicht verhandelbar: **Metadaten und Formen, niemals
-Payloads** — weil die Aufzeichnungen committet werden.
+**From counting to measuring.** Call counts are the beginning; timings and
+shapes are the road to a profiler. For API traffic the line is drawn in
+advance and it is not negotiable: **metadata and shapes, never payloads** —
+because the recordings get committed.
 
-**Zwei Browser-Stufen existieren, und keine ist zu Ende benutzt.** Eine
-dritte Pipeline wird nicht gebaut. `report_style = "preview-tab"` ist die
-browserfreie Stufe und nimmt die Binär-Download-Pause aus dem Standardpfad.
+**Two browser stages exist, and neither is used up.** A third pipeline will
+not be built. `report_style = "preview-tab"` is the browser-free stage and
+takes the binary-download pause out of the default path.
 
-## Drei Grenzen, die nicht verhandelt werden
+## Three limits that are not up for negotiation
 
-Sie stehen in [`IDEAS.md`](IDEAS.md) §7 mit voller Begründung; hier stehen
-sie, weil sie erklären, warum manches *nicht* kommt.
+They are in [`IDEAS.md`](IDEAS.md) §7 with the full rationale; they are here
+because they explain why some things are *not* coming.
 
-- **`documentation.nvim` darf niemals hart auf dieses Plugin angewiesen
-  sein.** Ein statischer Analysator, der ohne Runtime-Plugin nicht läuft, hat
-  genau die Eigenschaft verloren, die ihn im CI nützlich macht.
-- **Laufzeitdaten gehören nie ins committete Artefakt.** Sie brechen den
-  Byte-Vergleich beim Erzeugen und sind persönliche, schnell veraltende
-  Nutzungsdaten beim Committen.
-- **Laufzeit-Evidenz darf die Schwere eines Checks nie *erhöhen*.** Eine
-  Warnung, die auf einer Maschine erscheint und auf einer anderen nicht, ist
-  schlechter als keine Warnung. Als *Unterdrückung* ist sie dagegen richtig,
-  und so wird sie auch verwendet.
+- **`documentation.nvim` must never depend hard on this plugin.** A static
+  analyzer that does not run without a runtime plugin has lost exactly the
+  property that makes it useful in CI.
+- **Runtime data never belongs in the committed artifact.** It breaks the
+  byte comparison at generation time, and it is personal, quickly stale usage
+  data at commit time.
+- **Runtime evidence must never *raise* the severity of a check.** A warning
+  that appears on one machine and not on another is worse than no warning. As
+  a *suppression*, by contrast, it is right, and that is how it is used.
 
-Und eine, die oft vorgeschlagen wird: **Telemetrie zwischen Maschinen zu
-teilen**, damit „auf dieser Maschine kalt" nicht mehr mit „unbenutzt"
-verwechselt wird. Die richtige Antwort darauf ist eine ehrliche Formulierung
-im Render, kein Aggregationsdienst.
+And one that gets proposed often: **sharing telemetry between machines**, so
+that "cold on this machine" is no longer confused with "unused". The right
+answer to that is honest wording in the render, not an aggregation service.
