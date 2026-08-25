@@ -125,8 +125,60 @@ local DEFAULT_BACKUP_DIR = vim.fn.stdpath("cache")
 ---invisible: the prompt asked for a path and said nothing about what would
 ---appear there, which reads like "pick a filename" and answers a question
 ---nobody could otherwise answer without opening the directory afterwards.
+---
+---Also spells out the two ways to *not* get a path prompt in return:
+---submitting empty (`<CR>` on a cleared line) means "proceed, no backup" --
+---`<Esc>` means "abort, touch nothing". See `prompt_backup_dir` for why
+---those are two different outcomes rather than one.
 local BACKUP_PROMPT = "runtime-analysis.telemetry: back up existing data to "
-  .. "(created if missing; files are <namespace>-YYYYMMDD-HHMMSS.json): "
+  .. "(created if missing; files are <namespace>-YYYYMMDD-HHMMSS.json; "
+  .. "empty = proceed without backup, <Esc> = abort): "
+
+---Prompt for a backup directory, shared by `do_setup_all`/`do_reset_all`.
+---Distinguishes three outcomes rather than collapsing them into two:
+---  - a typed path       -> back up there, then proceed
+---  - submitted empty    -> proceed WITHOUT a backup (explicit, not a mistake)
+---  - `<Esc>`            -> abort the whole run, existing data untouched
+---`vim.ui.input`'s own contract already keeps "submitted empty" and
+---"cancelled" apart -- the callback gets `nil` on `<Esc>` and the (possibly
+---empty) typed string on `<CR>` -- so this only has to route the two rather
+---than invent a sentinel to tell them apart.
+---@param on_backup fun(dir: string|nil)  # nil means "proceed without a backup"
+---@param on_abort fun()
+local function prompt_backup_dir(on_backup, on_abort)
+  local function on_input(input)
+    if input == nil then
+      on_abort()
+      return
+    end
+    local dir = vim.trim(input)
+    if dir == "" then
+      on_backup(nil)
+      return
+    end
+    local ok_mkdir = require("lib.nvim.fs.mkdirp")(dir)
+    if not ok_mkdir or vim.fn.isdirectory(dir) == 0 then
+      notify.error("could not create backup directory: " .. dir)
+      return
+    end
+    on_backup(dir)
+  end
+
+  local ok_kit, kit = pcall(require, "lib.nvim.ui.kit")
+  if ok_kit then
+    kit.input({
+      title = BACKUP_PROMPT,
+      default = DEFAULT_BACKUP_DIR,
+      on_submit = on_input,
+      on_cancel = on_abort,
+    })
+  else
+    vim.ui.input({
+      prompt = BACKUP_PROMPT,
+      default = DEFAULT_BACKUP_DIR,
+    }, on_input)
+  end
+end
 
 local SUBCOMMANDS = {
   "report",
@@ -432,9 +484,10 @@ end
 ---dialog always has. So every candidate with existing data shares one
 ---directory, chosen once, before anything is touched; a candidate with
 ---nothing on disk needs no backup and is never why the prompt appeared.
----Declining (`<Esc>`/empty input) aborts the entire run — existing data is
----either backed up everywhere it exists, or nothing is reset anywhere,
----never a partial run silently dropping some of it.
+---Submitting empty proceeds without a backup; `<Esc>` aborts the entire run
+---instead — existing data is either backed up everywhere it exists, or
+---nothing is reset anywhere, never a partial run silently dropping some of
+---it. See `prompt_backup_dir` for why those are two different outcomes.
 ---@internal
 ---@param full boolean
 ---@param namespace string|nil When set, only that candidate is acted on
@@ -518,33 +571,9 @@ local function do_setup_all(full, namespace)
     return
   end
 
-  local function on_input(input)
-    if input == nil or vim.trim(input) == "" then
-      notify.warn("setup aborted -- existing telemetry data left untouched")
-      return
-    end
-    local dir = vim.trim(input)
-    local ok_mkdir = require("lib.nvim.fs.mkdirp")(dir)
-    if not ok_mkdir or vim.fn.isdirectory(dir) == 0 then
-      notify.error("could not create backup directory: " .. dir)
-      return
-    end
-    proceed(dir)
-  end
-
-  local ok_kit, kit = pcall(require, "lib.nvim.ui.kit")
-  if ok_kit then
-    kit.input({
-      title = BACKUP_PROMPT,
-      default = DEFAULT_BACKUP_DIR,
-      on_submit = on_input,
-    })
-  else
-    vim.ui.input({
-      prompt = BACKUP_PROMPT,
-      default = DEFAULT_BACKUP_DIR,
-    }, on_input)
-  end
+  prompt_backup_dir(proceed, function()
+    notify.warn("setup aborted -- existing telemetry data left untouched")
+  end)
 end
 
 ---`:RATelemetry reset [ns]` / `:RATelemetryResetAll` — same one-prompt-for-
@@ -625,33 +654,9 @@ local function do_reset_all(namespace)
     return
   end
 
-  local function on_input(input)
-    if input == nil or vim.trim(input) == "" then
-      notify.warn("reset aborted -- existing telemetry data left untouched")
-      return
-    end
-    local dir = vim.trim(input)
-    local ok_mkdir = require("lib.nvim.fs.mkdirp")(dir)
-    if not ok_mkdir or vim.fn.isdirectory(dir) == 0 then
-      notify.error("could not create backup directory: " .. dir)
-      return
-    end
-    proceed(dir)
-  end
-
-  local ok_kit, kit = pcall(require, "lib.nvim.ui.kit")
-  if ok_kit then
-    kit.input({
-      title = BACKUP_PROMPT,
-      default = DEFAULT_BACKUP_DIR,
-      on_submit = on_input,
-    })
-  else
-    vim.ui.input({
-      prompt = BACKUP_PROMPT,
-      default = DEFAULT_BACKUP_DIR,
-    }, on_input)
-  end
+  prompt_backup_dir(proceed, function()
+    notify.warn("reset aborted -- existing telemetry data left untouched")
+  end)
 end
 
 ---Register `:RATelemetry`. Idempotent (`usercmd.create` defaults to `force`).
