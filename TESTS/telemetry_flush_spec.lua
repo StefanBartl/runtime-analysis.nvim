@@ -1,4 +1,4 @@
--- docs/TESTS/telemetry_flush_spec.lua — writing without stopping.
+-- TESTS/telemetry_flush_spec.lua — writing without stopping.
 --
 -- Three questions a reader asks in this order, and the answers are the
 -- reason this file exists rather than a paragraph in the README:

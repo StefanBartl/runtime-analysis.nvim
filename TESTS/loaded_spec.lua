@@ -1,4 +1,4 @@
--- docs/TESTS/loaded_spec.lua — runtime-analysis.loaded (docs/ROADMAP.md §5.3)
+-- TESTS/loaded_spec.lua — runtime-analysis.loaded (docs/ROADMAP.md §5.3)
 
 return function(H)
   local eq, ok = H.eq, H.ok

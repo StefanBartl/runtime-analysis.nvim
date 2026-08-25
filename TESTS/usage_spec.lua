@@ -1,4 +1,4 @@
--- docs/TESTS/usage_spec.lua — runtime-analysis.usage (docs/ROADMAP.md §7.1)
+-- TESTS/usage_spec.lua — runtime-analysis.usage (docs/ROADMAP.md §7.1)
 --
 -- Real `vim.keymap.set` calls and a real typed command line (via
 -- `nvim_feedkeys`), not stubs — the same "exercise the real thing" posture

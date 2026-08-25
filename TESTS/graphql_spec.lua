@@ -1,4 +1,4 @@
--- docs/TESTS/graphql_spec.lua — runtime-analysis.graphql (docs/ROADMAP.md
+-- TESTS/graphql_spec.lua — runtime-analysis.graphql (docs/ROADMAP.md
 -- §2.6)
 --
 -- Pure logic: a parsed request in, either an unchanged request (not

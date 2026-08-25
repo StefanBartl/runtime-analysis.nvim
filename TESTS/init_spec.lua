@@ -1,4 +1,4 @@
--- docs/TESTS/init_spec.lua — runtime-analysis's own public surface
+-- TESTS/init_spec.lua — runtime-analysis's own public surface
 --
 -- `M.open_request` is this plugin's one stable integration point for
 -- another plugin to build on (see its own doc comment) — worth testing

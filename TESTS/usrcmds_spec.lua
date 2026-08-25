@@ -1,4 +1,4 @@
--- docs/TESTS/usrcmds_spec.lua — runtime-analysis.bindings.usrcmds
+-- TESTS/usrcmds_spec.lua — runtime-analysis.bindings.usrcmds
 --
 -- `parse_spec.lua` covers `split`/`block_at` as pure logic; this covers the
 -- actual wiring in `send_current_buffer` — a real multi-block buffer, a

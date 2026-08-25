@@ -1,4 +1,4 @@
--- docs/TESTS/cost_vs_use_spec.lua — runtime-analysis.telemetry.cost_vs_use
+-- TESTS/cost_vs_use_spec.lua — runtime-analysis.telemetry.cost_vs_use
 -- (docs/ROADMAP.md §7.2)
 --
 -- Pure logic, no I/O: resolved_modules() + total_calls + a startup report

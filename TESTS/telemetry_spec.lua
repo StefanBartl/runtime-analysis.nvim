@@ -1,4 +1,4 @@
--- docs/TESTS/telemetry_spec.lua — runtime-analysis.telemetry
+-- TESTS/telemetry_spec.lua — runtime-analysis.telemetry
 --
 -- Covers the properties the design actually rests on: zero-cost-when-stopped
 -- (identity restore), scoping, the shared wrap layer (no double counting, no
@@ -1725,7 +1725,7 @@ return function(H)
 
   -- -------------------------------------------------------------------------
   -- report_style resolution: mdview.nvim is not on this test run's runtime
-  -- path (docs/TESTS/run.lua only appends the lib.nvim repo itself), so
+  -- path (TESTS/run.lua only appends the lib.nvim repo itself), so
   -- "mdview"/"auto" deterministically fall back to "kit" here -- exactly the
   -- degrade-silently path a consumer without mdview installed hits for real.
   -- -------------------------------------------------------------------------

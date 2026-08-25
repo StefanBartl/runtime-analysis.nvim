@@ -1,4 +1,4 @@
--- docs/TESTS/lazy_spec.lua — runtime-analysis.telemetry.lazy
+-- TESTS/lazy_spec.lua — runtime-analysis.telemetry.lazy
 --
 -- The one plugin-manager adapter this module ships. Since real lazy.nvim is
 -- not on this test run's runtime path, `lazy.core.config`/`lazy.core.loader`

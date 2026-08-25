@@ -1,6 +1,6 @@
--- docs/TESTS/runner_spec.lua — runtime-analysis.runner
+-- TESTS/runner_spec.lua — runtime-analysis.runner
 --
--- Same hermetic pattern lib.nvim's own docs/TESTS/curl_spec.lua uses: a
+-- Same hermetic pattern lib.nvim's own TESTS/curl_spec.lua uses: a
 -- tiny `vim.uv` TCP server answers with a hand-crafted raw HTTP response,
 -- so this exercises the real `lib.nvim.net.curl.fetch_raw_blocking` call
 -- underneath `runner.run` against real sockets, no external test

@@ -1,4 +1,4 @@
--- docs/TESTS/telemetry_html_spec.lua — runtime-analysis.telemetry.
+-- TESTS/telemetry_html_spec.lua — runtime-analysis.telemetry.
 -- renderers.html (docs/ROADMAP.md §4.4)
 --
 -- A real telemetry instance, real calls, a real `t.report()` — the same

@@ -1,4 +1,4 @@
--- docs/TESTS/config_validate_spec.lua — runtime-analysis.config.validate
+-- TESTS/config_validate_spec.lua — runtime-analysis.config.validate
 -- (REVIEW.md §1 "Config-Merge-Reihenfolge"): a typo'd opts key must warn,
 -- with a "did you mean" guess when one is close enough, and must never
 -- block the caller it validates for.

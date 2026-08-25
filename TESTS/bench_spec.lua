@@ -1,4 +1,4 @@
--- docs/TESTS/bench_spec.lua — runtime-analysis.bench (docs/ROADMAP.md §3.6)
+-- TESTS/bench_spec.lua — runtime-analysis.bench (docs/ROADMAP.md §3.6)
 
 return function(H)
   local eq, ok = H.eq, H.ok

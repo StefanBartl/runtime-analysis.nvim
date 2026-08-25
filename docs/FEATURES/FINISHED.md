@@ -85,7 +85,7 @@ Verified against a real, checkable comparison, not just "it runs without
 erroring": a no-op candidate against one doing real (if trivial) work
 inside the timed loop, confirming the cheaper one is actually reported
 fastest and the more expensive one's `vs_fastest` is genuinely `> 1`, not
-asserted on faith. Test coverage in `docs/TESTS/bench_spec.lua`, including
+asserted on faith. Test coverage in `TESTS/bench_spec.lua`, including
 every bad-input path (empty candidates, missing name/fn, duplicate names)
 and a `lines()` rendering check that deliberately does not assert relative
 order between two equally-trivial no-op candidates, since that order is
@@ -157,7 +157,7 @@ default, which would have hidden a bug in the other direction). A request
 for a snapshot that was never saved correctly answered "snapshot not
 found".
 
-Test coverage: `docs/TESTS/loaded_spec.lua` here (snapshot/list/load/
+Test coverage: `TESTS/loaded_spec.lua` here (snapshot/list/load/
 retention/eviction — retention's own test asserts the count evicted down
 to the cap rather than which specific one, since `saved_at` is
 second-granularity and three snapshots saved back-to-back inside one test
@@ -191,7 +191,7 @@ by accident. **Trigger** is always explicit — `:RATelemetry snapshot <ns>
 evicting older, possibly still-wanted ones was judged a worse failure mode
 than a missed one.
 
-Verified against real behavior, not only `docs/TESTS/telemetry_spec.lua`'s
+Verified against real behavior, not only `TESTS/telemetry_spec.lua`'s
 own unit coverage (store-level round trip, module-level API, retention
 eviction, both via `store.lua` directly and through `telemetry.snapshot`):
 a real headless session running the actual `:RATelemetry snapshot`/
@@ -611,7 +611,7 @@ data structurally is not. Discussed directly on 2026-08-04 and moved to
 built on a guess at what shape the data should have taken instead — see
 that table's own entry for the full reasoning.
 
-Verified in `docs/TESTS/telemetry_spec.lua`: real, distinct call sites
+Verified in `TESTS/telemetry_spec.lua`: real, distinct call sites
 (not fabricated line numbers) producing genuinely different fingerprints;
 the busier site sorting first with the correct share; opt-in via both
 `wrap()`-time and `start()`-time predicate, mirroring `profile_args`'s own
@@ -716,7 +716,7 @@ published functions fully documented.
 ### Housekeeping — test coverage for the request runner's real transport
 
 **Already done, and had been since this plugin's very first commit** —
-this roadmap entry was simply stale. `docs/TESTS/runner_spec.lua` has
+this roadmap entry was simply stale. `TESTS/runner_spec.lua` has
 spun up a real hermetic `vim.uv` TCP server and exercised
 `lib.nvim.net.curl.fetch_raw`/`fetch_raw_blocking` underneath
 `runner.run`/`runner.run_async` against it since `02e9a0c` ("in-editor
@@ -867,7 +867,7 @@ soft-dependency fallback `:RATelemetry`'s own `show` helper already uses);
 `:RA usage start`/`:RA usage stop` toggle collection explicitly.
 
 Tested against the real entry points, not stubs, in
-[`docs/TESTS/usage_spec.lua`](../TESTS/usage_spec.lua): a real
+[`TESTS/usage_spec.lua`](../../TESTS/usage_spec.lua): a real
 `vim.keymap.set` callback stays callable and gets counted; a real typed
 command line, committed via `nvim_feedkeys`, is counted through a genuine
 `CmdlineLeave`; `stop()` restores the true `vim.keymap.set`. One case is
@@ -1551,7 +1551,7 @@ hand `M.parse`.
 Verified end-to-end, not just at the pure-logic level: a real hermetic
 local server recording which of two `###`-separated requests it actually
 received, cursor moved between blocks, `:RA send` and the flat `:RASend`
-alias both checked (`docs/TESTS/usrcmds_spec.lua`).
+alias both checked (`TESTS/usrcmds_spec.lua`).
 
 ### §1.4 `.http` / `.rest` file support
 
@@ -1653,7 +1653,7 @@ answer it — promising `coverage` here would be a CLI command that lies about
 what it can see.
 
 Bootstraps lib.nvim onto the runtimepath with the same three-candidate search
-(`LIB_NVIM_DIR`, `.deps/lib.nvim`, a sibling checkout) `docs/TESTS/run.lua`
+(`LIB_NVIM_DIR`, `.deps/lib.nvim`, a sibling checkout) `TESTS/run.lua`
 already uses, duplicated rather than shared between the two entry points —
 small enough that a shared helper module would add more indirection than it
 saves for two call sites.

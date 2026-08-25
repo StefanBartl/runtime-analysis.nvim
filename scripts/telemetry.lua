@@ -33,7 +33,7 @@
 -- not back up.
 
 -- Make the repo importable, and find lib.nvim — the same three-candidate
--- search `docs/TESTS/run.lua` uses (CI's `.deps/lib.nvim` checkout, a local
+-- search `TESTS/run.lua` uses (CI's `.deps/lib.nvim` checkout, a local
 -- sibling checkout, or an already-active plugin manager), duplicated rather
 -- than shared: this is a second, independent entry point, and the block is
 -- small enough that a shared helper module would cost more indirection than

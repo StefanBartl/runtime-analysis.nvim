@@ -1,7 +1,7 @@
--- docs/TESTS/run.lua — headless test runner for runtime-analysis.nvim.
+-- TESTS/run.lua — headless test runner for runtime-analysis.nvim.
 --
 -- Run from the repo root:
---   nvim --headless -u NONE -l docs/TESTS/run.lua
+--   nvim --headless -u NONE -l TESTS/run.lua
 --
 -- Loads every *_spec.lua listed below, runs it against the shared harness,
 -- prints a per-spec result, and exits non-zero on the first failing spec.
@@ -37,7 +37,7 @@ local function add_lib_nvim()
       end
     end
   end
-  io.stderr:write("docs/TESTS/run.lua: lib.nvim not found.\n")
+  io.stderr:write("TESTS/run.lua: lib.nvim not found.\n")
   io.stderr:write("  Set LIB_NVIM_DIR, or clone it to .deps/lib.nvim, or beside this repo.\n")
   os.exit(1)
 end

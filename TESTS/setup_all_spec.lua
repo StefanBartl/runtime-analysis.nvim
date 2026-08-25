@@ -1,4 +1,4 @@
--- docs/TESTS/setup_all_spec.lua — runtime-analysis.telemetry.lazy's
+-- TESTS/setup_all_spec.lua — runtime-analysis.telemetry.lazy's
 -- candidates()/configured(), and runtime-analysis.telemetry.setup_all's
 -- backup + reset + re-wrap + restart mechanism
 -- (:RATelemetrySetupAll/:RATelemetrySetupAllFull's own engine).

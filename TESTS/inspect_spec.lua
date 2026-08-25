@@ -1,4 +1,4 @@
--- docs/TESTS/inspect_spec.lua — runtime-analysis.inspect (docs/ROADMAP.md
+-- TESTS/inspect_spec.lua — runtime-analysis.inspect (docs/ROADMAP.md
 -- §5.1, `:RA inspect <module>`)
 --
 -- Real `package.loaded` fixtures, not stubs: the whole point of this module

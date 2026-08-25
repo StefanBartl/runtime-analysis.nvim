@@ -1,4 +1,4 @@
--- docs/TESTS/history_spec.lua — runtime-analysis.history
+-- TESTS/history_spec.lua — runtime-analysis.history
 --
 -- Every call passes an isolated `opts = { dir = ... }` so this never
 -- touches the real stdpath("cache") — the same reason telemetry_spec.lua

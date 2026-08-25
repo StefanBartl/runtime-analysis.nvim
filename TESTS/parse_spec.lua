@@ -1,4 +1,4 @@
--- docs/TESTS/parse_spec.lua — runtime-analysis.parse
+-- TESTS/parse_spec.lua — runtime-analysis.parse
 --
 -- Pure logic, no I/O: every case here is a plain buffer-lines array in,
 -- a request table (or an error) out.
@@ -202,7 +202,9 @@ return function(H)
   -- `require`d.
   do
     local dir = debug.getinfo(1, "S").source:sub(2):match("(.*[/\\])") or "./"
-    dofile(dir .. "../../ftdetect/runtime-analysis.lua")
+    -- One level up, not two: this suite sits at the repository root
+    -- (`TESTS/`), not under `docs/`, where it used to.
+    dofile(dir .. "../ftdetect/runtime-analysis.lua")
     eq(
       vim.filetype.match({ filename = "requests.rest" }),
       "http",

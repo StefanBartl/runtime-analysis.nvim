@@ -1,4 +1,4 @@
--- docs/TESTS/curl_spec.lua — runtime-analysis.curl (docs/ROADMAP.md §2.3)
+-- TESTS/curl_spec.lua — runtime-analysis.curl (docs/ROADMAP.md §2.3)
 --
 -- Pure logic, no I/O: a pasted curl command line in, a request table (or
 -- an error) out — and the reverse, `M.format`.

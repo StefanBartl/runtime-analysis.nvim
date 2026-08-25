@@ -1,4 +1,4 @@
--- docs/TESTS/multipart_spec.lua — runtime-analysis.multipart
+-- TESTS/multipart_spec.lua — runtime-analysis.multipart
 -- (docs/ROADMAP.md §2.6)
 --
 -- Real files on disk for the file-reference cases, not stubs: the whole
