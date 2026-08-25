@@ -310,10 +310,7 @@ function M.lines()
   end)
 
   local out = {
-    ("=== timeline + stalls >= %d ms (%.0f s) ==="):format(
-      state.opts.stall_ms,
-      elapsed()
-    ),
+    ("=== timeline + stalls >= %d ms (%.0f s) ==="):format(state.opts.stall_ms, elapsed()),
     "  a STALL line covers [at - blocked, at] — read the events just above it",
     "",
   }

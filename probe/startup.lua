@@ -30,7 +30,10 @@ package.path = table.concat({
 local ok, startup = pcall(require, "runtime-analysis.startup")
 if not ok then
   vim.notify(
-    "[runtime-analysis] startup probe: could not load the module from " .. root .. "\n" .. tostring(startup),
+    "[runtime-analysis] startup probe: could not load the module from "
+      .. root
+      .. "\n"
+      .. tostring(startup),
     vim.log.levels.ERROR
   )
   return
