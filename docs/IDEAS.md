@@ -1,11 +1,11 @@
 # runtime-analysis.nvim — cross-plugin feature ideas
 
-> **Begründungsdokument, keine Warteschlange.** Was als Nächstes gebaut wird,
-> steht seit 2026-08-20 in **einem** Plan für alle drei Repositories:
+> **A reasoning document, not a queue.** What gets built next has lived, since
+> 2026-08-20, in **one** plan covering all three repositories:
 > [`docmap-desktop/docs/PLAN.md`](https://github.com/StefanBartl/docmap-desktop/blob/main/docs/PLAN.md).
-> Hier steht, *warum* eine Idee so zugeschnitten ist, was sie kostet und was
-> dagegen spricht — §7 („Deliberately not") ist der wertvollste Teil davon
-> und gilt unverändert weiter.
+> What lives here is *why* an idea is cut the way it is, what it costs and what
+> argues against it — §7 ("Deliberately not") is the most valuable part of that
+> and still holds unchanged.
 
 ## Table of content
 
