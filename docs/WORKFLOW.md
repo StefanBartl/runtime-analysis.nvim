@@ -198,6 +198,86 @@ names the namespace precisely so this is easy to grep for; the fix is
 almost always "only one of these call sites should exist," not a
 namespace rename.
 
+## A freeze is a `:RA startup` question, and neither `--startuptime` nor `:profile` will answer it
+
+Reach for `:RA startup` when Neovim blocks — during startup or long after it.
+The two obvious tools each have a blind spot exactly where the interesting
+stalls live: `--startuptime` stops at the first screen redraw, and `:profile`
+instruments Vimscript and Lua calls while being blind to libuv callbacks, which
+is to say the filesystem, subprocesses and LSP handling. Here a libuv timer
+measures its own lateness, so a block registers wherever it came from.
+
+`:RA startup start` watches for twelve seconds and reports; `watch`/`report` is
+the same measurement kept open when you do not know how long you will need.
+The report is a notification and a `ra-startup.log` in the working directory.
+
+**The load reason is what cracks cases.** The timeline puts plugin loads,
+`VimEnter`, `VeryLazy`, `LspAttach` and LSP progress on one clock, and each
+load carries why it happened: `<- VeryLazy` means the spec asked for it,
+`<- require '<mod>' from <file>` means another file defeated the lazy loading.
+Only the second is a bug — and it is invisible in `:Lazy`, which reports the
+cost without the cause.
+
+**Measuring the startup itself needs the probe**, because the timer has to tick
+before your config is sourced and a lazily loaded plugin cannot arrange that
+for itself. `:RA startup probe` prints and yanks the `--cmd` line; it sets its
+own `package.path` and needs neither runtimepath nor plugin manager.
+
+**Two ways to misread the output.** Startup timing scatters by hundreds of
+milliseconds — filesystem cache, and on Windows the AV filter driver — so
+compare medians of three runs, never single numbers. And the plugin named above
+a stall is the leading suspect, not the verdict: a 40ms load under a 300ms
+block means something else contributed too.
+
+## `flush` when you want the numbers now, `stop` when you are done
+
+Telemetry writes **continuously**, not at the end — measured rather than
+asserted: a 60-second timer, `stop`, and a `VimLeavePre` autocommand each write,
+and every one of them *merges* into what is already on disk. Counters therefore
+survive a restart and keep accumulating across sessions.
+
+`:RATelemetry flush` is the fourth moment: write now, and keep recording. Reach
+for it before reading a report mid-session, or before doing anything that might
+end the process the hard way. `stop` is the one that also stops counting, which
+is a different intent and worth keeping distinct.
+
+## `reset` asks before it drops anything
+
+`:RATelemetry reset` and `:RATelemetryResetAll` prompt for a backup first —
+once for the whole run, shown only when at least one instance actually has data
+to lose, and declining aborts the entire reset rather than half of it. Same
+flow `:RATelemetrySetupAll` already used.
+
+So a reset is recoverable by default. That is worth knowing in the other
+direction too: if the prompt does *not* appear, nothing had data, and the reset
+is not the reason a report came back empty.
+
+## A misspelled option gets one warning instead of silence
+
+`setup()` validates its keys before merging and names the closest real one —
+`deps_popups` comes back as *unknown, did you mean "deps_popup"?* The same check
+runs on `telemetry.new()` and on the lazy.nvim adapter's own options, per plugin
+and per extra target, which is where it matters most because those tables are
+deeper.
+
+Fail-open by design: it warns once and continues, never blocking `setup()`.
+Before it, a typo'd key vanished into whatever the default already was, with no
+error and no warning ever — so if you have been carrying a config for a while,
+the first startup after upgrading is worth reading.
+
+## `:RA provenance` completes now — walk down through the tables
+
+The `<path>` argument used to be a bare string. It completes: type `vim.`, Tab,
+pick a table, `.`, Tab again. Table fields are offered alongside functions
+because a table is the way down to a function.
+
+It mirrors resolution with one deliberate exception: **it never calls
+`require`.** Completing `lib.nvim.` by requiring every candidate would load
+modules — running their top-level code, registering their autocommands — as a
+side effect of a keypress. So completion reads only the global-table walk and
+`package.loaded`: an unloaded module does not complete, and typing it out by
+hand still works, because `inspect` does require.
+
 ## Argument profiling costs more than counting — sample if it matters
 
 `t.wrap(mod, "name", { profile_args = true })` fingerprints every call's

@@ -524,6 +524,43 @@ since such a plugin has never heard of `lib.nvim`. The two wrappers this
 ecosystem does control turned out to be answerable without it. See that
 entry for what would reopen the question.
 
+## `:RA startup start|watch|report|probe`
+
+Finds what blocks Neovim's main loop during and after startup.
+
+**What it does that `--startuptime` and `:profile` cannot.**
+`--startuptime` stops at the first screen redraw and never sees a later
+block. `:profile` instruments Vimscript and Lua calls and is blind to libuv
+callbacks — which is exactly the filesystem, subprocesses and LSP handling.
+Here a libuv timer measures its **own** lateness, so a stall shows up
+whatever it came from.
+
+```vim
+:RA startup start     " watch for stalls, report after 12s
+:RA startup watch     " keep measuring until you ask
+:RA startup report    " stop and show the timeline
+```
+
+**The timeline puts everything on one clock:** plugin loads with lazy's load
+time *and* load reason, `VimEnter`, `VeryLazy`, `LspAttach`, LSP progress.
+The load reason is the part that cracks cases: `<- VeryLazy` means the spec
+asked for it, `<- require '<mod>' from <file>` means another file defeated
+the lazy loading — and only the second is a bug.
+
+**`:RA startup probe` measures the startup itself.** The timer has to tick
+*before* the config is sourced, which a lazily loaded plugin cannot arrange
+for itself, so the probe is a `--cmd` line: it sets `package.path` from its
+own location and needs neither the runtimepath nor a plugin manager. The
+command prints and yanks the finished line.
+
+**How not to read the numbers.** Startup timing scatters — runs of an
+identical config vary by hundreds of milliseconds, mostly from filesystem
+cache and, on Windows, the AV filter driver — so compare medians of three
+runs rather than single numbers. And a stall is not always the plugin named
+above it: a 40ms load time under a 300ms block means something else
+contributed too. The report arrives as a notification and is written to
+`ra-startup.log` in the current directory.
+
 ## `:RA inspect <module>`
 
 `docs/ROADMAP.md` §5.1: "Runtime inspection — a second pillar." Walks a
@@ -816,8 +853,11 @@ not `:DocMap browse ...`, split along the same "does something" vs.
 
 ## What is not a command
 
-- **No keymaps, no autocommands.** See [`docs/BINDINGS.md`](BINDINGS.md) —
-  every entry point here is one of the four commands above.
+- **No keymaps, and no user-facing autocommands.** See
+  [`docs/BINDINGS.md`](BINDINGS.md) — every entry point here is one of the
+  commands above. The handful of real registrations that do exist are opt-in
+  plumbing behind telemetry and usage tracking, listed there; nothing watches
+  buffer or window events.
 - **`M.open_request`/`M.setup` are Lua API, not commands.** Documented in
   [`lua/runtime-analysis/init.lua`](../lua/runtime-analysis/init.lua)'s own
   module doc-comment and in `docs/IDEAS.md` §1 as the integration surface

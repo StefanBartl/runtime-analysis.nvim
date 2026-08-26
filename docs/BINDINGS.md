@@ -25,6 +25,9 @@ All four are registered unconditionally by `require("runtime-analysis").setup()`
 | `:RA import` | none (or a range, e.g. `'<,'>RA import`) | Parses a `curl` command line — from the system clipboard, or the given range's lines — into a new request buffer. |
 | `:RA export` | none | Yanks the `###` block under the cursor as a shareable `curl` command line to the unnamed register. |
 | `:RA provenance <path>` | dotted path, e.g. `vim.notify` | Who wrapped this function right now — exact for this plugin's own telemetry wraps, best-effort (a `debug.getinfo` source location) for anyone else's. See `docs/COMMANDS.md`. |
+| `:RA startup start` | none | Watches the main loop for stalls and reports after 12s. A libuv timer measures its *own* lateness, so a block is caught wherever it comes from -- including libuv callbacks, which `:profile` cannot see. |
+| `:RA startup watch` / `:RA startup report` | none | The same measurement, kept running until you ask for the timeline. The report puts plugin loads (with lazy's load time **and** load reason), `VimEnter`, `VeryLazy`, `LspAttach` and LSP progress on one clock. |
+| `:RA startup probe` | none | Prints and yanks the `--cmd` command line that measures the startup itself -- the timer has to tick before the config is sourced, which a lazily loaded plugin cannot arrange for itself. |
 | `:RA inspect <module>` | a `package.loaded` key, `<Tab>`-completed live | Walks a live module table: functions, tables, metatables, what's shadowed through `__index`. See `docs/COMMANDS.md`. |
 | `:RA usage` | none | Report keymap/command press counts collected since `:RA usage start`. See `docs/COMMANDS.md`. |
 | `:RA usage start` / `:RA usage stop` | none | Start/stop counting — opt-in, local-only, records what you pressed rather than what the code did. |
@@ -179,6 +182,7 @@ Module: [`lua/runtime-analysis/loaded.lua`](../lua/runtime-analysis/loaded.lua).
 | `:RATelemetry start [ns]` | every instance, or just one |
 | `:RATelemetry stop [ns]` | every instance, or just one |
 | `:RATelemetry reset [ns]` | back up (prompted once for a directory, only if anything exists), then drop the aggregate — every instance, or just one |
+| `:RATelemetry flush [ns]` | write now and keep recording — every instance, or just one. The periodic flush, `stop` and `VimLeavePre` all write anyway; this buys certainty at a chosen moment without ending the run to get it. |
 | `:RATelemetry disable [ns]` | stop + persist "off" across restarts |
 | `:RATelemetry enable [ns]` | clear a persisted disable, resume now |
 | `:RATelemetry disabled` | list namespaces currently disabled |
