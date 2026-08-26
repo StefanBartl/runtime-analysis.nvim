@@ -9,6 +9,9 @@ profiler" rejection.
 
 ## Direct calls, not telemetry-wrapped
 
+- **Module:** `bench.lua` (`compare`), measured by `scripts/bench_overhead.lua`
+- **Why:** counting-only overhead is ~10-15 ns/call, argument profiling ~600-700 ns — enough to swamp the comparison
+
 The roadmap idea this closes assumed reusing `runtime-analysis.telemetry`'s
 own wrap/count machinery would be free. It measurably isn't —
 `scripts/bench_overhead.lua` puts counting-only overhead at ~10-15ns per

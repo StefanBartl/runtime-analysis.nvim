@@ -101,6 +101,9 @@ automatically, the same key shape documentation.nvim's own IR uses.
 
 ## Instrumenting your own Neovim config, not just plugins
 
+- **Module:** `telemetry/`
+- **Config:** `opts.telemetry.extra` — explicit targets, beside `opts.telemetry.plugins`
+
 `opts.telemetry.plugins` can only ever describe what a plugin manager
 resolves. Your own config is not one of those things — no repo, no spec,
 and usually several unrelated root prefixes rather than one `main` — yet it
