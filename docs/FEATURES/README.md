@@ -6,7 +6,7 @@ catalog of this plugin's own signature features — for
 generated map is opened, the same way it renders that plugin's own
 `docs/FEATURES/`. This folder is the *user-facing* catalog: what a feature
 is, which module and command are behind it, today —
-[`docs/ROADMAP.md`](../ROADMAP.md)/[`docs/FINISHED.md`](FINISHED.md)
+[`docs/ROADMAP.md`](../ROADMAP.md)/[`docs/FEATURE_LOG.md`](../FEATURE_LOG.md)
 stay the *decision record* (why something was built the way it was, what
 commit shipped it), a different document for a different reader.
 

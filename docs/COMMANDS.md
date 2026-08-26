@@ -601,7 +601,7 @@ combined into one count, not tracked per buffer.
 
 ## `:RA loaded snapshot <prefix> [name]` and `:RA loaded snapshots <prefix>`
 
-`docs/FEATURES/FINISHED.md` §5.4: persisted, named captures of
+`docs/FEATURE_LOG.md` §5.4: persisted, named captures of
 `runtime-analysis.loaded`'s live read, so it can be viewed later, or from a
 process that never itself loaded the code in question —
 documentation.nvim's `:DocMap serve` Loaded Analysis panel is the consumer

@@ -7,7 +7,7 @@ only see what is written in the text.
 This file was empty until 2026-08-20. What was missing here is the direction;
 the derivation of every single idea has always been in
 [`IDEAS.md`](IDEAS.md), and what was built is in
-[`FEATURES/FINISHED.md`](FEATURES/FINISHED.md).
+[`FEATURE_LOG.md`](FEATURE_LOG.md).
 
 > **The queue lives elsewhere.** What gets built next — here *and* in
 > `documentation.nvim` and `docmap-desktop` — has been in **one** plan since

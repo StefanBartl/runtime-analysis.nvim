@@ -539,7 +539,7 @@ plugin's counts against its static analysis — the design doc that scoped it
 "Mode 7"; it landed as the **eighth** entry in the real `MODES` list, since
 Endpoints took position seven first (see `ECOSYSTEM.md` step 8 for that
 renumbering). `:DocBrowse loaded` — the declared-vs-loaded diff,
-[`docs/FINISHED.md`](docs/FEATURES/FINISHED.md) — followed as the ninth.
+[`docs/FEATURE_LOG.md`](docs/FEATURE_LOG.md) — followed as the ninth.
 
 The same join now also answers outside Neovim entirely:
 [`docmap-desktop`](https://github.com/StefanBartl/docmap-desktop) runs
@@ -562,7 +562,7 @@ split into quick wins, medium and large.
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — where this plugin is going, in
   prose: the blind spot of static analysis is the job, and the three limits
   that are not up for negotiation. Direction, not schedule.
-- [`docs/FINISHED.md`](docs/FEATURES/FINISHED.md) — the decision record behind
+- [`docs/FEATURE_LOG.md`](docs/FEATURE_LOG.md) — the decision record behind
   everything that has shipped — what, and why.
 - [`docs/IDEAS.md`](docs/IDEAS.md) — ideas that only exist *between* plugins:
   runtime-analysis × documentation.nvim × mdview.nvim × lib.nvim.

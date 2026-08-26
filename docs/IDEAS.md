@@ -243,7 +243,7 @@ was not an accident, and this is the consumer it was built for.
 
 ### 1.6 `doc-references-missing`, in the other direction
 
-**Both halves shipped 2026-08-04** — see [`docs/FINISHED.md`](FEATURES/FINISHED.md)'s
+**Both halves shipped 2026-08-04** — see [`docs/FEATURE_LOG.md`](FEATURE_LOG.md)'s
 §6.1 entry. documentation.nvim reads prose and asks whether the entity it
 names still exists; the mirror question needed runtime: is anything
 documented that is never used, and is anything used constantly that no doc
