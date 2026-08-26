@@ -314,11 +314,11 @@ function M.autostart()
   if not M.start() then
     return false
   end
-  require("lib.nvim.autocmd").create("UIEnter", function()
+  require("lib.nvim.bindings.autocmd").create("UIEnter", function()
     M.stop()
   end, {
     once = true,
-    group = require("lib.nvim.autocmd").group("runtime_analysis_startup", true),
+    group = require("lib.nvim.bindings.autocmd").group("runtime_analysis_startup", true),
     desc = "runtime-analysis.telemetry.startup: stop timing once startup is over",
   })
   return true

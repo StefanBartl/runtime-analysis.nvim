@@ -678,7 +678,7 @@ overview: [`docs/FEATURES/LOADED.md`](FEATURES/LOADED.md).
 
 ### Why `:RARequest`/`:RASend` exist as separate flat commands, not only `:RA request`/`:RA send`
 
-`:RA`, built via `lib.nvim.usercmd.composer`, is the verb-first shape
+`:RA`, built via `lib.nvim.bindings.usercmd.composer`, is the verb-first shape
 `NEW_PROJECT.md`'s own checklist prefers and every sibling plugin
 (`:DocMap`, `:MDView`, `:Replace`) already uses. But `:RARequest`/`:RASend`
 predate `:RA` and are this plugin's most-referenced public surface; keeping

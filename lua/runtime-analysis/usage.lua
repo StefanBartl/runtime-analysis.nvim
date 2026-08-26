@@ -133,7 +133,7 @@ function M.start(opts)
   -- and M.start() may run again later, and autocmd.group()'s name->id cache
   -- would keep handing back the deleted id instead of a fresh one.
   augroup = vim.api.nvim_create_augroup("runtime_analysis_usage", { clear = true })
-  require("lib.nvim.autocmd").create("CmdlineLeave", function()
+  require("lib.nvim.bindings.autocmd").create("CmdlineLeave", function()
     if vim.v.event.abort or vim.fn.getcmdtype() ~= ":" then
       return
     end

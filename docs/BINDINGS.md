@@ -37,7 +37,7 @@ All four are registered unconditionally by `require("runtime-analysis").setup()`
 | `:RASend` | none | Flat alias for `:RA send`. |
 | `:RATelemetry [args]` | see below | Opt-in call counting and usage statistics for any plugin. Full reference: [`lua/runtime-analysis/telemetry/README.md`](../lua/runtime-analysis/telemetry/README.md). |
 
-Built via [`lib.nvim.usercmd.composer`](https://github.com/StefanBartl/lib.nvim/blob/main/lua/lib/nvim/usercmd/composer/README.md)
+Built via [`lib.nvim.bindings.usercmd.composer`](https://github.com/StefanBartl/lib.nvim/blob/main/lua/lib/nvim/bindings/usercmd/composer/README.md)
 — the same verb-first shape `:DocMap`, `:MDView` and `:Replace` already use
 (`<Tab>` after `:RA ` completes `request`/`send`/`yank`/`cancel`/`history`/
 `env`/`import`/`export`/`provenance`/`inspect`/`usage`/`loaded`; `:RA

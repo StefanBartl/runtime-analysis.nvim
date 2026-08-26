@@ -1,6 +1,6 @@
 ---@module 'runtime-analysis.bindings.usrcmds'
 --- Registers `:RA <subcommand>` (`request`/`send`/`yank`/`cancel`/
---- `history`/`history clear`, via `lib.nvim.usercmd.composer`, the same
+--- `history`/`history clear`, via `lib.nvim.bindings.usercmd.composer`, the same
 --- verb-first shape `:DocMap`, `:MDView` and `:Replace` already use) plus
 --- two flat convenience aliases, `:RARequest` and `:RASend`, for this
 --- plugin's two most-used actions. Split out of `init.lua` into its own
@@ -49,7 +49,7 @@
 --- buffer's own edits are what drive this plugin, not a keybinding). An empty
 --- placeholder file for either would be scaffolding with nothing to scaffold.
 
-local composer = require("lib.nvim.usercmd.composer")
+local composer = require("lib.nvim.bindings.usercmd.composer")
 local notify = require("lib.nvim.notify").create("[runtime-analysis]")
 
 -- A dynamic completer, registered once: `M.setup` may run more than once in
@@ -1024,7 +1024,7 @@ function M.setup(ra)
 
   -- Flat aliases — see the module doc-comment for why these stay alongside
   -- the `:RA` verb above rather than being replaced by it (composer).
-  local usercmd = require("lib.nvim.usercmd")
+  local usercmd = require("lib.nvim.bindings.usercmd")
   usercmd.create("RARequest", function()
     ra.open_request()
   end, {

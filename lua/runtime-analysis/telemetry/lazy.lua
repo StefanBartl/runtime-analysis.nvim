@@ -60,7 +60,7 @@
 ---     prevent. `wrap_at = "setup"|"manual"` overrides it per target.
 
 local notify = require("lib.nvim.notify").create("[runtime-analysis.telemetry]")
-local autocmd = require("lib.nvim.autocmd")
+local autocmd = require("lib.nvim.bindings.autocmd")
 local config_validate = require("runtime-analysis.config.validate")
 
 -- The exact fields each of `RA.Telemetry.LazyOpts`, `LazyPluginOpts` and

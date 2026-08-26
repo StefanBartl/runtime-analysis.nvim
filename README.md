@@ -219,7 +219,7 @@ the request buffer's own directory (or the cwd, for an ad-hoc `:RA
 request` scratch buffer). Full reasoning for both, including `:RA
 export`'s own handling: [`docs/COMMANDS.md`](docs/COMMANDS.md).
 
-Built via [`lib.nvim.usercmd.composer`](https://github.com/StefanBartl/lib.nvim) —
+Built via [`lib.nvim.bindings.usercmd.composer`](https://github.com/StefanBartl/lib.nvim) —
 `:RA` is one compound verb, `<Tab>`-completed, the same shape `:DocMap` and
 `:MDView` already use. `:RARequest`/`:RASend` also still work, unchanged, as
 flat aliases for the two commands above — this plugin's oldest, most-used

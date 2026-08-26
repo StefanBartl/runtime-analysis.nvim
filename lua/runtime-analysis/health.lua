@@ -32,10 +32,10 @@ local DEPS = {
   "lib.nvim.fs.find_root",
   "lib.nvim.fs.json",
   "lib.nvim.git",
-  "lib.nvim.usercmd",
-  "lib.nvim.usercmd.composer",
+  "lib.nvim.bindings.usercmd",
+  "lib.nvim.bindings.usercmd.composer",
   "lib.nvim.notify",
-  "lib.nvim.autocmd",
+  "lib.nvim.bindings.autocmd",
 }
 
 ---@internal

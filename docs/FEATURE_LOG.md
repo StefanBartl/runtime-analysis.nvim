@@ -1692,7 +1692,7 @@ before this.
 
 Per `NEW_PROJECT.md` §5's own preferred shape. Shipped as
 [`lua/runtime-analysis/bindings/usrcmds.lua`](../lua/runtime-analysis/bindings/usrcmds.lua),
-built on `lib.nvim.usercmd.composer` (the same module `:DocMap`/`:MDView`
+built on `lib.nvim.bindings.usercmd.composer` (the same module `:DocMap`/`:MDView`
 use): `:RA request` / `:RA send`, `<Tab>`-completed. Later the same day,
 gained a third route, `:RA yank` (§2.2 above).
 

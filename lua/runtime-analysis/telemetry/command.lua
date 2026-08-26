@@ -94,7 +94,7 @@
 ---                                equivalent of `:DocMap full`'s LuaLS
 ---                                enrichment: more expensive, on request only
 
-local usercmd = require("lib.nvim.usercmd")
+local usercmd = require("lib.nvim.bindings.usercmd")
 local notify = require("lib.nvim.notify").create("[runtime-analysis.telemetry]")
 local report_file = require("runtime-analysis.telemetry.report_file")
 local resolve_report_style = require("runtime-analysis.telemetry.report_style")

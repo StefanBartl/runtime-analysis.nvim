@@ -67,7 +67,7 @@ require("runtime-analysis.telemetry.@types")
 
 local uv = vim.uv or vim.loop
 
-local autocmd = require("lib.nvim.autocmd")
+local autocmd = require("lib.nvim.bindings.autocmd")
 local notify = require("lib.nvim.notify").create("[runtime-analysis.telemetry]")
 local registry = require("runtime-analysis.telemetry.registry")
 local reminder = require("runtime-analysis.telemetry.reminder")

@@ -107,7 +107,7 @@ opts.telemetry ~
 ==============================================================================
 5. COMMANDS                                        *runtime-analysis-commands*
 
-`:RA` is a compound verb built via lib.nvim.usercmd.composer — the same
+`:RA` is a compound verb built via lib.nvim.bindings.usercmd.composer — the same
 verb-first shape |:DocMap| and |:MDView| already use, `<Tab>`-completed.
 `:RARequest`/`:RASend` are flat aliases for `:RA request`/`:RA send`, kept
 because they predate `:RA` and are this plugin's most-referenced surface —
