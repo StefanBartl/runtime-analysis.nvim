@@ -78,7 +78,7 @@ nvim --headless -l scripts/bench_overhead.lua --calls=1000000
 - **Module:** `scripts/bench_overhead.lua`
 - **Docs:** [`lua/runtime-analysis/telemetry/README.md`](../../lua/runtime-analysis/telemetry/README.md)
   "Off costs nothing — literally" section; decision record in
-  [`docs/FINISHED.md`](FINISHED.md) (§3.7).
+  [`docs/FEATURE_LOG.md`](../FEATURE_LOG.md) (§3.7).
 
 ## The static × runtime join
 

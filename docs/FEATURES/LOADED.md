@@ -50,4 +50,4 @@ its Telemetry panel counterpart has one.
 - **Usercmds:** `:RA loaded snapshot <prefix> [name]`, `:RA loaded
   snapshots <prefix>`
 - **Docs:** `doc/runtime-analysis.txt` `*:RA-loaded-snapshot*`; decision
-  record in [`../FINISHED.md`](FINISHED.md) (§5.4).
+  record in [`../FEATURE_LOG.md`](../FEATURE_LOG.md) (§5.4).

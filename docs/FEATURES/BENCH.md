@@ -50,4 +50,4 @@ function value, and there is no command-line shape for "type the two
 closures you want compared".
 
 - **Module:** `bench.lua` (`M.compare`, `M.lines`)
-- **Docs:** decision record in [`../FINISHED.md`](FINISHED.md) (§3.6).
+- **Docs:** decision record in [`../FEATURE_LOG.md`](../FEATURE_LOG.md) (§3.6).
