@@ -32,7 +32,20 @@ local M = {}
 --- argument fingerprinting already applies, for the identical reason: the
 --- size of this file must be a function of how much it is used, not of how
 --- long ago it was started.
-local MAX_ENTRIES = 200
+---How many past requests the history file keeps.
+---
+---`history_max_entries`: the ring size is a preference about how far back
+---`:RAHistory` should reach, and the discipline it protects -- "the file's
+---size is a function of use, not of age" -- holds at any bound.
+---@return integer
+local function max_entries()
+  local ok, ra = pcall(require, "runtime-analysis")
+  if not ok then
+    return 200
+  end
+  local n = (ra.opts or {}).history_max_entries
+  return (type(n) == "number" and n > 0) and n or 200
+end
 
 --- Everything but these becomes `_` — the same rule
 --- `runtime-analysis.telemetry.store.sanitize` already applies to its own
@@ -98,8 +111,9 @@ function M.record(method, url, status, note, opts)
     note = final_note,
     at = os.time(),
   }
-  if #entries > MAX_ENTRIES then
-    entries = vim.list_slice(entries, #entries - MAX_ENTRIES + 1, #entries)
+  local cap = max_entries()
+  if #entries > cap then
+    entries = vim.list_slice(entries, #entries - cap + 1, #entries)
   end
   disk.save(key, entries, opts)
 end
@@ -136,6 +150,10 @@ function M.clear(opts)
   return disk.clear(cache_key(opts.root), opts)
 end
 
-M.MAX_ENTRIES = MAX_ENTRIES
+--- The effective cap, for tests and for anything that wants to say what it
+--- is. A function rather than the old `M.MAX_ENTRIES` constant, because the
+--- answer now depends on `setup({ history_max_entries = N })`.
+---@return integer
+M.max_entries = max_entries
 
 return M

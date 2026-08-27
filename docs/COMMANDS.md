@@ -290,7 +290,7 @@ only the response side the roadmap entry named explicitly.
 Persisted via `lib.nvim.cache.disk`, namespaced per project by
 `lib.nvim.fs.project_key()` (the Git root, or the cwd) — a `.http`
 collection in one repository never shows up in another's history. Capped
-at `history.MAX_ENTRIES` (200) total, oldest dropped first, the same
+at `history_max_entries` (default 200) total, oldest dropped first, the same
 bounded-cardinality discipline `runtime-analysis.telemetry`'s own argument
 fingerprinting already applies, for the identical reason.
 

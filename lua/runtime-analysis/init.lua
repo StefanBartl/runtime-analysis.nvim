@@ -39,9 +39,9 @@ local DEFAULTS = require("runtime-analysis.config").DEFAULTS
 
 -- The exact top-level keys `M.setup(opts)` reads — see the
 -- `runtime-analysis.config.validate` call at the top of `M.setup` below.
-local KNOWN_OPTS = { "split", "request_filetype", "deps_popup", "telemetry" }
+local KNOWN_OPTS = { "split", "request_filetype", "deps_popup", "history_max_entries", "telemetry" }
 
----@type { split: string, request_filetype: string }
+---@type { split: string, request_filetype: string, deps_popup: boolean, history_max_entries: integer }
 M.opts = vim.deepcopy(DEFAULTS)
 
 ---Open a new request buffer. With no `lines`, pre-filled with a template —

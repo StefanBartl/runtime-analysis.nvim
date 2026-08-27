@@ -88,7 +88,7 @@ Full reasoning: `docs/COMMANDS.md`.
 `runtime-analysis.history` records method/url/status/timestamp for every
 send, per project (`lib.nvim.fs.project_key()`), via `lib.nvim.cache.disk`
 — no headers, no body, on either side (a header is very often where the
-real secret actually lives). Capped at `history.MAX_ENTRIES` (200), oldest
+real secret actually lives). Capped at `history_max_entries` (default 200), oldest
 dropped first. Full reasoning: `docs/COMMANDS.md`'s own section on it.
 
 ### Variables and environments (`:RA env`)

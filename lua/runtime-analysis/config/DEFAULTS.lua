@@ -5,7 +5,7 @@
 
 local M = {}
 
----@type { split: string, request_filetype: string }
+---@type { split: string, request_filetype: string, deps_popup: boolean, history_max_entries: integer }
 M.DEFAULTS = {
   -- Where the response pane opens relative to the request buffer.
   split = "vsplit",
@@ -21,6 +21,12 @@ M.DEFAULTS = {
   -- this plugin specifically, right here in the spec passed to setup() —
   -- no vim.g needed. See README.
   deps_popup = true,
+
+  -- How many past requests `:RAHistory` keeps. A ring, so the file's size
+  -- stays a function of how much the plugin is used rather than of how long
+  -- ago it was first started -- which holds at any bound, so the bound is
+  -- yours to pick.
+  history_max_entries = 200,
 
   -- `telemetry` is the fourth accepted option (see `KNOWN_OPTS` in
   -- `runtime-analysis.init`), and it deliberately has **no default here**.

@@ -65,24 +65,24 @@ return function(H)
     )
   end
 
-  -- Bounded cardinality: recording past M.MAX_ENTRIES drops the oldest,
+  -- Bounded cardinality: recording past the cap drops the oldest,
   -- keeps the newest — the same "size is a function of usage, not of how
   -- long ago it started" discipline telemetry's own argument fingerprinting
   -- already applies.
   do
     local dir = vim.fn.tempname()
-    for i = 1, history.MAX_ENTRIES + 5 do
+    for i = 1, history.max_entries() + 5 do
       history.record("GET", ("https://api.example.com/%d"):format(i), 200, nil, { dir = dir })
     end
     local entries = history.list({ dir = dir })
-    eq(#entries, history.MAX_ENTRIES, "history.record: capped at MAX_ENTRIES, not left to grow")
+    eq(#entries, history.max_entries(), "history.record: capped at max_entries(), not left to grow")
     eq(
       entries[1].url,
-      ("https://api.example.com/%d"):format(history.MAX_ENTRIES + 5),
+      ("https://api.example.com/%d"):format(history.max_entries() + 5),
       "history.record: the newest entry survives the cap"
     )
     eq(
-      entries[history.MAX_ENTRIES].url,
+      entries[history.max_entries()].url,
       "https://api.example.com/6",
       "history.record: the oldest 5 were dropped, not the newest"
     )
