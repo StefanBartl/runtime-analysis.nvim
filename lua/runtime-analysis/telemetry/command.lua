@@ -210,21 +210,116 @@ local function telemetry()
 end
 
 ---@internal
+---A header row's namespace, if `line` is one — every per-instance block in
+---`report.lines()`/`report_lines()` starts with exactly
+---`("%s  —  %s"):format(namespace, state)` (see report.lua).
+---@param line string
+---@return string|nil
+local function header_namespace(line)
+  return line:match("^(%S[^\n]-)  —  %S+$")
+end
+
+---@internal
+---Read-only cheatsheet for a `show()` float — only lists the actions this
+---particular call actually wired up.
+---@param title string
+---@param rows { lhs: string, desc: string }[]
+---@return nil
+local function show_help(title, rows)
+  local widest = #"?"
+  for _, r in ipairs(rows) do
+    widest = math.max(widest, #r.lhs)
+  end
+  local lines = { "", (" %s keys"):format(title), "" }
+  local function row(lhs, desc)
+    lines[#lines + 1] = ("  %-" .. widest .. "s   %s"):format(lhs, desc)
+  end
+  for _, r in ipairs(rows) do
+    row(r.lhs, r.desc)
+  end
+  row("?", "Show this help")
+  lines[#lines + 1] = ""
+  local width = 40
+  for _, l in ipairs(lines) do
+    width = math.max(width, vim.fn.strdisplaywidth(l))
+  end
+  require("lib.nvim.ui.kit").viewer({
+    lines = lines,
+    title = title .. " Keys",
+    filetype = "runtime-analysis-telemetry-help",
+    width = math.min(width + 2, math.floor(vim.o.columns * 0.9)),
+    height = math.min(#lines, math.floor(vim.o.lines * 0.8)),
+  })
+end
+
+---@internal
 ---@param lines string[]
 ---@param title string
-local function show(lines, title)
+---@param opts { on_refresh: (fun(): string[])|nil, on_drilldown: (fun(namespace: string): string[]|nil, string|nil)|nil, on_open_html: (fun(): nil)|nil }|nil
+---`on_refresh` recomputes and returns fresh lines for the same view.
+---`on_drilldown` is offered the namespace under the cursor on `<CR>` over a
+---header row; returning `lines[, title]` swaps this same float to that
+---namespace's own view in place, returning nothing leaves the float as is.
+---`on_open_html` writes+opens this same report's HTML rendering in the
+---system browser.
+local function show(lines, title, opts)
+  opts = opts or {}
   local ok, kit = pcall(require, "lib.nvim.ui.kit")
-  if ok then
-    kit.viewer({
-      lines = lines,
-      title = (" %s "):format(title),
-      width = math.min(110, math.max(60, vim.o.columns - 8)),
-    })
+  if not ok then
+    -- No kit (a stripped runtimepath, a headless session): the data still
+    -- has to be reachable, so fall back to the message area rather than
+    -- failing.
+    notify.info(table.concat(lines, "\n"))
     return
   end
-  -- No kit (a stripped runtimepath, a headless session): the data still has to
-  -- be reachable, so fall back to the message area rather than failing.
-  notify.info(table.concat(lines, "\n"))
+
+  local surf = kit.viewer({
+    lines = lines,
+    title = (" %s "):format(title),
+    width = math.min(110, math.max(60, vim.o.columns - 8)),
+  })
+  if not surf then
+    return
+  end
+
+  local help_rows = { { lhs = "j/k", desc = "Move" } }
+  local km = { noremap = true, silent = true, buffer = surf.bufnr }
+  local keymap = require("lib.nvim.bindings.keymap")
+
+  if opts.on_refresh then
+    help_rows[#help_rows + 1] = { lhs = "r", desc = "Refresh" }
+    keymap("n", "r", function()
+      local fresh = opts.on_refresh()
+      if fresh then
+        surf:set_lines(fresh)
+      end
+    end, km, "runtime-analysis.telemetry: refresh")
+  end
+  if opts.on_drilldown then
+    help_rows[#help_rows + 1] = { lhs = "<CR>", desc = "Open the namespace under the cursor" }
+    keymap("n", "<CR>", function()
+      local ns = header_namespace(vim.api.nvim_get_current_line())
+      if not ns then
+        return
+      end
+      local new_lines, new_title = opts.on_drilldown(ns)
+      if new_lines then
+        surf:set_lines(new_lines)
+        if new_title then
+          surf:set_title((" %s "):format(new_title))
+        end
+      end
+    end, km, "runtime-analysis.telemetry: drill into namespace")
+  end
+  if opts.on_open_html then
+    help_rows[#help_rows + 1] = { lhs = "gO", desc = "Open this report as HTML in the browser" }
+    keymap("n", "gO", opts.on_open_html, km, "runtime-analysis.telemetry: open as HTML")
+  end
+  help_rows[#help_rows + 1] = { lhs = "q, <Esc>", desc = "Close" }
+
+  keymap("n", "?", function()
+    show_help(title, help_rows)
+  end, km, "runtime-analysis.telemetry: show keymap cheatsheet")
 end
 
 ---@internal
@@ -396,30 +491,7 @@ local function open_report(namespace)
   ---@param reports RA.Telemetry.Report[] docs/ROADMAP.md §4.4 — only the "html" branch reads this; every other branch already has what it needs in `lines`/`kit_lines`.
   ---@param html_path string
   local function dispatch(lines, path, kit_lines, title, reports, html_path)
-    if style == "mdview" then
-      local ok, err = mdview_renderer.open(lines, path)
-      if not ok then
-        notify.warn(("mdview open failed (%s) — falling back to the kit float"):format(err))
-        show(kit_lines, title)
-      end
-    elseif style == "preview-tab" then
-      -- `lines`, not `kit_lines`: this is the Markdown report, rendered by
-      -- mdview's conceal rather than flattened for a float. The float's own
-      -- lines are what the fallback below uses, which is the whole reason
-      -- both are passed in.
-      local ok, err = preview_tab_renderer.open(lines, title)
-      if not ok then
-        notify.warn(("in-editor preview failed (%s) — falling back to the kit float"):format(err))
-        show(kit_lines, title)
-      end
-    elseif style == "file" then
-      local ok, err = report_file.write(path, lines)
-      if ok then
-        notify.info("wrote " .. path)
-      else
-        notify.error("failed to write report: " .. tostring(err))
-      end
-    elseif style == "html" then
+    local function open_html()
       local html = html_renderer.render(reports)
       local ok, err = report_file.write(html_path, { html })
       if not ok then
@@ -434,8 +506,67 @@ local function open_report(namespace)
       else
         notify.info("wrote " .. html_path .. " — open it yourself, no system opener available")
       end
+    end
+
+    -- Wired onto every "kit" float this dispatch can produce (the primary
+    -- style itself, or its mdview/preview-tab failure fallback) so `r`/`gO`
+    -- work the same regardless of which branch below actually opened it.
+    -- `<CR>`-drilldown only makes sense on the bare "every instance" view —
+    -- a single-namespace float's only header row is already itself.
+    local show_opts = { on_open_html = open_html }
+    if namespace and namespace ~= "" then
+      show_opts.on_refresh = function()
+        local inst = mod.get(namespace)
+        if not inst then
+          return nil
+        end
+        inst.flush()
+        return inst.lines()
+      end
+    else
+      show_opts.on_refresh = function()
+        for _, inst in ipairs(mod.instances()) do
+          inst.flush()
+        end
+        return report_lines({ sort = "calls", top = 40 }, nil)
+      end
+      show_opts.on_drilldown = function(ns)
+        local inst = mod.get(ns)
+        if not inst then
+          return nil
+        end
+        inst.flush()
+        return inst.lines(), ("runtime-analysis.telemetry — %s"):format(ns)
+      end
+    end
+
+    if style == "mdview" then
+      local ok, err = mdview_renderer.open(lines, path)
+      if not ok then
+        notify.warn(("mdview open failed (%s) — falling back to the kit float"):format(err))
+        show(kit_lines, title, show_opts)
+      end
+    elseif style == "preview-tab" then
+      -- `lines`, not `kit_lines`: this is the Markdown report, rendered by
+      -- mdview's conceal rather than flattened for a float. The float's own
+      -- lines are what the fallback below uses, which is the whole reason
+      -- both are passed in.
+      local ok, err = preview_tab_renderer.open(lines, title)
+      if not ok then
+        notify.warn(("in-editor preview failed (%s) — falling back to the kit float"):format(err))
+        show(kit_lines, title, show_opts)
+      end
+    elseif style == "file" then
+      local ok, err = report_file.write(path, lines)
+      if ok then
+        notify.info("wrote " .. path)
+      else
+        notify.error("failed to write report: " .. tostring(err))
+      end
+    elseif style == "html" then
+      open_html()
     else -- "kit"
-      show(kit_lines, title)
+      show(kit_lines, title, show_opts)
     end
   end
 
@@ -930,7 +1061,39 @@ function M.setup()
       if first == nil or first == "report" then
         namespace = rest
       end
-      show(report_lines({ sort = "calls", top = 40 }, namespace), "runtime-analysis.telemetry")
+      local report_show_opts = {
+        on_refresh = function()
+          if namespace and namespace ~= "" then
+            local inst = mod.get(namespace)
+            if inst then
+              inst.flush()
+            end
+          else
+            for _, inst in ipairs(mod.instances()) do
+              inst.flush()
+            end
+          end
+          return report_lines({ sort = "calls", top = 40 }, namespace)
+        end,
+      }
+      -- Same reasoning as open_report's dispatch: a single-namespace view's
+      -- only header row is already itself, so drilldown is only offered on
+      -- the bare "every instance" report.
+      if not namespace or namespace == "" then
+        report_show_opts.on_drilldown = function(ns)
+          local inst = mod.get(ns)
+          if not inst then
+            return nil
+          end
+          inst.flush()
+          return inst.lines(), ("runtime-analysis.telemetry — %s"):format(ns)
+        end
+      end
+      show(
+        report_lines({ sort = "calls", top = 40 }, namespace),
+        "runtime-analysis.telemetry",
+        report_show_opts
+      )
     end
   end, {
     nargs = "*",

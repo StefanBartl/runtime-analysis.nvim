@@ -708,6 +708,17 @@ HTML dashboard (§4.4,
 
 Subcommand table: [`docs/BINDINGS.md`](BINDINGS.md#ratelemetry-subcommands).
 
+**Keys on the `kit` report float** (`report`/`open` when `report_style`
+resolves to `"kit"`, and the mdview/preview-tab fallback of `open` when
+neither is actually loadable): `r` re-flushes and refreshes the view in
+place, `<CR>` on a namespace's header row (`"<namespace>  —  <state>"`) drills
+into that one namespace (bare "every instance" views only — a
+single-namespace float's own header is already itself), `gO` writes and opens
+this report's `report_style = "html"` rendering in the system browser
+(`:RATelemetry open` only — `report` has no HTML path to write), `?` shows
+the full cheatsheet for whichever of these the current view actually wired
+up, `q`/`<Esc>` closes.
+
 ### Standalone `*All` aliases
 
 `:RATelemetryStartAll`/`StopAll`/`ResetAll` are exactly `:RATelemetry
