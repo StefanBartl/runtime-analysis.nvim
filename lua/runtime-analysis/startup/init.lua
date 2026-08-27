@@ -149,64 +149,64 @@ end
 ---@param group integer
 ---@return nil
 local function attach_sources(group)
-  local au = vim.api.nvim_create_autocmd
+  local au = require("lib.nvim.bindings.autocmd")
 
-  au("VimEnter", {
+  au.create("VimEnter", function()
+    mark("event", "VimEnter")
+  end, {
     group = group,
-    callback = function()
-      mark("event", "VimEnter")
-    end,
+    desc = "Stamp VimEnter on the startup timeline",
   })
 
-  au("User", {
+  au.create("User", function()
+    mark("event", "VeryLazy")
+  end, {
     group = group,
     pattern = "VeryLazy",
-    callback = function()
-      mark("event", "VeryLazy")
-    end,
+    desc = "Stamp lazy.nvim's VeryLazy on the startup timeline",
   })
 
-  au("User", {
+  au.create("User", function(ev)
+    local name = tostring(ev.data)
+    local detail = ""
+
+    local cfg = get_lazy_cfg()
+    local plugin = cfg and cfg.plugins[name]
+    local loaded = plugin and plugin._ and plugin._.loaded
+
+    if loaded then
+      if type(loaded.time) == "number" then
+        detail = (" (%.0f ms)"):format(loaded.time / 1e6)
+      end
+      local why = load_reason(loaded)
+      if why then
+        detail = detail .. "  <- " .. why
+      end
+    end
+
+    mark("plugin", name .. detail)
+  end, {
     group = group,
     pattern = "LazyLoad",
-    callback = function(ev)
-      local name = tostring(ev.data)
-      local detail = ""
-
-      local cfg = get_lazy_cfg()
-      local plugin = cfg and cfg.plugins[name]
-      local loaded = plugin and plugin._ and plugin._.loaded
-
-      if loaded then
-        if type(loaded.time) == "number" then
-          detail = (" (%.0f ms)"):format(loaded.time / 1e6)
-        end
-        local why = load_reason(loaded)
-        if why then
-          detail = detail .. "  <- " .. why
-        end
-      end
-
-      mark("plugin", name .. detail)
-    end,
+    desc = "Stamp each lazy.nvim plugin load, with its time and reason",
   })
 
-  au("LspAttach", {
+  au.create("LspAttach", function(ev)
+    local client = vim.lsp.get_client_by_id(ev.data.client_id)
+    mark("lsp", "LspAttach " .. (client and client.name or "?"))
+  end, {
     group = group,
-    callback = function(ev)
-      local client = vim.lsp.get_client_by_id(ev.data.client_id)
-      mark("lsp", "LspAttach " .. (client and client.name or "?"))
-    end,
+    desc = "Stamp each LSP client attach on the startup timeline",
   })
 
-  au("LspProgress", {
+  au.create("LspProgress", function(ev)
+    local value = ev.data and ev.data.params and ev.data.params.value
+    if type(value) == "table" and value.kind == "begin" then
+      mark("lsp", "progress: " .. tostring(value.title))
+    end
+  end, {
     group = group,
-    callback = function(ev)
-      local value = ev.data and ev.data.params and ev.data.params.value
-      if type(value) == "table" and value.kind == "begin" then
-        mark("lsp", "progress: " .. tostring(value.title))
-      end
-    end,
+    desc = "Stamp the start of each LSP progress report",
   })
 end
 
@@ -227,7 +227,7 @@ function M.start(opts)
     M.stop()
   end
 
-  local group = vim.api.nvim_create_augroup("RuntimeAnalysisStartup", { clear = true })
+  local group = require("lib.nvim.bindings.autocmd").group("RuntimeAnalysisStartup", true)
 
   state = {
     t0 = uv.hrtime(),
