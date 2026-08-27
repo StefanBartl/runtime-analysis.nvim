@@ -34,15 +34,10 @@
 
 local M = {}
 
----@internal
----@param s string?
----@return string
-local function esc(s)
-  if not s or s == "" then
-    return ""
-  end
-  return (s:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"):gsub('"', "&quot;"))
-end
+-- HTML-escape text destined for server-rendered markup. Not the same `esc()`
+-- the comment near the embedded `JS` string below refers to — that one is a
+-- client-side JavaScript function baked into that string, not Lua.
+local esc = require("lib.lua.strings.encoding").html_escape
 
 -- Same design tokens as documentation.nvim's own `core/render/html.lua` —
 -- see this module's own doc-comment for why they are copied rather than
