@@ -38,18 +38,7 @@ local DEPS = {
   "lib.nvim.bindings.autocmd",
 }
 
----@internal
----@return boolean
-local function version_ok()
-  local v = vim.version()
-  if v.major ~= MIN_NVIM[1] then
-    return v.major > MIN_NVIM[1]
-  end
-  if v.minor ~= MIN_NVIM[2] then
-    return v.minor > MIN_NVIM[2]
-  end
-  return v.patch >= MIN_NVIM[3]
-end
+local version_ok = require("lib.nvim.health").version_ok
 
 -- Duplicated from `telemetry/init.lua` rather than required from it: that
 -- constant is local there on purpose (an internal default, not a public
@@ -63,7 +52,7 @@ function M.check()
 
   local v = vim.version()
   local vstr = ("%d.%d.%d"):format(v.major, v.minor, v.patch)
-  if version_ok() then
+  if version_ok(MIN_NVIM) then
     h_ok(("Neovim %s (>= %d.%d.%d)"):format(vstr, MIN_NVIM[1], MIN_NVIM[2], MIN_NVIM[3]))
   else
     h_warn(
