@@ -1,3 +1,5 @@
+> **Active development.** This repository is in its development phase — breaking changes are to be expected at any time. Pin a commit or tag if you depend on it.
+
 ```
 ╔═══════════════════════════════════════════════╗
 ║   r u n t i m e - a n a l y s i s . n v i m   ║
