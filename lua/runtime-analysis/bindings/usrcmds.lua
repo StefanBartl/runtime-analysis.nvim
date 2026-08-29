@@ -51,6 +51,7 @@
 
 local composer = require("lib.nvim.bindings.usercmd.composer")
 local notify = require("lib.nvim.notify").create("[runtime-analysis]")
+local list = require("lib.nvim.ui.list")
 
 -- A dynamic completer, registered once: `M.setup` may run more than once in
 -- a session (`:source`-ing config during development), and
@@ -273,16 +274,13 @@ local function check_assertion(expect, expect_line, source_bufnr, actual)
     return
   end
   local actual_str = actual and tostring(actual) or "no response"
-  vim.fn.setqflist({}, " ", {
-    title = "runtime-analysis: response assertions",
-    items = {
-      {
-        bufnr = source_bufnr,
-        lnum = expect_line or 1,
-        text = ("expected status %d, got %s"):format(expect.status, actual_str),
-      },
+  list.qf({
+    {
+      bufnr = source_bufnr,
+      lnum = expect_line or 1,
+      text = ("expected status %d, got %s"):format(expect.status, actual_str),
     },
-  })
+  }, "runtime-analysis: response assertions", { open = false })
   notify.error(("✗ expect status %d, got %s — see :copen"):format(expect.status, actual_str))
 end
 
