@@ -99,6 +99,8 @@ return function(H)
     eq(r2, nil, "compare: an empty name -> nil result")
     ok(e2 ~= nil, "compare: ... with a reason")
 
+    -- Deliberately missing `fn`: the assertion below is that compare says so.
+    ---@diagnostic disable-next-line: missing-fields
     local r3, e3 = bench.compare({ { name = "a" } })
     eq(r3, nil, "compare: missing fn -> nil result")
     ok(e3:find("no function", 1, true) ~= nil, "compare: ... with a reason naming which candidate")
