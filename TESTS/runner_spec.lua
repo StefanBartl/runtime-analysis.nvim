@@ -33,7 +33,7 @@ return function(H)
   end
 
   -- A real 200 with a header and a JSON body: the body is now pretty-printed
-  -- (docs/ROADMAP.md §2.2) rather than shown compact, and `meta` reports
+  -- rather than shown compact, and `meta` reports
   -- where the body starts and that it is JSON.
   do
     local port, server = start_server(table.concat({
@@ -127,7 +127,7 @@ return function(H)
     ok(type(err) == "string", "runner.run: ... a real error string instead")
   end
 
-  -- runner.run_async (docs/ROADMAP.md §1.1) — same formatting as runner.run,
+  -- runner.run_async — same formatting as runner.run,
   -- reached non-blockingly, with a callback guaranteed to run outside the
   -- fast-event context `lib.nvim.net.curl.fetch_raw`'s own callback fires
   -- in (verified once, in `bindings/usrcmds.lua`'s own doc-comment; checked

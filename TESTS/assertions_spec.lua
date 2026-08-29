@@ -1,5 +1,4 @@
 -- TESTS/assertions_spec.lua — runtime-analysis.assertions
--- (docs/ROADMAP.md §2.5)
 --
 -- Pure logic, no I/O: a request block's own lines in, the `@expect status
 -- N` directive (or an error) out, plus the stripped lines `parse.parse`

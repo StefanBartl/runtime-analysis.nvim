@@ -1,5 +1,5 @@
 ---@module 'runtime-analysis.usage'
---- Keymap and command usage — docs/ROADMAP.md §7.1. Which of your own
+--- Keymap and command usage — Which of your own
 --- mappings and commands you actually press. The honest use case is
 --- pruning: a config accumulates bindings for years, and nothing ever
 --- tells you which ones went cold.
@@ -10,7 +10,7 @@
 --- (telemetry, startup attribution, cost-vs-use) counts function calls;
 --- this counts keypresses and typed commands. It stays local (the same
 --- "no account, no upload, no aggregation service" posture
---- `docs/ROADMAP.md`'s own "Deliberately not building" table already
+--- the "Deliberately not building" table already
 --- states for telemetry), stays opt-in (nothing here runs until `M.start()`
 --- is called explicitly), and must never grow a "share this" feature.
 ---

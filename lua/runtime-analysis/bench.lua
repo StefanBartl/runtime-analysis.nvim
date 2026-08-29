@@ -1,5 +1,5 @@
 ---@module 'runtime-analysis.bench'
---- Timed comparisons between candidate functions — docs/ROADMAP.md §3.6,
+--- Timed comparisons between candidate functions —
 --- "since telemetry already wraps and counts, adding timed benchmark
 --- comparisons would cost little more". That premise does not survive
 --- contact with real numbers, though, and this module is built on the
@@ -7,7 +7,7 @@
 ---
 --- **Deliberately NOT built on `runtime-analysis.telemetry`'s own
 --- wrap/count machinery**, despite what the roadmap note assumed.
---- `docs/ROADMAP.md` §3.7's own measured numbers (see
+--- the own measured numbers (see
 --- `scripts/bench_overhead.lua`) put counting-only overhead at ~10-15ns
 --- per call and argument profiling at ~600-700ns — real costs that would
 --- swamp the very comparison a benchmark is meant to make for anything
@@ -23,7 +23,7 @@
 --- purpose.** Keeps telemetry's own hot-path code untouched by anything
 --- benchmark-specific — the same reasoning that put §3.7's own script
 --- outside `telemetry/` too. `runtime-analysis.telemetry`'s whole premise
---- (docs/ROADMAP.md §3.5, "not a general profiler") is being installed,
+--- ("not a general profiler") is being installed,
 --- cheap, and left running for a week; a benchmark run here is the
 --- opposite shape — bounded, explicit, a few seconds, called by name —
 --- and does not need to share a module with something built for the

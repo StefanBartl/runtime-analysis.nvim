@@ -6,8 +6,7 @@
 -- counts, the motivating case being documentation.nvim's dead-function
 -- check), and `report.build()` already turns raw `Data` into the same
 -- report shape `:RATelemetry`'s live-instance path renders. This script is
--- the argument parser around both, not new analysis (see docs/ROADMAP.md
--- §4.1).
+-- the argument parser around both, not new analysis.
 --
 -- Usage:
 --   nvim --headless -l scripts/telemetry.lua report <namespace> [opts]

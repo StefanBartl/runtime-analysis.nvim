@@ -36,13 +36,13 @@ When it *is* on:
 | Counting | one table index + one integer add | **~0.01 µs** |
 | + timing | two `vim.uv.hrtime()` reads | ~0.2–0.4 µs |
 | + argument profiling | one fingerprint computation | ~0.6–0.7 µs |
-| + `call_tree` (docs/ROADMAP.md §3.1) | one `debug.getinfo(2, "Sl")` call | ~0.3–0.5 µs (counting + this) |
+| + `call_tree` | one `debug.getinfo(2, "Sl")` call | ~0.3–0.5 µs (counting + this) |
 | `errors` / `outermost_only` | one `pcall` (the call must return through us even when it raises) | ~0.3 µs (the unconditional `pcall` tax alone, not counting a raise) |
-| `errors`, on an actual raise | + one fingerprint of the error value (docs/ROADMAP.md §3.4) | — (only paid on the already-rare, already-`pcall`'d failure path; the success path above is unaffected) |
-| `sample = N` (docs/ROADMAP.md §3.2) | the branches above run on only 1 in `N` calls; every other call takes the counting-only path | — (a caller controls the trade-off directly via `N`) |
+| `errors`, on an actual raise | + one fingerprint of the error value | — (only paid on the already-rare, already-`pcall`'d failure path; the success path above is unaffected) |
+| `sample = N` | the branches above run on only 1 in `N` calls; every other call takes the counting-only path | — (a caller controls the trade-off directly via `N`) |
 
 **Ranges, not single numbers, and reproducible rather than quoted from
-memory** — `scripts/bench_overhead.lua` (docs/ROADMAP.md §3.7's answer;
+memory** — `scripts/bench_overhead.lua` (the answer;
 decision record in `docs/FINISHED.md`) is what actually measures this
 table, run fresh for it rather than hand-typed. It is a plain repo script,
 not a dev-only tool: **run it yourself** —
@@ -66,7 +66,7 @@ t.start({ profile_args = function(key) return key:match("^bindings%.") ~= nil en
 **If you are turning on more than counting, know what it costs on your own
 setup before leaving it on.** Counting alone is safe to leave running
 indefinitely — that is this module's whole premise (see "Zero-cost when
-stopped" above and docs/ROADMAP.md §3.5). Argument profiling, `call_tree`
+stopped" above). Argument profiling, `call_tree`
 and `errors` are each real, measured multiples of that floor, not
 rounding error — on a function called heavily enough, stacking several of
 them is the kind of cost you want a number for, not an assurance, before
@@ -75,7 +75,7 @@ while you are actually looking at something. `scripts/bench_overhead.lua`
 exists so that number is a five-second measurement on your machine, not a
 guess from this table.
 
-### Call trees — "who called this" (docs/ROADMAP.md §3.1)
+### Call trees — "who called this"
 
 A flat count answers "`fs.read` was called 4 812 times"; it cannot answer
 the question that usually follows, "by whom". `call_tree` records the
@@ -566,15 +566,14 @@ t.wrap(require("lsp.servers"), "servers", { module_id = "lsp.servers" })
 
 A key with no entry in `resolved_modules()` / `data.modules` is **unmatched**,
 not "zero calls" — a consumer joining telemetry against a static key set (the
-motivating case: documentation.nvim's `dead-function` check, see
-[`telemetry-documentation-bridge.md`](https://github.com/StefanBartl/lib.nvim/blob/main/docs/ROADMAP/telemetry-documentation-bridge.md))
+motivating case: documentation.nvim.s `dead-function` check)
 must keep those two claims distinguishable, or the join produces false
 positives it can't tell apart from real ones. That design document stayed in
 lib.nvim when this module moved out of it — it is about the *consumer* of
 this data, not about the collection this module does, so it was never
 telemetry's own file to take along.
 
-### Named snapshots — docs/ROADMAP.md §4.5
+### Named snapshots.5
 
 `telemetry.load()`/`t.report()` above are always the *current* aggregate —
 one continuously-overwritten slot per namespace. There is no way to ask
@@ -809,7 +808,7 @@ require("runtime-analysis.telemetry").setup({
 | `"kit"` | the same in-editor float `:RATelemetry <ns>` already renders |
 | `"mdview"` | write the report + `:MDView standalone` it; falls back to `"kit"` if mdview is not loadable |
 | `"file"` | just write the report to disk, no window opened |
-| `"html"` | render the sortable/filterable HTML dashboard (docs/ROADMAP.md §4.4, below) and open it in the system browser |
+| `"html"` | render the sortable/filterable HTML dashboard (below) and open it in the system browser |
 
 This is module-level, not per-instance (`telemetry.setup`, not
 `telemetry.new({...})`) — `:RATelemetry open` with no namespace spans every
@@ -878,7 +877,7 @@ configuration already resolves to, and quietly moving those readers from a
 browser tab to an editor tab is a changed answer to a question they settled
 once.
 
-## HTML dashboard (docs/ROADMAP.md §4.4)
+## HTML dashboard
 
 `report_style = "html"` renders a self-contained HTML page — one flat
 table, one row per (namespace, function): calls, errors, mean timing
@@ -1013,7 +1012,7 @@ always 100 % dominant and never actionable).
 
 ## Sampling
 
-`sample = N` (docs/ROADMAP.md §3.2) makes the expensive modes above —
+`sample = N` makes the expensive modes above —
 timing, argument profiling, error fingerprinting — affordable on a hot
 surface: only every `N`th call pays for them, every other call takes the
 same counting-only path a plain `t.start()` already uses.
@@ -1041,7 +1040,7 @@ neither subscriber ever sees less than it asked for.
 
 ## Startup attribution
 
-`:RATelemetry startup` (docs/ROADMAP.md §3.3) answers which *module* a
+`:RATelemetry startup` answers which *module* a
 plugin's startup cost actually sits in — lazy.nvim already reports
 per-plugin totals, so the value here is specifically the level below that.
 
@@ -1129,7 +1128,7 @@ directly if you want a different window.
 
 ## Plugin cost vs. use
 
-`:RATelemetry cost` (docs/ROADMAP.md §7.2) — startup attribution above
+`:RATelemetry cost` — startup attribution above
 answers "what did loading cost"; a telemetry report answers "how much is it
 actually used." Combined: **the report that gets plugins deleted.**
 
@@ -1174,7 +1173,7 @@ neither `telemetry.startup` nor a live instance to test in isolation.
 
 ## Error fingerprinting
 
-`errors` (docs/ROADMAP.md §2.5) already counted how *often* a wrapped function
+`errors` already counted how *often* a wrapped function
 raised; it now also fingerprints *what* it raised — reusing the identical
 bounded-cardinality machinery argument profiling uses above, literally the
 same code, pointed at the error value instead of the call's arguments. "This
@@ -1257,7 +1256,7 @@ receive a call.
 ## Comparison across time windows
 
 `report({ since = "7d" })` answers "how much, in the last week"; `compare()`
-(docs/ROADMAP.md §4.2) answers "what changed since the week before that" —
+answers "what changed since the week before that" —
 day buckets were already stored for the first, so the second is a report
 mode over the same data, not a new collection mechanism:
 

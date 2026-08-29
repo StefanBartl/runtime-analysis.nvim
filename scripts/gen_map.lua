@@ -2,7 +2,7 @@
 --- CLI entry point for this repository's own module map, adopted per
 --- documentation.nvim's own reuse guide
 --- (https://github.com/StefanBartl/documentation.nvim/blob/main/docs/REUSE.md)
---- — docs/ROADMAP.md's Housekeeping section, `scripts/gen_map.lua` +
+--- — the housekeeping section, `scripts/gen_map.lua` +
 --- documentation.nvim as a dev dependency.
 ---
 ---   nvim --headless -l scripts/gen_map.lua                    # regenerate

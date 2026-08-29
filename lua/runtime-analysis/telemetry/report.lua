@@ -157,7 +157,7 @@ function M.build(namespace, data, meta, opts)
       end
 
       if stats.callers then
-        -- docs/ROADMAP.md §3.1 — a caller site is a fingerprint exactly
+        -- a caller site is a fingerprint exactly
         -- like an argument, just derived from `debug.getinfo` instead of
         -- the call's own arguments, so it reuses the identical bucket and
         -- the identical sampling-honest share calculation.
@@ -449,7 +449,7 @@ function M.markdown(report)
     end
   end
 
-  -- Call-tree subsections (docs/ROADMAP.md §3.1) — the identical shape
+  -- Call-tree subsections — the identical shape
   -- again, a separate loop for the same reason the error-profile one is.
   for _, e in ipairs(report.entries) do
     if e.callers then
@@ -507,7 +507,7 @@ function M.markdown_all(reports)
 end
 
 -- ---------------------------------------------------------------------------
--- Comparison across time windows (docs/ROADMAP.md §4.2)
+-- Comparison across time windows
 -- ---------------------------------------------------------------------------
 
 ---@internal

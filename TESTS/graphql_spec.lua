@@ -1,5 +1,4 @@
--- TESTS/graphql_spec.lua — runtime-analysis.graphql (docs/ROADMAP.md
--- §2.6)
+-- TESTS/graphql_spec.lua — runtime-analysis.graphql
 --
 -- Pure logic: a parsed request in, either an unchanged request (not
 -- GraphQL) or the real POST+JSON it resolves to (GraphQL) out.

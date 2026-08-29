@@ -1,5 +1,5 @@
 ---@module 'runtime-analysis.assertions'
---- Response assertions — docs/ROADMAP.md §2.5. `# @expect status 200` (or
+--- Response assertions — `# @expect status 200` (or
 --- `// @expect status 200`), checked once a real response arrives, a
 --- mismatch surfaced via the quickfix list rather than only a `vim.notify`
 --- easy to miss. Deliberately narrow, per the roadmap entry's own stated

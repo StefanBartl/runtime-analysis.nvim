@@ -1,5 +1,4 @@
--- TESTS/inspect_spec.lua — runtime-analysis.inspect (docs/ROADMAP.md
--- §5.1, `:RA inspect <module>`)
+-- TESTS/inspect_spec.lua — runtime-analysis.inspect (`:RA inspect <module>`)
 --
 -- Real `package.loaded` fixtures, not stubs: the whole point of this module
 -- is walking what is *actually* on a live table right now, so a fake

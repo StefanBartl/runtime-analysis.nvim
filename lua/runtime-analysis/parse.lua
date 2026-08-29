@@ -14,7 +14,7 @@
 --- `M.parse` itself has no `###` awareness at all, deliberately: it parses
 --- exactly one request out of whatever `lines` it is handed, the same
 --- contract it has always had. `###`-separated multi-request buffers
---- (docs/ROADMAP.md §1.2) are `M.split`'s job — it slices a whole buffer
+--- are `M.split`'s job — it slices a whole buffer
 --- into blocks first, and the caller (`bindings/usrcmds.lua`) hands `M.parse`
 --- one block's own lines, never the whole buffer, once more than one block
 --- exists. A single-block buffer (no `###` line at all) behaves exactly as

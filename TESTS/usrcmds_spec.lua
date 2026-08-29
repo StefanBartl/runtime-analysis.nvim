@@ -138,7 +138,7 @@ return function(H)
   -- for why), which needs them to still be in scope down there.
   local slow_buf, race_buf, cancel_buf
 
-  -- Non-blocking (docs/ROADMAP.md §1.1): :RA send must return control
+  -- Non-blocking: :RA send must return control
   -- before the response arrives, showing a pending placeholder in the
   -- meantime rather than leaving the pane looking untouched.
   do
@@ -367,7 +367,7 @@ return function(H)
     return capture_port, capture_server, raw_requests
   end
 
-  -- GraphQL (docs/ROADMAP.md §2.6): a real :RA send against the
+  -- GraphQL: a real :RA send against the
   -- X-Request-Type: GraphQL shorthand puts the real {"query":...,
   -- "variables":...} JSON on the wire, not the shorthand shape.
   local graphql_buf
@@ -405,7 +405,7 @@ return function(H)
     gql_server:close()
   end
 
-  -- Multipart (docs/ROADMAP.md §2.6): a real :RA send against a
+  -- Multipart: a real :RA send against a
   -- multipart body with a `< ./path` file reference puts the real file
   -- bytes on the wire.
   local multipart_buf
@@ -452,7 +452,7 @@ return function(H)
     os.remove(upload_path)
   end
 
-  -- Response assertions (docs/ROADMAP.md §2.5): a passing `@expect status
+  -- Response assertions: a passing `@expect status
   -- N` leaves the quickfix list alone; a mismatch populates it with an
   -- entry pointing back at the directive's own line.
   local assert_pass_buf, assert_fail_buf

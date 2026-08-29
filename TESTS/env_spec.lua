@@ -1,4 +1,4 @@
--- TESTS/env_spec.lua — runtime-analysis.env (docs/ROADMAP.md §2.1)
+-- TESTS/env_spec.lua — runtime-analysis.env
 --
 -- Every case passes `{ root = tmpdir }` so this never touches the real
 -- project root or a real .gitignore — the same isolation history_spec.lua

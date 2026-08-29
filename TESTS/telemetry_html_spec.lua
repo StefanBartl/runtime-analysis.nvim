@@ -1,5 +1,5 @@
 -- TESTS/telemetry_html_spec.lua — runtime-analysis.telemetry.
--- renderers.html (docs/ROADMAP.md §4.4)
+-- renderers.html
 --
 -- A real telemetry instance, real calls, a real `t.report()` — the same
 -- data `:RATelemetry open` would actually hand this renderer, not a hand-

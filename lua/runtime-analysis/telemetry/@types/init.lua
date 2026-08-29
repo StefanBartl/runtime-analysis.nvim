@@ -21,7 +21,7 @@
 ---@field max_arg_values? integer                       # distinct fingerprints kept per function (default 32)
 ---@field report_file? boolean                          # keep this namespace's Markdown report on disk, rewritten at every flush (default false); see lua/lib/nvim/telemetry/report_file.lua
 ---@field info? table<string, string>                   # free-form metadata bundled with the report (branch, version/release tag, commit, …) — see lib.nvim.git.info() for a ready-made source; the caller supplies it, this module never inspects a repo to guess it
----@field snapshot_retention? integer                    # per-instance override for how many named snapshots (M.snapshot(), docs/ROADMAP.md §4.5) this namespace keeps before the oldest are evicted — default M.SNAPSHOT_RETENTION (20) when unset
+---@field snapshot_retention? integer                    # per-instance override for how many named snapshots (M.snapshot()) this namespace keeps before the oldest are evicted — default M.SNAPSHOT_RETENTION (20) when unset
 
 --- "auto" (default) prefers mdview if loadable, else the kit float — same
 --- degrade-silently discipline as `lib.nvim.progress`'s style resolution.
@@ -37,8 +37,8 @@
 ---@field time? boolean                        # measure duration for these functions
 ---@field errors? boolean                      # count raised errors for these functions
 ---@field outermost_only? boolean              # recursive calls count once (costs a pcall)
----@field call_tree? boolean                   # docs/ROADMAP.md §3.1 — record the immediate caller's `short_src:line` (`debug.getinfo(2, "Sl")`, ~0.32µs measured total vs ~0.014µs for counting alone)
----@field sample? integer                      # docs/ROADMAP.md §3.2 — only every Nth call pays for args/time/errors/outermost_only/call_tree; `calls` itself is always exact. Structural, like `outermost_only`: set at wrap()-time, not toggleable via StartOpts.
+---@field call_tree? boolean                   # record the immediate caller's `short_src:line` (`debug.getinfo(2, "Sl")`, ~0.32µs measured total vs ~0.014µs for counting alone)
+---@field sample? integer                      # only every Nth call pays for args/time/errors/outermost_only/call_tree; `calls` itself is always exact. Structural, like `outermost_only`: set at wrap()-time, not toggleable via StartOpts.
 ---@field module_id? string                    # the real Lua module path `container` came from, if known (set automatically by wrap_loaded()). Enables a consumer to resolve a wrapped key back to source; omit when the wrap prefix is not a real module path.
 
 --- Scoping for `wrap_loaded()`: the per-function `only`/`except`/`filter`
@@ -55,7 +55,7 @@
 ---@field profile_args? string[]|true|fun(key: string): boolean  # argument fingerprinting
 ---@field time? string[]|true|fun(key: string): boolean          # duration measurement
 ---@field errors? string[]|true|fun(key: string): boolean        # count raised errors
----@field call_tree? string[]|true|fun(key: string): boolean     # docs/ROADMAP.md §3.1 — immediate-caller recording
+---@field call_tree? string[]|true|fun(key: string): boolean     # immediate-caller recording
 
 ---@class RA.Telemetry.ReportOpts
 ---@field sort? "calls"|"name"|"time"  # default "calls"
@@ -69,7 +69,7 @@
 ---@field delta integer                # current - previous
 ---@field delta_pct? number            # (current - previous) / previous; absent when previous == 0 (see new_functions instead)
 
----docs/ROADMAP.md §4.2 — `inst.compare()`'s own result shape.
+---`inst.compare()`'s own result shape.
 ---@class RA.Telemetry.Comparison
 ---@field days integer                                    # window size, both windows the same length
 ---@field current_total integer
@@ -113,8 +113,8 @@
 ---@field errors? integer
 ---@field timing? RA.Telemetry.Timing
 ---@field args? RA.Telemetry.ArgStats
----@field error_fp? RA.Telemetry.ArgStats  # docs/ROADMAP.md §2.5 — same shape as `args`, fingerprinting the raised error instead of the call's arguments
----@field callers? RA.Telemetry.ArgStats   # docs/ROADMAP.md §3.1 — same shape as `args`, fingerprinting the immediate caller's `short_src:line` instead of the call's arguments
+---@field error_fp? RA.Telemetry.ArgStats  # same shape as `args`, fingerprinting the raised error instead of the call's arguments
+---@field callers? RA.Telemetry.ArgStats   # same shape as `args`, fingerprinting the immediate caller's `short_src:line` instead of the call's arguments
 
 ---@class RA.Telemetry.Data
 ---@field version integer
@@ -137,10 +137,10 @@
 ---@field other? integer
 ---@field distinct? integer
 ---@field hint? string   # e.g. the "dominant argument -> memoize" suggestion
----@field error_fp? { fingerprint: string, count: number, share: number }[]  # docs/ROADMAP.md §2.5 — share is of `errors`, not `calls`
+---@field error_fp? { fingerprint: string, count: number, share: number }[]  # share is of `errors`, not `calls`
 ---@field error_other? integer
 ---@field error_distinct? integer
----@field callers? { fingerprint: string, count: number, share: number }[]  # docs/ROADMAP.md §3.1 — `fingerprint` is a `short_src:line` call site; share is of `calls`
+---@field callers? { fingerprint: string, count: number, share: number }[]  # `fingerprint` is a `short_src:line` call site; share is of `calls`
 ---@field callers_other? integer
 ---@field callers_distinct? integer
 
@@ -158,7 +158,7 @@
 ---@field entries RA.Telemetry.ReportEntry[]
 
 -- ---------------------------------------------------------------------------
--- Startup attribution (docs/ROADMAP.md §3.3)
+-- Startup attribution
 -- ---------------------------------------------------------------------------
 
 ---One module load, timed. `self_ms` excludes everything this module required
@@ -178,7 +178,7 @@
 ---@field roots { root: string, self_ms: number }[]        # per module-root (a plugin's own Lua namespace) totals, descending
 
 -- ---------------------------------------------------------------------------
--- Cost vs. use (docs/ROADMAP.md §7.2)
+-- Cost vs. use
 -- ---------------------------------------------------------------------------
 
 ---One namespace's startup-cost-vs-call-count entry. `startup_ms`/

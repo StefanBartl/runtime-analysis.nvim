@@ -26,8 +26,7 @@
 ---@field note string? Set only when `status` is `nil` — `"cancelled"`, or the transport error text
 ---@field at integer `os.time()` when this was recorded
 
----`runtime-analysis.provenance.inspect`'s own result — docs/ROADMAP.md
----§5.2. `source` is `nil` only when `debug.getinfo` itself failed (never
+---`runtime-analysis.provenance.inspect`.s own result. `source` is `nil` only when `debug.getinfo` itself failed (never
 ---observed in practice, still not assumed).
 ---@class RA.Provenance.Info
 ---@field path string the dotted path as given, e.g. `"vim.notify"`
@@ -37,8 +36,7 @@
 ---@field telemetry { wrapped: boolean, namespaces: string[] } exact — this plugin's own registry
 ---@field source { what: string, short_src: string, linedefined: integer }? best-effort — where the function currently there was actually defined
 
----One node in `runtime-analysis.inspect`'s walked tree — docs/ROADMAP.md
----§5.1. A tagged union on `kind`; which other fields are populated depends
+---One node in `runtime-analysis.inspect`.s walked tree. A tagged union on `kind`; which other fields are populated depends
 ---on it and, for `kind == "table"`, on `cyclic`/`truncated`. `key` is
 ---absent only on the tree's own root.
 ---@class RA.Inspect.Node

@@ -236,7 +236,7 @@ end
 
 ---Accumulate one fingerprint into a bounded-cardinality bucket, creating it
 ---if `bucket` is `nil`. Shared by argument profiling (`s.args`) and error
----fingerprinting (`s.error_fp`, docs/ROADMAP.md §2.5 — literally "reuses the
+---fingerprinting (`s.error_fp`, literally "reuses the
 ---existing argument-fingerprint machinery, pointed at errors instead of
 ---arguments," not a parallel reimplementation of it) — both are the
 ---identical shape (`RA.Telemetry.ArgStats`) and the identical bound, so one
@@ -368,10 +368,10 @@ function M.new(opts)
   ---@param fp string|nil
   ---@param dur number|nil
   ---@param errored boolean
-  ---@param err_fp string|nil docs/ROADMAP.md §2.5 — set only when `errored`
+  ---@param err_fp string|nil set only when `errored`
   ---and the subscribing instance opted into `errors`; fingerprinted the
   ---same way an argument is, via the identical bounded-cardinality bucket.
-  ---@param caller_key string|nil docs/ROADMAP.md §3.1 — `"short_src:line"` of
+  ---@param caller_key string|nil `"short_src:line"` of
   ---the immediate caller, set only when the subscribing instance opted into
   ---`call_tree`. Accumulated through the identical bounded-cardinality
   ---bucket `args`/`error_fp` already use — a caller site is a fingerprint
@@ -890,7 +890,7 @@ function M.new(opts)
     return report_mod.markdown(inst.report(report_opts))
   end
 
-  ---"This week vs last week" (docs/ROADMAP.md §4.2) — day buckets are
+  ---"This week vs last week" — day buckets are
   ---already stored, so this reads `merged()` the same way `inst.report`
   ---does; nothing about collection changes for this to exist.
   ---@param compare_opts? { days?: integer }
@@ -1137,13 +1137,13 @@ function M.load(namespace, opts)
 end
 
 ---How many named snapshots a namespace keeps before `M.snapshot` starts
----evicting the oldest — confirmed with the user (2026-08-10, docs/ROADMAP.md
----§4.5) rather than left unbounded, the same growth concern `retention_days`
+---evicting the oldest — confirmed with the user (2026-08-10) rather than
+---left unbounded, the same growth concern `retention_days`
 ---already exists for on the live aggregate's own day buckets.
 M.SNAPSHOT_RETENTION = 20
 
 ---Capture the current aggregate for `namespace` under a name, without
----resetting the live counters — docs/ROADMAP.md §4.5.
+---resetting the live counters.
 ---
 ---**Always explicit.** Nothing in this module ever calls this on its own —
 ---no auto-snapshot on `disable()`, on a flush, on an interval. The only

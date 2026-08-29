@@ -1,14 +1,14 @@
 -- scripts/bench_overhead.lua — reproducible measurement backing the
 -- overhead table in lua/runtime-analysis/telemetry/README.md ("Off costs
--- nothing — literally"), and the answer to docs/ROADMAP.md §3.7 ("measuring
--- this module's own instrumentation overhead"): how much does turning on
+-- nothing — literally"), and the answer to "measuring this module.s own
+-- instrumentation overhead": how much does turning on
 -- each telemetry feature actually cost, per call, in isolation.
 --
 -- Deliberately NOT a runtime feature, NOT reachable from any usercmd, and
 -- NOT under telemetry/ — a one-time (or occasional) dev-side benchmark you
 -- run and read the numbers from, the same way a library publishes "~200ns
 -- per call" in its own README. That exclusion is what lets this exist
--- without reopening docs/ROADMAP.md §3.5's "not a general profiler"
+-- without reopening the "not a general profiler"
 -- rejection: nothing here is installed, left running, or user-toggleable —
 -- see §3.7's own decision record in docs/FINISHED.md for the full
 -- reasoning.

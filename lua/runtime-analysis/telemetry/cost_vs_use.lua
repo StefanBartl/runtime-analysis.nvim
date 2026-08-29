@@ -1,5 +1,5 @@
 ---@module 'runtime-analysis.telemetry.cost_vs_use'
---- Plugin cost-versus-use — docs/ROADMAP.md §7.2. Combines
+--- Plugin cost-versus-use — Combines
 --- `runtime-analysis.telemetry.startup`'s per-module startup cost with a
 --- telemetry instance's own call count into one number: what a plugin
 --- costs to load versus how much it is actually used. "That is the report

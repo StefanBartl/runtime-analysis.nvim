@@ -1,5 +1,5 @@
 ---@module 'runtime-analysis.graphql'
---- GraphQL request support — docs/ROADMAP.md §2.6. VS Code REST Client's
+--- GraphQL request support — VS Code REST Client's
 --- own convention, not invented here: a request is marked as GraphQL via
 --- an `X-Request-Type: GraphQL` header, and its body is the GraphQL query
 --- text, optionally followed by a blank line and a JSON variables object.

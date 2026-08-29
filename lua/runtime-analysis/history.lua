@@ -1,5 +1,5 @@
 ---@module 'runtime-analysis.history'
---- Request history — docs/ROADMAP.md §1.3. Persists via
+--- Request history — Persists via
 --- `lib.nvim.cache.disk`, namespaced per project via
 --- `lib.nvim.fs.project_key()` (the Git root of the cwd, or the cwd
 --- itself), so `.http`/`.rest` collections in different repositories never
@@ -126,7 +126,7 @@ end
 ---test-only escape hatch: `M.record` always writes for wherever the reader
 ---is *currently working* (cwd), which is the only sensible meaning for "I
 ---just sent a request" — but a cross-repo reader (documentation.nvim's own
----endpoint-coverage join, docs/ROADMAP.md §6.2) analyzes a tree via
+---endpoint-coverage join) analyzes a tree via
 ---`opts.root`, which is not necessarily cwd at all, and needs *that*
 ---project's history, not whichever one Neovim happens to be sitting in.
 ---@param opts? Lib.Cache.Opts|{ root?: string } `root` overrides the

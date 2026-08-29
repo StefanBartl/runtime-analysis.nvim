@@ -1,5 +1,4 @@
 -- TESTS/multipart_spec.lua — runtime-analysis.multipart
--- (docs/ROADMAP.md §2.6)
 --
 -- Real files on disk for the file-reference cases, not stubs: the whole
 -- point of `M.resolve` is reading real bytes, so a fake read would only

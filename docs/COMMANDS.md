@@ -137,7 +137,7 @@ the cursor, so landing exactly on a `###` line resolves to the block
 a single-block buffer (no `###` at all splits into exactly one block
 covering everything) — there is one code path, not a special case for the
 common single-request buffer. **Always the block under the cursor, never
-the whole buffer, never a picker** — the answer `docs/ROADMAP.md` §1.2
+the whole buffer, never a picker** — the answer the roadmap
 already settled before this was built.
 
 This is also what makes a **real, committed `.http` or `.rest` file** work
@@ -150,7 +150,7 @@ path.
 
 ## GraphQL and multipart request bodies
 
-`docs/ROADMAP.md` §2.6, named "for completeness" and shipped once a real
+the roadmap, named "for completeness" and shipped once a real
 need existed: two request-body shapes beyond plain JSON/text, both VS
 Code REST Client's own conventions rather than invented here — the same
 "match an existing tool, don't design a third shape" posture the whole
@@ -182,7 +182,7 @@ already establishes for `Authorization`. No query at all with a
 variables block that is not valid JSON is a real, named error, not a
 silently empty `variables: {}`.
 
-Runs **after** `{{var}}` resolution (docs/ROADMAP.md §2.1), not before —
+Runs **after** `{{var}}` resolution, not before —
 so a placeholder inside the query or the variables block resolves the
 ordinary way first, indistinguishable from a token typed there directly.
 `:RA export` applies the same transform (a shared curl command should
@@ -318,7 +318,7 @@ a backup step meaningfully protects anything worth the friction.
 
 `{{name}}` inside a request buffer's url, header values or body — `{{baseUrl}}/users/:id`
 — resolves against a *named* environment (`dev`/`staging`/`prod`, or any
-name a project's own files define), docs/ROADMAP.md §2.1. With an argument,
+name a project.s own files define). With an argument,
 selects that environment directly (or reports the available names if it
 doesn't exist, rather than silently doing nothing); with none, offers every
 defined name via `vim.ui.select`, the same picker `:RA history` already
@@ -330,7 +330,7 @@ writing to disk.
 
 Two per-project JSON files at the project root — the same split IntelliJ's
 HTTP Client already uses for exactly this problem, matched rather than
-invented (the same reasoning `docs/ROADMAP.md`'s "Deliberately not: owning
+invented (the same reasoning the "Deliberately not: owning
 the `.http` filetype" already gives for `parse.lua`'s own request shape):
 
 ```
@@ -391,7 +391,7 @@ as a literal string.
 
 ## Response assertions (`# @expect status N`)
 
-`docs/ROADMAP.md` §2.5: a smoke-test shape for a local API, deliberately
+a smoke-test shape for a local API, deliberately
 narrow — "is this endpoint still 200," not a general assertion language.
 A comment line anywhere in a `###` block —
 
@@ -416,7 +416,7 @@ own line, naming both the expected and actual status. `:copen` to see it.
 
 ## `:RA import` and `:RA export`
 
-`docs/ROADMAP.md` §2.3: paste a `curl` command line, get a request buffer;
+paste a `curl` command line, get a request buffer;
 the reverse for sharing. Both are built on
 [`lua/runtime-analysis/curl.lua`](../lua/runtime-analysis/curl.lua) — a
 real (if bounded) `curl`-argument parser, not string templating.
@@ -469,7 +469,7 @@ unresolved. Exporting is sharing, and a `{{token}}` must render as
 
 ## `:RA provenance <path>`
 
-`docs/ROADMAP.md` §5.2: "who wrapped this function," the narrow slice of
+"who wrapped this function," the narrow slice of
 `:RA inspect` (§5.1, below) worth shipping on its own first.
 
 ```vim
@@ -563,7 +563,7 @@ contributed too. The report arrives as a notification and is written to
 
 ## `:RA inspect <module>`
 
-`docs/ROADMAP.md` §5.1: "Runtime inspection — a second pillar." Walks a
+"Runtime inspection — a second pillar." Walks a
 live `package.loaded[module]` table and renders it: functions (upvalue
 counts, source location), nested tables (their own shape), metatables,
 and what a direct key *shadows* through `__index`. lib.nvim's own roadmap
@@ -606,7 +606,7 @@ resolved:**
 
 ## `:RA usage`, `:RA usage start`, `:RA usage stop`
 
-`docs/ROADMAP.md` §7.1: which of your own keymaps and typed commands you
+which of your own keymaps and typed commands you
 actually press. A different *product* from everything else `:RA` does —
 instrumenting the editor rather than instrumenting code — and the first
 feature in this plugin that records *what the person did* rather than

@@ -44,7 +44,7 @@ jobs:
           version: stable
       - run: nvim --headless -u NONE -l TESTS/run.lua
 
-  # docs/ROADMAP.md Housekeeping: scripts/gen_map.lua + documentation.nvim as
+  # Housekeeping: scripts/gen_map.lua + documentation.nvim as
   # a dev dependency, adopted per that project's own docs/REUSE.md. `--check`
   # verifies the committed docs/map/ is current and drift-free; it writes
   # nothing, so a stale map fails loudly here instead of quietly rotting on

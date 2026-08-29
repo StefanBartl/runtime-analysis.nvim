@@ -54,12 +54,11 @@ own three-file split, which is worth keeping apart on purpose:
 | Document | Holds |
 |---|---|
 | [`../README.md`](../README.md) + [`telemetry/README.md`](../lua/runtime-analysis/telemetry/README.md) | What shipped, and the trade-off behind it. |
-| [`ROADMAP.md`](ROADMAP.md) | This plugin's **own** backlog — request-runner gaps, telemetry collection modes, `:RAInspect`, housekeeping. |
 | **this file** | Ideas that only exist **between** plugins: runtime-analysis × documentation.nvim × mdview.nvim × lib.nvim. |
 
-`ROADMAP.md` §6 already names three items of the static × runtime join. Those
+The plugin backlog already names three items of the static × runtime join. Those
 are **not repeated here**, only cross-referenced — this document is the wider
-sweep across all four repositories, including the seams `ROADMAP.md` does not
+sweep across all four repositories, including the seams that backlog does not
 look at (mdview as more than a renderer, lib.nvim as the shared floor, and the
 three-way cases where a feature needs all of them).
 
@@ -100,7 +99,7 @@ The seam with **no traffic at all** is documentation.nvim ↔ mdview.nvim, and
 
 ## 1. runtime-analysis × documentation.nvim — beyond the join already planned
 
-`ROADMAP.md` §6 has Mode 8 (telemetry in `:DocBrowse`), endpoint coverage, and
+The backlog has Mode 8 (telemetry in `:DocBrowse`), endpoint coverage, and
 documentation-priority-by-usage. Everything below is a *different* crossing,
 found by walking documentation.nvim's actual command surface and asking what
 each one would answer differently with runtime evidence attached.
@@ -192,8 +191,8 @@ reader is already about to make a decision.
 ### 1.4 `:DocMap why` × call trees — the require chain vs the call chain
 
 `why <a> <b>` walks the **static require graph** and puts each hop in the
-quickfix list at the line the `require` is written on. `ROADMAP.md` §3.1
-proposes recording the immediate caller per call — a *runtime* call graph.
+quickfix list at the line the `require` is written on. Recording the immediate
+caller per call gives a *runtime* call graph instead.
 These are two different graphs over the same tree, and the interesting output
 is where they **disagree**:
 
@@ -202,7 +201,7 @@ is where they **disagree**:
   a callback, or a table the static pass cannot follow — precisely the class
   `calls.lua`'s `confidence` field exists to admit uncertainty about.
 
-**Was strictly gated on §3.1 of `ROADMAP.md` shipping — it now has, 2026-08-04**
+**Was strictly gated on `call_tree` shipping — it now has, 2026-08-04**
 (see `docs/FINISHED.md`, `call_tree` opt-in via `debug.getinfo(2, "Sl")`).
 Written down here because it was the payoff that justified paying that
 cost, not because it is ready to build on its own: this idea is still the
@@ -217,8 +216,7 @@ since `:DocMap why` is its command.
 
 Every crossing above is a view. The stronger form is feeding runtime evidence
 back into documentation.nvim's **check** pipeline, where it changes a severity
-rather than a rendering. `dead-function` suppression (already designed in
-[`lib.nvim/docs/ROADMAP/telemetry-documentation-bridge.md`](https://github.com/StefanBartl/lib.nvim/blob/main/docs/ROADMAP/telemetry-documentation-bridge.md))
+rather than a rendering. `dead-function` suppression (already designed on the lib.nvim side)
 is the first instance; the general shape is worth naming because it comes with
 a rule that must not be broken:
 
@@ -410,8 +408,7 @@ apply. This is surface 1 in that document's own ranking, at its cheapest.
 
 ### 1.9 Multi-language telemetry — importing profiles, not instrumenting them
 
-documentation.nvim's own `docs/ROADMAP/IDEAS/MULTILANG.md` costs out language
-backends beyond Lua (JS/TS shipped 2026-08-03; C/Python/Rust/Go planned).
+documentation.nvim costs out language backends beyond Lua (JS/TS shipped 2026-08-03; C/Python/Rust/Go planned).
 The question this section answers: if that side gains a language, can this
 plugin's telemetry follow it? The honest answer splits the plugin in two,
 and only one half survives the question.
@@ -542,8 +539,8 @@ Cheapest idea in this section by a wide margin.
 
 ### 2.3 The request runner's response pane, rendered
 
-A JSON or HTML response body in a plain split is the runner's weakest surface
-(`ROADMAP.md` §2.2). Markdown is not the right target for a JSON body — but a
+A JSON or HTML response body in a plain split is the runner.s weakest surface.
+Markdown is not the right target for a JSON body — but a
 **session log** is: a request/response transcript written as Markdown, watched
 by the relay, is a browser tab that updates itself as you send. mdview's
 `standalone --watch` already does exactly this for the telemetry report; the
@@ -581,7 +578,7 @@ against the ones that only exist for one platform or one failure path.
 ### 2.6 Borrow `:MDView diagnose`, do not build a second one
 
 mdview writes a full component-state diagnostics report to a file and opens it.
-`ROADMAP.md`'s housekeeping section wants `:checkhealth runtime-analysis`;
+The housekeeping section wants `:checkhealth runtime-analysis`;
 `diagnose` is the same idea one step further — resolved config, live instances,
 which namespaces are persistently disabled, where the cache actually is, in a
 file that can be attached to an issue. Worth copying the *shape*, not the code.
@@ -600,8 +597,7 @@ build step). mdview ships a Go relay plus a prebuilt web client. Both are
 crosses between them** — the one empty seam noted in §0.
 
 The question this document posed but did not answer itself: when
-runtime-analysis wanted a real dashboard (`ROADMAP.md` §4.4, shipped —
-see `docs/FINISHED.md`), would it (a) steal documentation.nvim's renderer,
+runtime-analysis wanted a real dashboard (shipped), would it (a) steal documentation.nvim's renderer,
 (b) ride mdview's relay, or (c) stay in Markdown? Asked directly, decided
 **(a)** — but not a literal code dependency on documentation.nvim's own
 4,500-line renderer, which is tightly coupled to its own IR: the *design*
@@ -646,9 +642,8 @@ A soft, real problem visible while writing this document: the architecture doc
 lives in documentation.nvim, the bridge design lives in **lib.nvim**, and this
 plugin's README links to both. Two consequences already observable:
 
-- `lua/runtime-analysis/telemetry/README.md` linked
-  `../../../../docs/ROADMAP/telemetry-documentation-bridge.md` — i.e. a path in
-  *this* repository. The file did not move with telemetry; it is still in
+- `lua/runtime-analysis/telemetry/README.md` linked the
+  telemetry-documentation bridge note as a path in *this* repository. The file did not move with telemetry; it is still in
   lib.nvim, correctly so (it describes the *consumer* of telemetry's data, not
   the collection). Found dead while writing this document and fixed in the same
   commit — but it was dead from the moment telemetry moved, and nothing would
@@ -699,7 +694,7 @@ on-thesis housekeeping idea available.
 > something wants the combined per-project view this entry was protecting.
 
 
-Request history (`ROADMAP.md` §1.3) wants per-project scoping. documentation.nvim
+Request history wants per-project scoping. documentation.nvim
 scopes an artifact per repository. mdview scopes a session per `cwd`. lib.nvim
 already has `fs.project_key` and a `store/project` module. If history, telemetry
 namespaces and documentation.nvim's artifact all resolved "which project is
@@ -755,7 +750,7 @@ Not a feature seam so much as a discipline one, but two items are real.
 
 
 `lib.nvim.system.proc_trace` wraps `vim.fn.system`; telemetry's registry wraps
-arbitrary table fields; `runtime-analysis.provenance` (`ROADMAP.md` §5.2,
+arbitrary table fields; `runtime-analysis.provenance` (
 shipped) answers "who wrapped this function" — but only exactly for its own
 telemetry wraps; anything else (`proc_trace`, any third-party monkey-patch)
 falls back to a `debug.getinfo` source-location guess, stated as best-effort
@@ -792,7 +787,7 @@ Named for completeness, ranked honestly low.
   what version* would make the soft-dependency graph visible from inside the
   editor. Genuinely small; genuinely useful the first time a `gs` binding
   silently does nothing.
-- **Editor/session analytics** (`ROADMAP.md` §7) has no cross-plugin
+- **Editor/session analytics** has no cross-plugin
   dimension worth adding here, and deliberately so: it records what the
   *person* did rather than what the *code* did, and widening its reach is the
   wrong direction for the one feature in this ecosystem that needs narrowing.
@@ -833,7 +828,7 @@ expensive directions, and none of the five touches any of them.
 | **Runtime data in the committed artifact** | Breaks the byte-comparison gate at generation time; personal, high-churn usage data at commit time. §1.5 has the full rule, `ECOSYSTEM.md` §7 has the argument | Never |
 | **A third browser pipeline** | Two already exist and neither is finished being used. §3.1 is the decision to make first | A decision from §3.1 says so explicitly |
 | **Runtime evidence upgrading a check's severity** | A warning that appears on one developer's machine and not another's is worse than no warning (§1.5) | Never |
-| **Sharing telemetry across machines to fix "cold on this machine ≠ unused"** | The correct fix is honest wording in the render, not an aggregation service. `ROADMAP.md`'s "telemetry that leaves the machine" row already answers this and this document does not reopen it | Never |
+| **Sharing telemetry across machines to fix "cold on this machine ≠ unused"** | The correct fix is honest wording in the render, not an aggregation service. The "telemetry that leaves the machine" row already answers this and this document does not reopen it | Never |
 
 ---
 
@@ -855,9 +850,6 @@ House convention: state what was verified and what was assumed.
 - `telemetry-documentation-bridge.md` is in **lib.nvim**, not this repository —
   so the relative link in `telemetry/README.md` was dead (§3.3, fixed in the
   commit that added this file).
-- `docs/ROADMAP.md` existed only as an untracked file in the main checkout when
-  this document was written, which is why it links to it as though it were
-  committed. It is, as of this commit.
 
 **Assumed, not verified:** every claim about the *cost* of an idea above. No
 prototype was written for any of them, and this ecosystem has already been

@@ -54,7 +54,7 @@ local function refresh(site)
     outermost = outermost or s.outermost_only
     callers = callers or s.callers
 
-    -- docs/ROADMAP.md §3.2: sampling is the MINIMUM (most eager) rate any
+    -- sampling is the MINIMUM (most eager) rate any
     -- subscriber that actually wants expensive work asks for -- so the
     -- pickiest subscriber's own sample size is never starved by a laxer
     -- one. A subscriber that wants expensive work with NO sample opt of
@@ -84,7 +84,7 @@ end
 ---@param dur number|nil
 ---@param errored boolean
 ---@param err_fp string|nil
----@param caller_key string|nil docs/ROADMAP.md §3.1 -- `"short_src:currentline"` of the immediate caller, or nil when nobody wants it or `debug.getinfo` returned nothing (a C caller, e.g. `vim.schedule`'s own dispatch)
+---@param caller_key string|nil `"short_src:currentline"` of the immediate caller, or nil when nobody wants it or `debug.getinfo` returned nothing (a C caller, e.g. `vim.schedule`'s own dispatch)
 ---@internal
 local function dispatch(site, fp, dur, errored, err_fp, caller_key)
   local subs = site.subs
@@ -128,7 +128,7 @@ local function make_wrapper(site)
       return original(...)
     end
 
-    -- Sampling (docs/ROADMAP.md §3.2): decide once per call whether THIS
+    -- Sampling: decide once per call whether THIS
     -- call pays for the expensive path below at all, or takes the same
     -- cheap counting-only path the branch above already uses. `calls`
     -- stays exact regardless — it was already free — only args/timing/
@@ -149,7 +149,7 @@ local function make_wrapper(site)
       fp = fingerprint.of(select("#", ...), ...)
     end
 
-    -- docs/ROADMAP.md §3.1: one frame of `debug.getinfo`, at the cheapest
+    -- one frame of `debug.getinfo`, at the cheapest
     -- field set that still names a real call site — `"Sl"` (source +
     -- current line), not `"Sln"` (+ name resolution), which measured
     -- ~1.5x more expensive for a caller *name* this already has a cheaper,
@@ -319,7 +319,7 @@ function M.is_wrapped(container, field)
 end
 
 ---Which telemetry instance(s), if any, currently wrap `container[field]` —
----docs/ROADMAP.md §5.2. Precise, unlike anything about a *non*-telemetry
+---Precise, unlike anything about a *non*-telemetry
 ---wrapper this plugin might sit next to: this registry is the one shared
 ---wrap layer every telemetry instance goes through (see the module
 ---doc-comment on why), so it genuinely knows every subscriber by name.

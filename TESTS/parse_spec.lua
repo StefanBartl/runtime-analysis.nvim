@@ -75,7 +75,7 @@ return function(H)
     ok(err ~= nil, "parse: ... and reports why")
   end
 
-  -- The `Auth:` shorthand (docs/ROADMAP.md §2.4).
+  -- The `Auth:` shorthand.
   do
     local req = parse.parse({ "GET https://x", "Auth: Bearer abc123" })
     eq(
@@ -127,7 +127,7 @@ return function(H)
     )
   end
 
-  -- `###`-separated multi-request buffers (docs/ROADMAP.md §1.2).
+  -- `###`-separated multi-request buffers.
   do
     -- No `###` at all: one block, the whole buffer — unchanged behavior
     -- from before this existed.
@@ -193,7 +193,7 @@ return function(H)
     )
   end
 
-  -- `.rest` ftdetect (docs/ROADMAP.md §1.4). `*.http` already resolves to
+  -- `.rest` ftdetect. `*.http` already resolves to
   -- filetype `http` in stock Neovim with no plugin at all — verified
   -- separately, not re-asserted here, since nothing in this repo could
   -- meaningfully break that. `ftdetect/runtime-analysis.lua` is a plain

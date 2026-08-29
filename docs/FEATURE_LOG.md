@@ -1,21 +1,15 @@
 # runtime-analysis.nvim — finished work
 
-What shipped, and the trade-off behind it — the decision record
-[`docs/ROADMAP.md`](ROADMAP.md) deliberately is not.
+What shipped, and the trade-off behind it — the decision record.
 
-**The convention this file exists to keep:** when an item in `docs/ROADMAP.md`
-ships, it is removed from there — not left behind as a struck-through "Done"
-note that would otherwise make that document grow without bound — and
-archived here instead, in full, with whatever reasoning made it worth
-recording. `docs/ROADMAP.md` stays a living, readable backlog; this file is
-the paper trail behind what is no longer on it. The same three-way split
-[documentation.nvim](https://github.com/StefanBartl/documentation.nvim)
-already draws between its own `FEATURES.md`/`ROADMAP.md`/`IDEAS.md` — this
-file plays `FEATURES.md`'s role here, `docs/ROADMAP.md` plays its own, and
-`docs/IDEAS.md` plays `IDEAS.md`'s.
+**The convention this file exists to keep:** when a backlog item ships, it is
+removed from the backlog — not left behind as a struck-through "Done" note
+that would otherwise make that document grow without bound — and archived
+here instead, in full, with whatever reasoning made it worth recording. This
+file is the paper trail behind what is no longer open.
 
 A `§`-number below (e.g. "§2.2") points at the section that item used to
-occupy in `docs/ROADMAP.md` — the number is not reused, so old cross-links
+occupy in the old backlog — the number is not reused, so old cross-links
 and commit messages that cite it still mean the same thing; it simply no
 longer resolves to a section in that document. Housekeeping items (which
 were never numbered) are named directly.
@@ -28,7 +22,7 @@ Newest first, by date; original document order within a date.
 
 ### §3.6 Benchmark comparisons — `runtime-analysis.bench`
 
-The last item left open in `docs/ROADMAP.md`'s Phases triage. Raised
+The last item left open in the Phases triage. Raised
 2026-08-10 alongside §3.7 (both from the same brainstorm), and both
 carried the identical gate: does this survive §3.5's "not a general
 profiler" thesis before it is anything more than a note. It does — a
@@ -333,8 +327,7 @@ entry rather than leaking a new registry site per call.
 "Worth doing only if the Markdown report is actually being read often
 enough to feel limiting" — revisited the same day it was first written,
 and answered "not yet" the first time it was asked (see §4.4's own
-history in this file's earlier revision, and `docs/ROADMAP.md`'s git
-history). Asked again directly, the answer changed: build it, and use
+history in this file.s earlier revision). Asked again directly, the answer changed: build it, and use
 option (a) of `docs/IDEAS.md` §3.1's three-way choice — steal
 documentation.nvim's renderer's *design*, not its code.
 
@@ -607,7 +600,7 @@ covers why this module does not become one). §4.3 (standard trace
 formats) is not unblocked by this in the way it sounds: a real trace-
 format viewer expects nested call stacks with timing spans, which this
 data structurally is not. Discussed directly on 2026-08-04 and moved to
-`docs/ROADMAP.md`'s own "Deliberately not building" table rather than
+the "Deliberately not building" table rather than
 built on a guess at what shape the data should have taken instead — see
 that table's own entry for the full reasoning.
 
@@ -661,8 +654,7 @@ reachable on the rtp — a real wrap, real calls, a real flush to disk,
 read back through `telemetry.load()` with no live instance, the same
 path a fresh `:DocMap check` run actually takes. Full writeup:
 documentation.nvim's own `docs/ECOSYSTEM.md` step 8; the original
-lib.nvim-side design and its now-fully-`**done**` status table:
-[`lib.nvim/docs/ROADMAP/telemetry-documentation-bridge.md`](https://github.com/StefanBartl/lib.nvim/blob/main/docs/ROADMAP/telemetry-documentation-bridge.md).
+lib.nvim-side design is fully done.
 
 ### Housekeeping — `scripts/gen_map.lua` + documentation.nvim as a dev dependency
 
@@ -1575,7 +1567,7 @@ Nothing else needed to change: `:RA send`/`:RASend` already read "the
 current buffer" regardless of how it was opened, so a real file opened
 directly with `:e requests.http` hits the identical code path a scratch
 buffer from `:RA request` does. Not owning the `.http`/`.rest` filetype
-outright — `docs/ROADMAP.md`'s own "Deliberately not building" table already
+outright — the "Deliberately not building" table already
 states that rule — this only teaches Neovim that `.rest` means the same
 thing `.http` already does.
 

@@ -27,7 +27,7 @@ function M.namespace_path(namespace, opts)
   return M.dir(opts) .. "/" .. store.sanitize(namespace) .. ".md"
 end
 
----The HTML dashboard's own path (docs/ROADMAP.md §4.4) — a sibling of
+---The HTML dashboard's own path — a sibling of
 ---`M.namespace_path`, `.html` rather than `.md`, same directory. A
 ---separate extension rather than a separate directory: both are
 ---disposable per-namespace snapshots of the same underlying report, not

@@ -1,5 +1,5 @@
 ---@module 'runtime-analysis.telemetry.renderers.html'
---- A purpose-built HTML dashboard — docs/ROADMAP.md §4.4. The Markdown
+--- A purpose-built HTML dashboard — The Markdown
 --- report answers "what happened" in prose; this answers the same
 --- question sortable and filterable, the way documentation.nvim's own
 --- Analysis tab already does for static findings.

@@ -1,5 +1,5 @@
 ---@module 'runtime-analysis.provenance'
---- Wrapper provenance — docs/ROADMAP.md §5.2, the narrow, high-value slice
+--- Wrapper provenance — the narrow, high-value slice
 --- of §5.1 ("Runtime inspection — a second pillar") the roadmap entry says
 --- should ship first. Given a dotted path — `"vim.notify"`,
 --- `"lib.nvim.notify.create"` — says what's actually installed there right

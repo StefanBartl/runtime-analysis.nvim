@@ -88,7 +88,7 @@ return function(H)
     )
   end
 
-  -- `opts.root` (docs/ROADMAP.md §6.2): a reader analyzing a different tree
+  -- `opts.root`: a reader analyzing a different tree
   -- than cwd gets *that* tree's history, not whichever project Neovim
   -- happens to be sitting in — `M.record` itself stays cwd-only (recording
   -- is always "I just sent a request from here"), only `M.list`/`M.clear`

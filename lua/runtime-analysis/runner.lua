@@ -128,7 +128,7 @@ function M.run(request)
   return lines, nil, meta
 end
 
----The non-blocking twin of `M.run`, docs/ROADMAP.md §1.1. `cb` always runs
+---The non-blocking twin of `M.run`. `cb` always runs
 ---through `vim.schedule` — `lib.nvim.net.curl.fetch_raw`'s own completion
 ---callback fires in a **fast event context** (verified: a bare
 ---`nvim_create_buf` call inside it raises `E5560`), so every caller of this

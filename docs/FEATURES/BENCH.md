@@ -4,7 +4,7 @@
 "which of these two implementations is actually faster, on this machine,
 right now". A bounded, explicit, few-seconds measurement a caller asks
 for by name, not something installed or left running — the property that
-lets it exist without reopening `docs/ROADMAP.md` §3.5's "not a general
+lets it exist without reopening the "not a general
 profiler" rejection.
 
 ## Direct calls, not telemetry-wrapped

@@ -396,7 +396,7 @@ return function(H)
   end
 
   -- -------------------------------------------------------------------------
-  -- call trees (docs/ROADMAP.md §3.1) — the immediate caller, one frame of
+  -- call trees — the immediate caller, one frame of
   -- debug.getinfo, reusing the identical bounded-cardinality bucket
   -- argument profiling already uses.
   -- -------------------------------------------------------------------------
@@ -527,7 +527,7 @@ return function(H)
     t.unwrap()
   end
 
-  -- sampling (docs/ROADMAP.md §3.2) applies to call_tree exactly as it
+  -- sampling applies to call_tree exactly as it
   -- already does to args/time/errors — only every Nth call pays for it.
   do
     local mod = {
@@ -614,7 +614,7 @@ return function(H)
   end
 
   -- -------------------------------------------------------------------------
-  -- error fingerprinting (docs/ROADMAP.md §2.5): the same bounded-cardinality
+  -- error fingerprinting: the same bounded-cardinality
   -- machinery `profile_args` already uses, pointed at the raised error's own
   -- value instead of the call's arguments.
   -- -------------------------------------------------------------------------
@@ -656,8 +656,8 @@ return function(H)
 
   -- error fingerprinting: a passing call must never populate error_fp, and a
   -- function with no `errors` opt-in at all must never populate it either
-  -- (mirrors profile_args' own strict opt-in, docs/ROADMAP.md §2.5's own
-  -- "reuses the existing machinery" framing extended to this too).
+  -- (mirrors profile_args own strict opt-in, and the same "reuses the
+  -- existing machinery" framing extended to this too).
   do
     local mod = {
       ok_fn = function()
@@ -755,7 +755,7 @@ return function(H)
   end
 
   -- -------------------------------------------------------------------------
-  -- sampling (docs/ROADMAP.md §3.2): only every Nth call pays for the
+  -- sampling: only every Nth call pays for the
   -- expensive modes; `calls` itself stays exact regardless.
   -- -------------------------------------------------------------------------
   do
@@ -1179,7 +1179,7 @@ return function(H)
   end
 
   -- -------------------------------------------------------------------------
-  -- comparison across time windows (docs/ROADMAP.md §4.2): "this week vs
+  -- comparison across time windows: "this week vs
   -- last week" — pure logic first (store.previous_window, report.compare),
   -- then one end-to-end pass through a real instance.
   -- -------------------------------------------------------------------------
@@ -2209,7 +2209,7 @@ return function(H)
   end
 
   -- -------------------------------------------------------------------------
-  -- named/dated snapshots -- docs/ROADMAP.md §4.5
+  -- named/dated snapshots
   -- -------------------------------------------------------------------------
 
   do

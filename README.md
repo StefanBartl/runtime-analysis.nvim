@@ -534,9 +534,8 @@ the method and path are pre-filled and the reader completes the base URL
 ## The static × runtime join
 
 **Shipped.** documentation.nvim's `:DocBrowse telemetry` mode joins this
-plugin's counts against its static analysis — the design doc that scoped it
-(`docs/ROADMAP/telemetry-documentation-bridge.md`, lib.nvim) called it
-"Mode 7"; it landed as the **eighth** entry in the real `MODES` list, since
+plugin.s counts against its static analysis — the design that scoped it called
+it "Mode 7"; it landed as the **eighth** entry in the real `MODES` list, since
 Endpoints took position seven first (see `ECOSYSTEM.md` step 8 for that
 renumbering). `:DocBrowse loaded` — the declared-vs-loaded diff,
 [`docs/FEATURE_LOG.md`](docs/FEATURE_LOG.md) — followed as the ninth.
@@ -559,9 +558,6 @@ split into quick wins, medium and large.
 
 ## Where this is going
 
-- [`docs/ROADMAP.md`](docs/ROADMAP.md) — where this plugin is going, in
-  prose: the blind spot of static analysis is the job, and the three limits
-  that are not up for negotiation. Direction, not schedule.
 - [`docs/FEATURE_LOG.md`](docs/FEATURE_LOG.md) — the decision record behind
   everything that has shipped — what, and why.
 - [`docs/IDEAS.md`](docs/IDEAS.md) — ideas that only exist *between* plugins:

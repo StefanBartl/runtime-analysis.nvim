@@ -35,7 +35,7 @@
 ---   :RATelemetry startup [top]   which module a plugin's startup cost sits in
 ---   :RATelemetry cost            startup cost vs. call count, worst first
 ---   :RATelemetry snapshot <ns> [name]  save a named capture of ns's current
----                                aggregate (docs/ROADMAP.md §4.5) -- always
+---                                aggregate -- always
 ---                                explicit, nothing ever snapshots on its own
 ---   :RATelemetry snapshots <ns>  list ns's saved snapshots, newest first
 ---   :RATelemetry snapshot-compare <ns> <a> <b>  diff two named snapshots'
@@ -358,7 +358,7 @@ local function report_lines(opts, namespace)
   return out
 end
 
----`:RATelemetry compare [namespace] [days]` — docs/ROADMAP.md §4.2. Same
+---`:RATelemetry compare [namespace] [days]` — Same
 ---"every instance, or just one" shape `report_lines` above already uses;
 ---`days` (default 7, `inst.compare`'s own) applies to every instance shown,
 ---not per-instance.
@@ -488,7 +488,7 @@ local function open_report(namespace)
   ---@param path string
   ---@param kit_lines string[]
   ---@param title string
-  ---@param reports RA.Telemetry.Report[] docs/ROADMAP.md §4.4 — only the "html" branch reads this; every other branch already has what it needs in `lines`/`kit_lines`.
+  ---@param reports RA.Telemetry.Report[] only the "html" branch reads this; every other branch already has what it needs in `lines`/`kit_lines`.
   ---@param html_path string
   local function dispatch(lines, path, kit_lines, title, reports, html_path)
     local function open_html()
@@ -953,7 +953,7 @@ function M.setup()
     elseif first == "open" then
       open_report(rest)
     elseif first == "startup" then
-      -- docs/ROADMAP.md §3.3. Namespace-free on purpose: this measures
+      -- Namespace-free on purpose: this measures
       -- module loads, not one namespace's wrapped functions, so the
       -- second slot every other subcommand uses for a namespace is a
       -- `top` count here instead.
@@ -963,7 +963,7 @@ function M.setup()
         "runtime-analysis.telemetry — startup"
       )
     elseif first == "cost" then
-      -- docs/ROADMAP.md §7.2. No arguments: this is inherently cross-
+      -- No arguments: this is inherently cross-
       -- namespace (a per-namespace `cost` would just repeat `report`'s own
       -- call count with one extra number), and it reads live startup data
       -- rather than anything this instance itself persists.

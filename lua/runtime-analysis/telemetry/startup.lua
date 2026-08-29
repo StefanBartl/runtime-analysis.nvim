@@ -1,5 +1,5 @@
 ---@module 'runtime-analysis.telemetry.startup'
---- Startup attribution — docs/ROADMAP.md §3.3. Which *module* a plugin's
+--- Startup attribution — Which *module* a plugin's
 --- startup cost actually sits in, as a waterfall.
 ---
 --- **The roadmap entry's own premise needed correcting before this could be
@@ -160,7 +160,7 @@ local function root_of(modname)
 end
 
 ---Everything recorded, plus per-root totals — the waterfall
----docs/ROADMAP.md §3.3 asks for.
+---the startup attribution asks for.
 ---@param opts? { top?: integer, sort?: "self"|"total"|"name" } `sort`
 ---defaults to `"self"`: "where did the time actually go" is the question
 ---this exists to answer, and total time re-orders by how deep a module sits

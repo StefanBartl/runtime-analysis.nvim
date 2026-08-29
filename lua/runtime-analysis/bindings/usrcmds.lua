@@ -25,7 +25,7 @@
 --- inspect` get no flat alias: all are new, have no external references,
 --- and no keymap could already exist for any of them.
 ---
---- **`:RA history`** (docs/ROADMAP.md §1.3) reads `runtime-analysis.history`,
+--- **`:RA history`** reads `runtime-analysis.history`,
 --- a per-project record of method/url/status/timestamp for every send this
 --- module makes — see that module's own doc-comment for exactly what is
 --- and is not recorded, and why. Every outcome records: a real response, a
@@ -33,7 +33,7 @@
 --- eventual result once it is known — the one thing that is never recorded
 --- twice for the same send.
 ---
---- **`:RA send`/`:RASend` are non-blocking** (docs/ROADMAP.md §1.1) — see
+--- **`:RA send`/`:RASend` are non-blocking** — see
 --- `runner.run_async`'s own doc-comment for why every callback through it is
 --- guaranteed to run outside Neovim's fast-event context, and see the
 --- pending-request tracking below for what "cancel" actually means here: a
@@ -199,7 +199,7 @@ composer.register_type("RA_PROVENANCE_PATH", {
 
 local M = {}
 
--- Pending-request tracking (docs/ROADMAP.md §1.1). One token per send;
+-- Pending-request tracking. One token per send;
 -- firing a new `:RA send` bumps it, which makes an earlier in-flight
 -- request's own callback a silent no-op when it eventually arrives — a
 -- *logical* supersession, not a queue and not a "one at a time" refusal.
@@ -253,7 +253,7 @@ local function cancel_pending(ra)
 end
 
 ---Check an `@expect status N` directive against a send's real outcome —
----docs/ROADMAP.md §2.5. `actual` is `nil` for a transport failure (no
+---`actual` is `nil` for a transport failure (no
 ---response at all), itself a mismatch when an assertion was expected. A
 ---mismatch populates the quickfix list (never auto-opened — the same
 ---"never steals focus from the request buffer" posture `:RA send` itself
@@ -301,7 +301,7 @@ local function request_base_dir(source_bufnr)
   return vim.fn.getcwd()
 end
 
----docs/ROADMAP.md §2.6: GraphQL and multipart both transform a resolved
+---GraphQL and multipart both transform a resolved
 ---request's own *shape* rather than a placeholder inside it — a
 ---GraphQL-shorthand query+variables body becomes the real JSON payload a
 ---server expects; a multipart body's `< ./path` references become the
@@ -348,14 +348,14 @@ end
 ---Parse the current buffer as a request and send it asynchronously,
 ---showing the response in the split `view.lua` manages once it arrives.
 ---
----`###`-aware (docs/ROADMAP.md §1.2): the buffer is always split into
+---`###`-aware: the buffer is always split into
 ---blocks first, and the block the cursor is in (or nearest above it) is
 ---the one parsed and sent — never the whole buffer verbatim, never a
 ---picker. A buffer with no `###` line at all splits into exactly one
 ---block covering everything, so this behaves exactly as it did before
 ---`###` support existed.
 ---
----Non-blocking (docs/ROADMAP.md §1.1): the editor stays responsive while
+---Non-blocking: the editor stays responsive while
 ---curl runs. The response pane shows a "sending" placeholder immediately,
 ---then either the real response or an error/cancelled message — never
 ---silence while nothing visibly happens.
@@ -375,7 +375,7 @@ local function send_current_buffer(ra)
     block_first = block and block.first or 1
   end
 
-  -- docs/ROADMAP.md §2.5: an `@expect status N` directive is read (and
+  -- an `@expect status N` directive is read (and
   -- stripped) before `parse.parse` ever sees the block — that module has
   -- no comment syntax of its own, so a directive left in would otherwise
   -- fail as a malformed request/header line.
@@ -393,7 +393,7 @@ local function send_current_buffer(ra)
     return
   end
 
-  -- docs/ROADMAP.md §2.1: `{{name}}` placeholders resolve against the
+  -- `{{name}}` placeholders resolve against the
   -- selected environment right here, immediately before the request goes
   -- out — `request` itself stays untouched below (the "sending" summary,
   -- the pending-request record, and the history entry all read `request`,
@@ -405,7 +405,7 @@ local function send_current_buffer(ra)
     return
   end
 
-  -- docs/ROADMAP.md §2.6: GraphQL and multipart both transform the
+  -- GraphQL and multipart both transform the
   -- request's own shape (query+variables -> real JSON body; `< ./file`
   -- references -> real bytes) *after* {{var}} resolution above, so a
   -- placeholder used inside either — a token in the variables block, in
@@ -558,7 +558,7 @@ local function browse_history(ra)
   end
 end
 
----`:RA env [name]` (docs/ROADMAP.md §2.1). With `name`, selects it directly
+---`:RA env [name]`. With `name`, selects it directly
 ---(or reports the available names if it doesn't exist); with no argument,
 ---offers every name the project's env files define via `vim.ui.select`, the
 ---same picker `browse_history` above already uses for the identical "pick
@@ -608,7 +608,7 @@ local function select_environment(name)
   end
 end
 
----`:RA import` (docs/ROADMAP.md §2.3) — parses a `curl` command line into a
+---`:RA import` — parses a `curl` command line into a
 ---new request buffer via `ra.open_request`, the same entry point
 ---documentation.nvim's own Endpoints mode already uses. Two sources, in
 ---order of precedence: a real visual/line-range invocation (`'<,'>RA
@@ -654,7 +654,7 @@ local function do_import(ra, ctx)
   ra.open_request(lines)
 end
 
----`:RA export` (docs/ROADMAP.md §2.3) — the reverse of `:RA import`: parses
+---`:RA export` — the reverse of `:RA import`: parses
 ---whichever `###` block the cursor is in (the identical resolution `:RA
 ---send` uses) and formats it as a `curl` command line via
 ---`runtime-analysis.curl.format`, yanked to the unnamed register the same
@@ -684,7 +684,7 @@ local function do_export()
     return
   end
 
-  -- GraphQL only (docs/ROADMAP.md §2.6): turns the query+variables
+  -- GraphQL only: turns the query+variables
   -- shorthand into the real JSON body a `curl` command actually needs to
   -- send, same as `send_current_buffer`'s own pipeline. Deliberately NOT
   -- `resolve_request_shape` (which also handles multipart) -- a
@@ -707,7 +707,7 @@ local function do_export()
   notify.info("curl command yanked to the unnamed register")
 end
 
----`:RA provenance <path>` (docs/ROADMAP.md §5.2) — "who wrapped this
+---`:RA provenance <path>` — "who wrapped this
 ---function", the narrow slice of `:RA inspect` (§5.1) the roadmap entry
 ---itself named as worth shipping first. `path` is a dotted string like
 ---`"vim.notify"` or `"lib.nvim.notify.create"`; see
@@ -726,7 +726,7 @@ local function do_provenance(path)
   notify.info(table.concat(provenance.lines(info), "\n"))
 end
 
----`:RA loaded snapshot <prefix> [name]` (docs/ROADMAP.md §5.4) — capture
+---`:RA loaded snapshot <prefix> [name]` — capture
 ---every currently-loaded module under `prefix` as a named, persisted
 ---snapshot, so it can be viewed later (or from a different process — a
 ---`:DocMap serve` session, say) rather than only in the live one that took
@@ -749,7 +749,7 @@ local function do_loaded_snapshot(prefix, name)
   notify.info(("loaded snapshot %q saved for prefix %q"):format(saved, prefix))
 end
 
----`:RA loaded snapshots <prefix>` (docs/ROADMAP.md §5.4) — list every
+---`:RA loaded snapshots <prefix>` — list every
 ---saved snapshot for `prefix`, newest first. The same read
 ---documentation.nvim's own Loaded panel picker does over the server API,
 ---exposed here as a plain command for a quick local check.
@@ -773,7 +773,7 @@ local function do_loaded_snapshots(prefix)
   notify.info(table.concat(lines, "\n"))
 end
 
----`:RA inspect <module>` (docs/ROADMAP.md §5.1) — walk a live
+---`:RA inspect <module>` — walk a live
 ---`package.loaded` table and render it: functions with upvalue counts and
 ---source, tables with their own shape, metatables, and what a direct key
 ---shadows through `__index`. See `runtime-analysis.inspect`'s own
@@ -805,7 +805,7 @@ local function do_inspect(module_id)
   end
 end
 
----`:RA usage [start|stop]` (docs/ROADMAP.md §7.1) — keymap/command usage,
+---`:RA usage [start|stop]` — keymap/command usage,
 ---the one feature in this plugin that records *what the person did* rather
 ---than *what the code did* (see `runtime-analysis.usage`'s own doc-comment
 ---for the caveat that shapes it). Opt-in like everything else it touches:
@@ -966,7 +966,7 @@ function M.setup(ra)
       },
       {
         path = { "loaded", "snapshot" },
-        desc = "Persist a loaded-vs-declared snapshot for <prefix> (docs/ROADMAP.md §5.4)",
+        desc = "Persist a loaded-vs-declared snapshot for <prefix>",
         args = {
           { name = "prefix", type = "STRING" },
           { name = "name", type = "STRING", optional = true },

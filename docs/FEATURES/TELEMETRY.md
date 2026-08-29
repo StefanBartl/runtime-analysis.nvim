@@ -65,7 +65,7 @@ Deliberately **not** a runtime feature: nothing here is installed, left
 running, or user-toggleable — a one-time script you run and read numbers
 from, the same posture a library's README publishing "~200ns per call"
 already has. That exclusion is what lets it exist without reopening
-`docs/ROADMAP.md` §3.5's "not a general profiler" rejection.
+the "not a general profiler" rejection.
 
 Run it yourself for numbers specific to your own machine, rather than
 trusting a committed table:

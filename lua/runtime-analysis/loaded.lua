@@ -1,7 +1,6 @@
 ---@module 'runtime-analysis.loaded'
 --- Enumerate what a module actually has on its table right now —
---- docs/ROADMAP.md §5.3, the half of "diff loaded-vs-declared" this
---- repository owns. documentation.nvim knows every function the source
+--- the half of "diff loaded-vs-declared" this repository owns. documentation.nvim knows every function the source
 --- *declares*; this answers what `package.loaded` actually holds in the
 --- current process, which the static half structurally cannot: a module
 --- never required this session, a field a metatable materializes only on
@@ -68,7 +67,7 @@ function M.is_loaded(module_id)
 end
 
 -- -----------------------------------------------------------------------
--- Persisted snapshots — docs/ROADMAP.md §5.4.
+-- Persisted snapshots.
 --
 -- `loaded.lua`'s own header already states the limit this section cannot
 -- lift: "declared but dead" vs. "not loaded here" is a distinction only a
@@ -144,7 +143,7 @@ end
 
 ---How many named snapshots a prefix keeps before `M.snapshot` starts
 ---evicting the oldest — same default and the same reasoning
----`telemetry.SNAPSHOT_RETENTION` already has (docs/ROADMAP.md §4.5): kept
+---`telemetry.SNAPSHOT_RETENTION` already has: kept
 ---bounded rather than left to grow forever, since nothing here ever prunes
 ---on its own.
 M.SNAPSHOT_RETENTION = 20

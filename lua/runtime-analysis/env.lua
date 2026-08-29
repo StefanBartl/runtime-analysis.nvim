@@ -1,12 +1,12 @@
 ---@module 'runtime-analysis.env'
---- Variables and environments — docs/ROADMAP.md §2.1. `{{baseUrl}}` inside a
+--- Variables and environments — `{{baseUrl}}` inside a
 --- request buffer's URL, header values or body resolves against a *named*
 --- environment (`dev`/`staging`/`prod`, or any name a project's own files
 --- define), selected with `:RA env <name>`.
 ---
 --- Two per-project JSON files at the project root — the same split
 --- IntelliJ's HTTP Client already uses for exactly this problem, matched
---- rather than invented, the same reasoning `docs/ROADMAP.md`'s "Deliberately
+--- rather than invented, the same reasoning the "Deliberately
 --- not: owning the .http filetype" already gives for `parse.lua`'s own shape:
 ---
 ---   http-client.env.json          shared, safe to commit — non-secret

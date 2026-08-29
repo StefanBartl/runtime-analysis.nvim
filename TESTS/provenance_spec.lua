@@ -1,5 +1,4 @@
 -- TESTS/provenance_spec.lua — runtime-analysis.provenance
--- (docs/ROADMAP.md §5.2)
 --
 -- Real globals and real telemetry instances, not stubs: provenance's whole
 -- point is inspecting what is *actually* installed right now, so a fake

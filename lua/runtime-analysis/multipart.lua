@@ -1,5 +1,5 @@
 ---@module 'runtime-analysis.multipart'
---- Multipart/form-data support — docs/ROADMAP.md §2.6. VS Code REST
+--- Multipart/form-data support — VS Code REST
 --- Client's own convention, not invented here: a boundary-delimited body
 --- (`Content-Type: multipart/form-data; boundary=...`), one
 --- `Content-Disposition: form-data; name="..."` part per field, and a

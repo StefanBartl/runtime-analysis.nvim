@@ -1,5 +1,4 @@
 -- TESTS/startup_spec.lua — runtime-analysis.telemetry.startup
--- (docs/ROADMAP.md §3.3)
 --
 -- Real module loads against real files on disk: a temp directory added to
 -- `package.path`, so `require` genuinely misses the cache, genuinely reads a

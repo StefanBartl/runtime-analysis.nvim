@@ -71,7 +71,7 @@ Neovim, `*.rest` via this plugin's own [`ftdetect/runtime-analysis.lua`](../ftde
 ### GraphQL and multipart bodies
 
 Two request-body shapes `:RA send`/`:RA export` both understand beyond
-plain JSON/text — docs/ROADMAP.md §2.6, VS Code REST Client's own
+plain JSON/text — VS Code REST Client's own
 conventions. `X-Request-Type: GraphQL` marks a body as query text (+
 optional blank-line-separated JSON variables), turned into the real
 `{"query": ..., "variables": {...}}` payload

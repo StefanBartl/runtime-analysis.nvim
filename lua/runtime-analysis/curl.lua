@@ -1,5 +1,5 @@
 ---@module 'runtime-analysis.curl'
---- curl import/export — docs/ROADMAP.md §2.3. `M.parse` turns a pasted
+--- curl import/export — `M.parse` turns a pasted
 --- `curl` command line (bash-quoted, the shape every API's own docs and
 --- every browser's "copy as cURL" already produce) into the same request
 --- table `runtime-analysis.parse.parse` returns; `M.format` is the
@@ -312,7 +312,7 @@ end
 ---everywhere a request is shown or shared, and export is exactly that, no
 ---different from request history or the "sending ..." placeholder.
 ---
----A multipart/form-data body (docs/ROADMAP.md §2.6) is never emitted as
+---A multipart/form-data body is never emitted as
 ---`--data-raw`: a file reference's real bytes are not safe, shareable
 ---shell text, and `runtime-analysis.multipart.to_curl_flags` already
 ---turns each part into curl's own `-F "field=@path"` shape instead, which

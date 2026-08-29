@@ -1,5 +1,5 @@
 ---@module 'runtime-analysis.inspect'
---- `:RA inspect <module>` — docs/ROADMAP.md §5.1, walking a live
+--- `:RA inspect <module>` — walking a live
 --- `package.loaded` table and rendering it: functions (with upvalue
 --- counts and source location), nested tables (their own shape),
 --- metatables, and what a direct key *shadows* through `__index`.

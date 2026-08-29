@@ -185,7 +185,7 @@ function M.namespaces(opts)
 end
 
 -- ---------------------------------------------------------------------------
--- Named/dated snapshots — docs/ROADMAP.md §4.5.
+-- Named/dated snapshots.
 --
 -- `M.load`/`M.save` above are one continuously-overwritten aggregate per
 -- namespace: exactly what a live instance wants to merge into, but no way to
@@ -336,7 +336,7 @@ end
 
 ---Merges one bounded-cardinality fingerprint bucket into another — shared
 ---by argument profiling (`functions[key].args`) and error fingerprinting
----(`functions[key].error_fp`, docs/ROADMAP.md §2.5), the identical shape
+---(`functions[key].error_fp`), the identical shape
 ---for both, hence one merge function rather than two copies of it.
 ---@internal
 ---@param dst RA.Telemetry.ArgStats
@@ -516,7 +516,7 @@ function M.since(data, days)
 end
 
 ---Sum the day buckets covering the `days`-day window immediately *before*
----`since(data, days)`'s own window — docs/ROADMAP.md §4.2 ("this week vs
+---`since(data, days)`'s own window.2 ("this week vs
 ---last week"). Half-open on the newer side (`day < newer_cutoff`, `since`'s
 ---own cutoff) so the two windows never overlap and together cover exactly
 ---`2 * days` days with no double-counted boundary day.

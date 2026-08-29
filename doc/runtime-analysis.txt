@@ -399,7 +399,7 @@ curl import/export ~
 
                                               *runtime-analysis-provenance*
 Wrapper provenance ~
-  |:RA-provenance| — "who wrapped this function," docs/ROADMAP.md §5.2, the
+  |:RA-provenance| — "who wrapped this function": the
   narrow slice of the still-unbuilt `:RAInspect` (§5.1) worth shipping on
   its own first. `{path}` is a dotted string, resolved via a global-table
   walk first, then require() of the whole prefix — and stops there; it
@@ -417,7 +417,7 @@ Wrapper provenance ~
 
                                                     *runtime-analysis-usage*
 Keymap and command usage ~
-  |:RA-usage| — docs/ROADMAP.md §7.1: which of your own keymaps and typed
+  |:RA-usage| — which of your own keymaps and typed
   commands you actually press. The one feature in this plugin that records
   *what the person did* rather than *what the code did*, and it ships with
   exactly the posture that caveat demands: opt-in
@@ -564,7 +564,7 @@ registered functions were never called" needs a live instance's own
 read cannot answer.
 
 Measuring instrumentation's own overhead — a separate, one-time script,
-never a runtime feature (see docs/ROADMAP.md §3.5's "not a general
+never a runtime feature (see the "not a general
 profiler" thesis for why that distinction matters): >
 
   nvim --headless -l scripts/bench_overhead.lua
@@ -575,7 +575,7 @@ telemetry README's "Off costs nothing — literally" section for what it
 measures and why it is shaped as a script rather than a command.
 
                                                       *runtime-analysis-bench*
-Benchmark comparisons (docs/ROADMAP.md §3.6) ~
+Benchmark comparisons ~
 
 `runtime-analysis.bench` answers a different question from telemetry
 itself: not "how often was this called", but "which of these candidate
@@ -632,7 +632,7 @@ the method and path are pre-filled and the reader completes the base URL
 <
 
                                                     *runtime-analysis-loaded*
-Loaded-vs-declared (docs/ROADMAP.md §5.3/§5.4) ~
+Loaded-vs-declared ~
 
 `runtime-analysis.loaded` answers what documentation.nvim's own static
 scan structurally cannot: what is actually on a module's table right now,
@@ -672,11 +672,9 @@ and lib.nvim.progress are available, and whether `setup()` has registered
 its commands yet in this session.
 
 ==============================================================================
-9. ROADMAP                                           *runtime-analysis-roadmap*
+9. FURTHER READING                                   *runtime-analysis-roadmap*
 
-This plugin's own backlog, organized into phases (quick wins, medium,
-longer-term), plus documented rejections: docs/ROADMAP.md in the
-repository. What has shipped out of it, and why: docs/FINISHED.md. Ideas
+What has shipped, and why: docs/FEATURE_LOG.md. Ideas
 that only exist *between* this plugin and its siblings (documentation.nvim,
 mdview.nvim, lib.nvim): docs/IDEAS.md.
 

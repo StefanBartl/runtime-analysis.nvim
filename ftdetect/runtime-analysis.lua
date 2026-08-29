@@ -1,4 +1,4 @@
--- ftdetect/runtime-analysis.lua — docs/ROADMAP.md §1.4.
+-- ftdetect/runtime-analysis.lua.
 --
 -- `*.http` already resolves to filetype `http` in stock Neovim (verified:
 -- `vim.filetype.match({ filename = "x.http" })` answers `"http"` with no
@@ -9,7 +9,7 @@
 -- run yet — the same reason a plugin lazy-loaded on `ft = "http"` still
 -- needs its filetype detected before it can ever be loaded on it.
 --
--- Not owning `.http`/`.rest` outright (docs/ROADMAP.md's own "Deliberately
+-- Not owning `.http`/`.rest` outright (the "Deliberately
 -- not building" table already states that rule) — this maps `.rest` onto
 -- the *existing* `http` filetype both this plugin and VS Code's REST
 -- Client already use, rather than inventing a filetype of its own.
