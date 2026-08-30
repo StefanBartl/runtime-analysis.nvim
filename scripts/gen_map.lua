@@ -70,12 +70,45 @@ end
 ensure("lib.nvim.fs.read", "lib.nvim")
 ensure("documentation.core.cli", "documentation.nvim")
 
+-- Sibling checkouts, for `sibling-reference-missing`. Relative to `root`, so
+-- the declaration stays true on every machine and simply finds nothing on CI,
+-- where no sibling is checked out -- which is silence, not a finding.
+--
+-- `name` is the repository *directory* name a doc citation uses, which is not
+-- the module prefix the entry is keyed by: `documentation.nvim` against a
+-- `documentation` key. This repository is the reason the check exists -- it
+-- carried nine dead `docs/ECOSYSTEM.md` citations, a path that only exists in
+-- documentation.nvim.
+local siblings = {
+  ["lib.nvim"] = {
+    repo = "StefanBartl/lib.nvim",
+    name = "lib.nvim",
+    local_path = "../lib.nvim",
+  },
+  documentation = {
+    repo = "StefanBartl/documentation.nvim",
+    name = "documentation.nvim",
+    local_path = "../documentation.nvim",
+  },
+  mdview = {
+    repo = "StefanBartl/mdview.nvim",
+    name = "mdview.nvim",
+    local_path = "../mdview.nvim",
+  },
+  ["docmap-desktop"] = {
+    repo = "StefanBartl/docmap-desktop",
+    name = "docmap-desktop",
+    local_path = "../docmap-desktop",
+  },
+}
+
 local opts = require("documentation.config").build(root, {
   source = "lua/runtime-analysis",
   title = "runtime-analysis.nvim",
   out_dir = "docs/map",
   repo_url = "https://github.com/StefanBartl/runtime-analysis.nvim",
   branch = "main",
+  external_repos = siblings,
 })
 
 local code = require("documentation.core.cli").run(opts, _G.arg or {})
