@@ -610,3 +610,7 @@ map is published at **<https://stefanbartl.github.io/runtime-analysis.nvim/>**;
 [docs/map/overview.md](docs/map/overview.md) is the same tree as Markdown,
 rendered on GitHub. History, Telemetry and Loaded need a local server and say
 so on the published copy — every other tab works there in full.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
