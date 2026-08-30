@@ -102,7 +102,7 @@ fs.read  —  4 812 calls
 `~60 %` more expensive for information a call site's own source location
 already narrows down unambiguously, and it is the identical join key
 `documentation.nvim`'s own static `calls` extraction already uses (a call
-edge's line number, not a resolved caller name) — see `docs/ECOSYSTEM.md`
+edge's line number, not a resolved caller name) — see `documentation.nvim/docs/ECOSYSTEM.md`
 step 8 for that join in practice. `sample = N` applies to `call_tree`
 exactly as it already does to `profile_args`/`time`/`errors`: only every
 Nth call pays for the `debug.getinfo` lookup, `calls` itself stays exact

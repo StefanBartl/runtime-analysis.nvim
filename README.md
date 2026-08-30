@@ -15,9 +15,13 @@
 [![CI](https://github.com/StefanBartl/runtime-analysis.nvim/actions/workflows/ci.yml/badge.svg)](https://github.com/StefanBartl/runtime-analysis.nvim/actions/workflows/ci.yml)
 
 > Pairs with [documentation.nvim](https://github.com/StefanBartl/documentation.nvim) —
-> that plugin's `docs/ECOSYSTEM.md` is the architecture this pairing is part
-> of. documentation.nvim knows what exists and is documented; this plugin
-> knows what actually happens when it runs.
+> [`documentation.nvim/docs/ECOSYSTEM.md`](https://github.com/StefanBartl/documentation.nvim/blob/main/docs/ECOSYSTEM.md)
+> is the architecture this pairing is part of, and it is **not in this
+> repository**: one document describes all four pieces
+> (`lib.nvim`, documentation.nvim, this plugin, `mdview.nvim`), so the other
+> three link to it rather than keeping a copy. documentation.nvim knows what
+> exists and is documented; this plugin knows what actually happens when it
+> runs.
 >
 > [`docmap-desktop`](https://github.com/StefanBartl/docmap-desktop) is the
 > third leg — the same static × runtime join, read outside Neovim entirely,
@@ -524,7 +528,7 @@ Two things worth knowing before drawing conclusions from a single run:
 
 `M.open_request(lines)` is this plugin's one public integration surface —
 written against a small named interface from the start, per
-`docs/ECOSYSTEM.md` §7's own stated rule, rather than another plugin
+`documentation.nvim/docs/ECOSYSTEM.md` §7's own stated rule, rather than another plugin
 reaching into this one's internal files. documentation.nvim's `:DocBrowse`
 Endpoints mode is the first consumer: pressing `gs` on a route it found by
 static analysis calls `require("runtime-analysis").open_request({"METHOD
@@ -568,6 +572,11 @@ split into quick wins, medium and large.
   everything that has shipped — what, and why.
 - [`docs/IDEAS.md`](docs/IDEAS.md) — ideas that only exist *between* plugins:
   runtime-analysis × documentation.nvim × mdview.nvim × lib.nvim.
+- [`documentation.nvim/docs/ECOSYSTEM.md`](https://github.com/StefanBartl/documentation.nvim/blob/main/docs/ECOSYSTEM.md)
+  — **the architecture, and it is not in this repository.** Where docs, static
+  analysis and runtime each belong, and the argument for why this plugin is
+  separate from documentation.nvim rather than a module inside it. One document
+  for all four pieces; the other three link to it.
 - [`doc/runtime-analysis.txt`](doc/runtime-analysis.txt) — `:help
   runtime-analysis`.
 

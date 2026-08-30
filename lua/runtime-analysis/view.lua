@@ -3,7 +3,7 @@
 --- rather than a new window every time. Deliberately not
 --- `lib.nvim.ui.kit`'s `viewer`/`surface` components — those are floats
 --- that close as soon as focus leaves them, which is exactly wrong here:
---- `docs/ECOSYSTEM.md`'s own description is "a Neovim split holding a
+--- `documentation.nvim/docs/ECOSYSTEM.md`'s own description is "a Neovim split holding a
 --- request buffer and a response buffer", because the whole workflow is
 --- look at the response, go back to the request buffer to tweak it, send
 --- again — a float that vanishes the moment you look away from it fights

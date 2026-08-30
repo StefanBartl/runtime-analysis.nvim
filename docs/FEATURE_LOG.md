@@ -615,7 +615,7 @@ staying exact; and markdown rendering.
 
 ### §6.1 Mode 8 — telemetry in `:DocBrowse` (§6.3 folded in)
 
-The reason two plugins exist, per `docs/ECOSYSTEM.md`'s own framing —
+The reason two plugins exist, per `documentation.nvim/docs/ECOSYSTEM.md`'s own framing —
 shipped as the design doc specified, cross-repo. This repository's own
 half (`telemetry.load()`, `Data.modules`, `resolved_modules()`) had
 already shipped earlier; what landed today is entirely on

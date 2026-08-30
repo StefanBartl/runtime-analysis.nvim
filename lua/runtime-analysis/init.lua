@@ -2,7 +2,7 @@
 --- runtime-analysis.nvim: runtime truth, paired with documentation.nvim's
 --- static truth — see that plugin's `docs/ECOSYSTEM.md` for the full split.
 ---
---- This plugin's first feature (`docs/ECOSYSTEM.md` step 5): an in-editor
+--- This plugin's first feature (`documentation.nvim/docs/ECOSYSTEM.md` step 5): an in-editor
 --- HTTP request runner. `:RARequest` opens a new request buffer (one
 --- request per buffer, `METHOD url` on the first line, `Name: value`
 --- headers, a blank line, then an optional body — the same shape VS Code's
@@ -11,11 +11,11 @@
 --- shows the response in a persistent split beside it.
 ---
 --- No browser, no server, no CORS, no token — the cheap first version
---- `docs/ECOSYSTEM.md` calls for specifically, because none of those
+--- `documentation.nvim/docs/ECOSYSTEM.md` calls for specifically, because none of those
 --- problems exist for a request Neovim itself sends.
 ---
 --- `M.open_request` is this plugin's one public integration surface for
---- another plugin to build on — `docs/ECOSYSTEM.md` §7 states the rule this
+--- another plugin to build on — `documentation.nvim/docs/ECOSYSTEM.md` §7 states the rule this
 --- follows explicitly: "the join should be written against a small named
 --- interface from the start", not against this module's internal file
 --- layout. documentation.nvim's Endpoints browser mode (step 6) is the
@@ -25,7 +25,7 @@
 --- method and path over pre-filled and lets the reader complete the
 --- request before sending it themselves, rather than guessing at either.
 ---
---- `docs/ECOSYSTEM.md` step 7 moved `runtime-analysis.telemetry` here from
+--- `documentation.nvim/docs/ECOSYSTEM.md` step 7 moved `runtime-analysis.telemetry` here from
 --- lib.nvim: opt-in call counting and usage statistics for any plugin,
 --- registered as `:RATelemetry` below. See that module's own README.md for
 --- its API; lib.nvim keeps a thin caller, `lib.strategies.telemetry_wrap`,

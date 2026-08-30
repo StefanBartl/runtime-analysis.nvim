@@ -2,7 +2,7 @@
 --- Executes a parsed request via `lib.nvim.net.curl.fetch_raw_blocking` and
 --- formats the result into plain lines for `view.lua` to display.
 ---
---- Blocking, not async, for this first version: `docs/ECOSYSTEM.md`'s own
+--- Blocking, not async, for this first version: `documentation.nvim/docs/ECOSYSTEM.md`'s own
 --- sequencing (documentation.nvim's, the plugin this one pairs with) calls
 --- the in-editor request runner "the cheap first version" specifically
 --- because it has no CORS problem, no socket, no token — blocking keeps
