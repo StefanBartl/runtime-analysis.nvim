@@ -759,13 +759,13 @@ local function do_loaded_snapshots(prefix)
     return
   end
   local loaded = require("runtime-analysis.loaded")
-  local list = loaded.list_snapshots(prefix)
-  if #list == 0 then
+  local snapshots = loaded.list_snapshots(prefix)
+  if #snapshots == 0 then
     notify.info(("no snapshots saved for prefix %q"):format(prefix))
     return
   end
-  local lines = { ("%d snapshot(s) for prefix %q:"):format(#list, prefix) }
-  for _, s in ipairs(list) do
+  local lines = { ("%d snapshot(s) for prefix %q:"):format(#snapshots, prefix) }
+  for _, s in ipairs(snapshots) do
     lines[#lines + 1] = ("  %s (%s)"):format(s.name, os.date("%Y-%m-%d %H:%M:%S", s.saved_at))
   end
   notify.info(table.concat(lines, "\n"))
