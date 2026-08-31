@@ -33,6 +33,12 @@
 ---   :RATelemetry open [ns]       render + open (report_style: auto/kit/preview-tab/mdview/file/html)
 ---   :RATelemetry compare [ns] [days]  this window vs the one before it (default 7d)
 ---   :RATelemetry startup [top]   which module a plugin's startup cost sits in
+---   :RATelemetry flamegraph [path]  the same startup data as a flamegraph SVG
+---                                -- width is time, depth is require nesting.
+---                                Drawn in the terminal by images.nvim when
+---                                it is installed, otherwise handed to the
+---                                system opener. Without a path it lands in
+---                                the disposable cache directory
 ---   :RATelemetry cost            startup cost vs. call count, worst first
 ---   :RATelemetry snapshot <ns> [name]  save a named capture of ns's current
 ---                                aggregate -- always
@@ -195,6 +201,7 @@ local SUBCOMMANDS = {
   "open",
   "compare",
   "startup",
+  "flamegraph",
   "cost",
   "snapshot",
   "snapshots",
@@ -961,6 +968,50 @@ function M.setup()
       show(
         startup.lines(startup.report({ top = tonumber(rest) or 40 })),
         "runtime-analysis.telemetry — startup"
+      )
+    elseif first == "flamegraph" then
+      -- Namespace-free for the same reason `startup` above is: this draws
+      -- module loads, of which a session has exactly one set. `rest` is
+      -- therefore an output path rather than a namespace -- pass one to keep
+      -- the file (next to a ticket, in a repo), leave it out and it lands in
+      -- the disposable cache directory beside the other reports.
+      local startup = require("runtime-analysis.telemetry.startup")
+      local flamegraph = require("runtime-analysis.telemetry.renderers.flamegraph")
+      local report = startup.report()
+
+      if #(report.order or {}) == 0 then
+        notify.warn(
+          "no startup data recorded — telemetry.startup.autostart() has to run before the "
+            .. "modules you want to see (see its own docs for where that line belongs)"
+        )
+        return
+      end
+
+      local path = (rest and rest ~= "") and vim.fn.fnamemodify(vim.fn.expand(rest), ":p")
+        or report_file.flamegraph_path()
+      local ok_write, err = report_file.write(path, { flamegraph.svg(report) })
+      if not ok_write then
+        notify.error("failed to write flamegraph: " .. tostring(err))
+        return
+      end
+
+      -- images.nvim first, and only as a soft dependency: it draws the SVG
+      -- in the terminal through its own cached SVG->PNG conversion, which is
+      -- the whole reason this renderer emits SVG. Without it the file still
+      -- exists and the system opener still shows it -- the graphic is the
+      -- deliverable, the viewer is a convenience.
+      local ok_images, images = pcall(require, "images")
+      if ok_images and type(images.show) == "function" and images.show(path) then
+        notify.info("wrote " .. path)
+        return
+      end
+
+      local ok_open = pcall(function()
+        require("lib.nvim.fs.open.url.system_opener").open(path)
+      end)
+      notify.info(
+        ok_open and ("wrote and opened " .. path)
+          or ("wrote " .. path .. " — open it yourself, no system opener available")
       )
     elseif first == "cost" then
       -- No arguments: this is inherently cross-

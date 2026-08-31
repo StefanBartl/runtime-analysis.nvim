@@ -213,6 +213,14 @@ function M.report(opts)
     total_ms = total_ms,
     modules = list,
     roots = root_list,
+    -- The same entries again, in load order and never truncated. `modules`
+    -- answers "where did the time go" and is sorted and cut for that; `order`
+    -- answers "what required what", and both of those treatments destroy it —
+    -- sorting loses the pre-order that makes the depths reconstructible into
+    -- a tree, and `top` would silently drop subtrees. Only the flamegraph
+    -- renderer reads it (`renderers/flamegraph.lua`), and it holds the same
+    -- table references, not copies.
+    order = entries,
   }
 end
 

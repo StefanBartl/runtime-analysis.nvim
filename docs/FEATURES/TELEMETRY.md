@@ -80,6 +80,70 @@ nvim --headless -l scripts/bench_overhead.lua --calls=1000000
   "Off costs nothing — literally" section; decision record in
   [`docs/FEATURE_LOG.md`](../FEATURE_LOG.md) (§3.7).
 
+## The startup require tree as a flamegraph
+
+`telemetry/startup.lua` wraps the global `require` and times every cache
+miss against a stack, so each entry carries `depth`, `total_ms` and a
+`self_ms` with its children subtracted out. That is already a flamegraph —
+width is time, depth is nesting, and a parent's uncovered strip is its own
+work. `:RATelemetry startup` renders it as a sorted table, which answers
+"where did the time go" and flattens the one dimension that answers "what
+did it go *inside*".
+
+`:RATelemetry flamegraph [path]` draws the same report as an SVG.
+
+- **Module:** `telemetry/renderers/flamegraph.lua` (`M.tree`, `M.svg`),
+  `telemetry/report_file.lua` (`M.flamegraph_path`)
+- **Usercmds:** `:RATelemetry flamegraph [path]`
+  ([bindings](../BINDINGS.md))
+- **Needs:** nothing. `images.nvim` draws it in the terminal when it is
+  installed; otherwise the file goes to the system opener, and it is an
+  ordinary SVG either way.
+
+### The tree is rebuilt, not recorded
+
+`startup.lua` stores no parent pointer, only a depth — and it does not need
+one. Entries are appended when a load *begins*, so the list is a pre-order
+traversal, and a pre-order sequence plus a depth per node determines the
+tree uniquely. `M.tree` walks it with a stack indexed by depth: the same
+stack the recorder used, reconstructed afterwards.
+
+That is also why the renderer reads `report.order` rather than
+`report.modules`. `modules` is sorted by self time and may be cut by `top`,
+and either of those destroys the reconstruction — sorting loses the
+pre-order, `top` drops whole subtrees. Both would still produce a
+plausible-looking picture, which is the dangerous part; `order` exists so
+they cannot.
+
+### Why SVG
+
+It is text, so it diffs and costs no image library to produce, and it stays
+sharp at any zoom — which matters here, because the interesting frames are
+the narrow ones. `images.nvim` converts it to PNG through its own cached
+SVG path when it has to be drawn in a terminal, so nothing is lost by not
+rasterizing here.
+
+The document carries an explicit light background rather than a transparent
+one. Its job is to leave the editor, and every consumer that rasterizes it
+renders transparency as whatever sits behind — which in a terminal is
+usually black, under dark text.
+
+### One colour per module root, in hex
+
+A flamegraph where every frame has its own colour shows nothing. Hashing
+the module *root* instead means a plugin's whole subtree shares a colour,
+which answers "which block is this" before a label is read, and the hash
+makes it stable across runs.
+
+The colours are fixed hex values from a small palette, and that is a bug
+fix rather than a preference. The first version computed `hsl()` from the
+hash — correct in a browser, **solid black** through ImageMagick's librsvg
+delegate, which does not implement `hsl()` in a `fill` and falls back to
+the initial value. That delegate is the path `images.nvim` uses, so the
+primary consumer would have received black boxes with black text. Found by
+rasterizing the output and looking at it, which is the only way this class
+of bug is ever found.
+
 ## The static × runtime join
 
 The reason this plugin exists next to documentation.nvim rather than

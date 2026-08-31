@@ -192,6 +192,7 @@ Module: [`lua/runtime-analysis/loaded.lua`](../lua/runtime-analysis/loaded.lua).
 | `:RATelemetry open [ns]` | render + open (`report_style`: `auto`/`kit`/`preview-tab`/`mdview`/`file`/`html`) |
 | `:RATelemetry compare [ns] [days]` | "this window vs the one before it" (default 7 days) — newly-hot/gone-cold/changed functions |
 | `:RATelemetry startup [top]` | which module a plugin's startup cost sits in, as a waterfall. Opt-in via `autostart()` from this plugin's own lazy.nvim `init` hook — see the telemetry README for why `init` and not `init.lua`. |
+| `:RATelemetry flamegraph [path]` | the same startup data as a flamegraph SVG — width is total time, depth is require nesting, one colour per module root. Drawn in the terminal by `images.nvim` when it is installed (its cached SVG→PNG path), otherwise handed to the system opener. Without a `path` it lands in the disposable cache directory beside the other reports. |
 | `:RATelemetry cost` | startup cost vs. call count per namespace, worst (expensive, underused) first — joins `startup` and every live instance's own `resolved_modules()` on real module paths, never a name guess. |
 | `:RATelemetry snapshot <ns> [name]` | save a named, device-tagged capture of `ns`'s current aggregate |
 | `:RATelemetry snapshots <ns>` | list `ns`'s saved snapshots, newest first |

@@ -176,6 +176,7 @@
 ---@field total_ms number                                  # sum of every module's self time
 ---@field modules RA.Telemetry.Startup.Entry[]
 ---@field roots { root: string, self_ms: number }[]        # per module-root (a plugin's own Lua namespace) totals, descending
+---@field order RA.Telemetry.Startup.Entry[]               # the same entries in load order, never sorted and never truncated. A pre-order sequence plus each entry's `depth` determines the require tree uniquely, which is what `renderers/flamegraph.lua` rebuilds from; `modules` cannot serve because sorting loses the pre-order and `top` would drop whole subtrees
 
 -- ---------------------------------------------------------------------------
 -- Cost vs. use

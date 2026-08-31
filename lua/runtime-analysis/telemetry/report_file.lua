@@ -57,6 +57,16 @@ function M.combined_html_path(opts)
   return M.dir(opts) .. "/report.html"
 end
 
+---The startup flamegraph's own path. Not per-namespace, and that is the
+---whole difference: startup attribution measures module loads, not one
+---namespace's wrapped functions, so there is exactly one of these per
+---session. Same directory and same disposability as the reports beside it.
+---@param opts? Lib.Cache.Opts
+---@return string
+function M.flamegraph_path(opts)
+  return M.dir(opts) .. "/startup-flamegraph.svg"
+end
+
 ---Best-effort: never raises. A report file is a convenience artifact, not
 ---data — a write failure (a locked file, a full disk) must not take down
 ---the flush that triggered it.
