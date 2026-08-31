@@ -214,11 +214,36 @@ since `:DocMap why` is its command.
 
 ### 1.5 Runtime evidence as a *check input*, not just a view
 
+**Both instances shipped** — `dead-function` on 2026-08-30, `unreferenced-module`
+on 2026-08-31 (`documentation.nvim` `b632673`). The rule below held in both,
+and the second one is where it earned its keep.
+
+The two differ in *which* runtime fact settles the question, and that is worth
+recording because the second one is not the obvious choice:
+
+- `dead-function` reads **telemetry** — did this function ever run — through
+  `documentation.core.telemetry_join`.
+- `unreferenced-module` reads a **`loaded` snapshot** — was this module ever
+  `require()`d — through `documentation.core.loaded_diff.loaded_modules`. It
+  deliberately does **not** read the live `package.loaded` of the process
+  running the check: `documentation.core.scan` requires the scanned tree's own
+  modules in order to read them, so a self-scan would find nearly everything
+  loaded and suppress every finding. Evidence produced by the observation is
+  not evidence. A snapshot is taken on purpose, in a session someone was
+  working in.
+
+What the second one is *for*: `unreferenced-module` has always carried its own
+counter-argument in a comment — a module may be reached only through an
+aggregator's string map, with no literal `require` anywhere for a static scan
+to find. That describes `lib.nvim` exactly. Measured there with ten modules
+loaded to stand in for a session: 71 findings before, 68 after, **0
+manufactured**, and one of the three suppressed was `lib.strategies.metatable`
+— the aggregator itself.
+
 Every crossing above is a view. The stronger form is feeding runtime evidence
 back into documentation.nvim's **check** pipeline, where it changes a severity
-rather than a rendering. `dead-function` suppression (already designed on the lib.nvim side)
-is the first instance; the general shape is worth naming because it comes with
-a rule that must not be broken:
+rather than a rendering. The general shape was worth naming because it comes
+with a rule that must not be broken:
 
 > Runtime data may **downgrade** a check (this looks dead, but it ran — so
 > `info`, not `warn`). It must never **upgrade** one, and it must never enter
