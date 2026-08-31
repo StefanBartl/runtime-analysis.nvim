@@ -1,3 +1,7 @@
+-- Test code: when something here comes back nil -- a `pcall(require, ...)`,
+-- a fixture read, a uv handle -- this file must crash and name it. The nil
+-- guards LuaLS asks for below would hide the very failure it exists to report.
+---@diagnostic disable: need-check-nil
 -- TESTS/usrcmds_spec.lua — runtime-analysis.bindings.usrcmds
 --
 -- `parse_spec.lua` covers `split`/`block_at` as pure logic; this covers the
