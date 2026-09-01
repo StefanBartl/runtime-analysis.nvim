@@ -1926,6 +1926,9 @@ return function(H)
     package.loaded["pdfport"] = nil
     local notified
     local orig_vim_notify = vim.notify
+    -- A test double over typed `vim.*` surface: replacing the field is the
+    -- point of the case, not a second definition of it.
+    ---@diagnostic disable-next-line: duplicate-set-field
     vim.notify = function(msg, level)
       notified = { msg = msg, level = level }
     end

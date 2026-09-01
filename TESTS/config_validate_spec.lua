@@ -81,6 +81,9 @@ return function(H)
   local function with_vim_notify(fn)
     local captured
     local orig = vim.notify
+    -- A test double over typed `vim.*` surface: replacing the field is the
+    -- point of the case, not a second definition of it.
+    ---@diagnostic disable-next-line: duplicate-set-field
     vim.notify = function(msg, level)
       captured = { msg = msg, level = level }
     end
