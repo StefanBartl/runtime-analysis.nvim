@@ -152,7 +152,7 @@ function M.run(run_opts)
       local had_data = existing ~= nil and next(existing.functions or {}) ~= nil
 
       local backed_up
-      if had_data and run_opts.backup_dir then
+      if had_data and existing and run_opts.backup_dir then
         backed_up = M.write_backup(run_opts.backup_dir, candidate.namespace, existing)
       end
 

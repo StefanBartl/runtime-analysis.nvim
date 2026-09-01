@@ -387,7 +387,7 @@ local function send_current_buffer(ra)
 
   local request, err = parse.parse(assertions.strip(block_lines))
   if not request then
-    notify.error(err)
+    notify.error(err or "could not parse the request block")
     return
   end
 
@@ -399,7 +399,7 @@ local function send_current_buffer(ra)
   -- everywhere except inside the one real outgoing request.
   local resolved_request, resolve_err = require("runtime-analysis.env").resolve(request)
   if not resolved_request then
-    notify.error(resolve_err)
+    notify.error(resolve_err or "could not resolve the {{...}} placeholders")
     return
   end
 
@@ -409,12 +409,15 @@ local function send_current_buffer(ra)
   -- placeholder used inside either — a token in the variables block, in
   -- a literal form field, even in a file path — resolves the ordinary
   -- way first and is indistinguishable from one typed there directly.
-  local resolve_shape_err
-  resolved_request, resolve_shape_err = resolve_request_shape(resolved_request, source_bufnr)
-  if not resolved_request then
-    notify.error(resolve_shape_err)
+  -- A separate local rather than reassigning `resolved_request` in place: the
+  -- guard above narrowed that one, and writing an optional back into it would
+  -- widen it again for everything below.
+  local shaped, resolve_shape_err = resolve_request_shape(resolved_request, source_bufnr)
+  if not shaped then
+    notify.error(resolve_shape_err or "could not build the request body")
     return
   end
+  resolved_request = shaped
 
   pending_token = pending_token + 1
   local my_token = pending_token
@@ -571,7 +574,7 @@ local function select_environment(name)
     if ok then
       notify.info("environment set to " .. name)
     else
-      notify.error(err)
+      notify.error(err or "could not set the environment")
     end
     return
   end
@@ -594,7 +597,7 @@ local function select_environment(name)
     if ok then
       notify.info("environment set to " .. choice)
     else
-      notify.error(err)
+      notify.error(err or "could not set the environment")
     end
   end
 
@@ -634,7 +637,7 @@ local function do_import(ra, ctx)
 
   local request, err = require("runtime-analysis.curl").parse(source)
   if not request then
-    notify.error(err)
+    notify.error(err or "could not parse the curl command")
     return
   end
 
@@ -678,7 +681,7 @@ local function do_export()
 
   local request, err = parse.parse(block_lines)
   if not request then
-    notify.error(err)
+    notify.error(err or "could not parse the request block")
     return
   end
 
@@ -694,7 +697,7 @@ local function do_export()
   if graphql.is_graphql(request.headers) then
     local resolved, gerr = graphql.resolve(request)
     if not resolved then
-      notify.error(gerr)
+      notify.error(gerr or "could not build the GraphQL request")
       return
     end
     request = resolved
@@ -718,7 +721,7 @@ local function do_provenance(path)
   local provenance = require("runtime-analysis.provenance")
   local info, err = provenance.inspect(path)
   if not info then
-    notify.error(err)
+    notify.error(err or ("could not inspect " .. path))
     return
   end
   notify.info(table.concat(provenance.lines(info), "\n"))
@@ -786,7 +789,7 @@ local function do_inspect(module_id)
   local inspect = require("runtime-analysis.inspect")
   local report, err = inspect.inspect(module_id)
   if not report then
-    notify.error(err)
+    notify.error(err or ("could not inspect " .. module_id))
     return
   end
 

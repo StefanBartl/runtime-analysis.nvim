@@ -76,6 +76,9 @@ function M.start()
   original_require = require
   running = true
 
+  -- Replacing the global `require` is the whole mechanism: there is no other
+  -- hook that sees a module's first load. Restored in M.stop().
+  ---@diagnostic disable-next-line: duplicate-set-field
   _G.require = function(modname)
     -- A cache hit is not a load: it costs a table index, it is not
     -- attributable to anyone's startup, and recording it would bury the

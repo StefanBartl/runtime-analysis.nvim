@@ -120,10 +120,13 @@ function M.run(request)
 
   if not ok then
     -- `resp` is the error string in this branch — `fetch_raw_blocking`'s
-    -- own contract, the same one `fetch_json_blocking` already has.
+    -- own contract, the same one `fetch_json_blocking` already has. The cast
+    -- is that contract, stated where the reader is instead of only in prose.
+    ---@cast resp string
     return nil, resp
   end
 
+  ---@cast resp Lib.Net.Curl.RawResponse
   local lines, meta = format_response(resp)
   return lines, nil, meta
 end
@@ -156,9 +159,11 @@ function M.run_async(request, cb)
       if not ok then
         -- `resp` is the error string in this branch too, same contract
         -- `fetch_raw_blocking` documents.
+        ---@cast resp string
         cb(nil, resp)
         return
       end
+      ---@cast resp Lib.Net.Curl.RawResponse
       local lines, meta = format_response(resp)
       cb(lines, nil, meta)
     end)

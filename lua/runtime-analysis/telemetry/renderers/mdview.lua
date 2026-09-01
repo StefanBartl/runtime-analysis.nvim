@@ -44,7 +44,9 @@ function M.open(lines, path)
     return false, write_err
   end
 
-  local ok_cmd, cmd_err = pcall(vim.cmd, ("MDView standalone %s"):format(vim.fn.fnameescape(path)))
+  local ok_cmd, cmd_err = pcall(function()
+    vim.cmd(("MDView standalone %s"):format(vim.fn.fnameescape(path)))
+  end)
   if not ok_cmd then
     return false, "MDView standalone failed: " .. tostring(cmd_err)
   end

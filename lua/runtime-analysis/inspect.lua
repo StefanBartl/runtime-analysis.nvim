@@ -226,6 +226,9 @@ function M.inspect(module_id, opts)
 
   local max_depth = (opts and opts.max_depth) or DEFAULT_MAX_DEPTH
   local report = walk(mod, { [mod] = true }, 1, max_depth)
+  -- A report *is* the root node plus the module id it was taken from, so the
+  -- id is attached here rather than threaded through every recursive call.
+  ---@cast report RA.Inspect.Report
   report.module_id = module_id
   return report, nil
 end

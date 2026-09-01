@@ -32,7 +32,10 @@ return function(H)
     return ("spec.setup_all.%s.%d"):format(name, seq)
   end
 
-  package.loaded["fakesetupall_loaded"] = { f = function() end }
+  -- `f` stands in for any wrapped function, and the calls below hand it
+  -- one and three arguments to check argument fingerprinting -- so it takes
+  -- what a stand-in has to take.
+  package.loaded["fakesetupall_loaded"] = { f = function(...) end }
   package.loaded["fakesetupall_notloaded"] = nil
 
   local plugin_loaded = { "someorg/setupall-loaded.nvim" }

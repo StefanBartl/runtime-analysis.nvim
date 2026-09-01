@@ -116,7 +116,11 @@ return function(H)
     eq(r4, nil, "compare: duplicate names -> nil result")
     ok(e4:find("duplicate", 1, true) ~= nil, "compare: ... with a reason")
 
+    -- Deliberately invalid: that `compare` answers nil instead of raising is
+    -- what these two check, so the types are wrong on purpose.
+    ---@diagnostic disable-next-line: param-type-mismatch
     eq(bench.compare(nil), nil, "compare: nil candidates does not error")
+    ---@diagnostic disable-next-line: param-type-mismatch
     eq(bench.compare("not a table"), nil, "compare: a non-table does not error")
   end
 
@@ -129,7 +133,7 @@ return function(H)
       { name = "one", fn = function() end },
       { name = "two", fn = function() end },
     }, { iterations = 50 })
-    local lines = bench.lines(result)
+    local lines = bench.lines(assert(result))
     eq(#lines, 3, "lines: one header row plus one row per candidate")
     ok(lines[1]:find("Name", 1, true) ~= nil, "lines: header names the columns")
     local rendered = table.concat(lines, "\n")

@@ -242,7 +242,7 @@ local function draw(out, node, x, y, scale)
 end
 
 --- Render a startup report as a standalone SVG document.
----@param report RA.Telemetry.Startup.Report
+---@param report RA.Telemetry.Startup.Drawable
 ---@param opts? { width?: integer, title?: string }
 ---@return string svg
 function M.svg(report, opts)

@@ -161,7 +161,7 @@ M.SNAPSHOT_RETENTION = 20
 ---start evicting a prefix's older, possibly still-wanted ones. The only
 ---call site is `:RA loaded snapshot <prefix> [name]`.
 ---@param prefix string Module-id prefix to scope the walk to, e.g. `"documentation"` — also the storage key; see this section's own header for why there is no separate namespace argument.
----@param name? string Default: a timestamp (`os.date("%Y-%m-%dT%H-%M-%S")`), the same default `telemetry.snapshot` uses.
+---@param name? string Default: a timestamp (`tostring(os.date("%Y-%m-%dT%H-%M-%S"))`), the same default `telemetry.snapshot` uses.
 ---@return string|nil saved_name `nil` when `prefix` is invalid, or nothing under it is loaded at all.
 function M.snapshot(prefix, name)
   if type(prefix) ~= "string" or prefix == "" then
@@ -183,7 +183,7 @@ function M.snapshot(prefix, name)
     return nil
   end
 
-  local snapshot_name = sanitize(name or os.date("%Y-%m-%dT%H-%M-%S"))
+  local snapshot_name = sanitize(name or tostring(os.date("%Y-%m-%dT%H-%M-%S")))
   local data = { version = 1, prefix = prefix, captured_at = os.time(), modules = modules }
   local ok = disk.save(snapshot_cache_key(prefix, snapshot_name), data)
   if not ok then

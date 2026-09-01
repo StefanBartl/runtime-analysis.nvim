@@ -45,7 +45,7 @@ return function(H)
       a_table = {},
       [1] = function() end, -- non-string key, must not appear either
     }
-    local fns = loaded.functions("__loaded_spec_fixture")
+    local fns = assert(loaded.functions("__loaded_spec_fixture"))
     eq(fns.a_function, true, "functions: a real function field is included")
     eq(fns.a_string, nil, "functions: a non-function field is excluded")
     eq(
@@ -67,6 +67,7 @@ return function(H)
     package.loaded["__loaded_spec_data_only"] = { x = 1, y = 2 }
     local fns = loaded.functions("__loaded_spec_data_only")
     ok(fns ~= nil, "functions: a real (empty) table, not nil, for a loaded data-only module")
+    fns = assert(fns)
     local count = 0
     for _ in pairs(fns) do
       count = count + 1
@@ -78,6 +79,8 @@ return function(H)
   -- A bogus module_id: no error, same "not loaded" answer.
   do
     eq(loaded.functions(""), nil, "functions: empty string is not a module id")
+    -- Deliberately invalid: answering nil rather than raising is the point.
+    ---@diagnostic disable-next-line: param-type-mismatch
     eq(loaded.functions(nil), nil, "functions: nil input does not error")
   end
 

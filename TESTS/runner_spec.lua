@@ -17,14 +17,14 @@ return function(H)
 
   ---@param response string
   ---@return integer port
-  ---@return uv_tcp_t server
+  ---@return uv.uv_tcp_t server
   local function start_server(response)
-    local server = uv.new_tcp()
+    local server = assert(uv.new_tcp())
     assert(server:bind("127.0.0.1", 0))
     local port = server:getsockname().port
     server:listen(128, function(listen_err)
       assert(not listen_err, listen_err)
-      local client = uv.new_tcp()
+      local client = assert(uv.new_tcp())
       server:accept(client)
       client:read_start(function(_, _)
         client:write(response)
@@ -53,6 +53,7 @@ return function(H)
       headers = {},
     })
     eq(err, nil, "runner.run: no error on a real 200")
+    lines = assert(lines)
     eq(lines[1], "200 OK", "runner.run: first line is the real status")
     eq(lines[2], "content-type: application/json", "runner.run: headers next, lowercased")
     eq(lines[3], "", "runner.run: a blank line separates headers from body")

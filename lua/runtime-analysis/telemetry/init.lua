@@ -1168,7 +1168,7 @@ local function local_hostname()
 end
 
 ---@param namespace string
----@param name? string Default: a timestamp (`os.date("%Y-%m-%dT%H-%M-%S")`),
+---@param name? string Default: a timestamp (`tostring(os.date("%Y-%m-%dT%H-%M-%S"))`),
 ---filesystem- and sort-friendly — `M.list_snapshots` relies on neither for
 ---ordering (it reads `mtime`), but a caller listing raw filenames still
 ---benefits from one that sorts the way it reads.
@@ -1217,7 +1217,7 @@ function M.snapshot(namespace, name, opts)
     })
   end
 
-  local snapshot_name = store.sanitize_snapshot_name(name or os.date("%Y-%m-%dT%H-%M-%S"))
+  local snapshot_name = store.sanitize_snapshot_name(name or tostring(os.date("%Y-%m-%dT%H-%M-%S")))
   local ok = store.save_snapshot(namespace, snapshot_name, data, cache_opts)
   if not ok then
     return nil
@@ -1446,8 +1446,7 @@ end
 ---list) that needs to know *whether* wrapping `main` would find anything to
 ---wrap without actually calling `M.auto()` and creating an instance to find
 ---out.
----@param main string
----@return boolean
+---@type fun(main: string): boolean
 M.module_loaded = module_tree_loaded
 
 ---The `module_filter` `M.auto()` applies by default: excludes `@types`
@@ -1456,8 +1455,7 @@ M.module_loaded = module_tree_loaded
 ---own doc-comment). Exported so any other caller building a `wrap_loaded()`
 ---call by hand (`telemetry.setup_all`'s own re-wrap step, chiefly) gets the
 ---identical default rather than a second copy that could drift from it.
----@param name string
----@return boolean
+---@type fun(name: string): boolean
 M.default_module_filter = default_module_filter
 
 ---@type RA.Telemetry

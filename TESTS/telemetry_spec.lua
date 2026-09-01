@@ -1153,6 +1153,8 @@ return function(H)
     H.eq(loaded.modules.go, "fakeplug_ro", "...including the module map")
 
     H.eq(
+      -- Deliberately invalid: being refused rather than erroring is the point.
+      ---@diagnostic disable-next-line: param-type-mismatch
       telemetry.load(nil, { dir = tmpdir }),
       nil,
       "a non-string namespace is refused, not errored on"
@@ -1443,7 +1445,9 @@ return function(H)
     H.ok(vim.tbl_contains(completions, ns_a), "namespace offered after 'stop '")
     H.eq(vim.tbl_contains(completions, "start"), false, "subcommands not repeated as a 2nd arg")
 
-    local ok = pcall(vim.cmd, "RATelemetry stop does-not-exist")
+    local ok = pcall(function()
+      vim.cmd("RATelemetry stop does-not-exist")
+    end)
     H.eq(ok, true, "an unknown namespace warns rather than erroring")
 
     ta.unwrap()
@@ -1543,7 +1547,9 @@ return function(H)
     vim.cmd("RATelemetry enable " .. ns_a)
     H.eq(ta.is_running(), true, ":RATelemetry enable <ns> resumes it now")
 
-    local ok_unknown = pcall(vim.cmd, "RATelemetry disable does-not-exist")
+    local ok_unknown = pcall(function()
+      vim.cmd("RATelemetry disable does-not-exist")
+    end)
     H.eq(ok_unknown, true, "disabling an unknown/not-yet-loaded namespace does not error")
 
     ta.unwrap()
@@ -1744,6 +1750,8 @@ return function(H)
     H.eq(resolve_style("mdview"), "kit", "explicit mdview degrades to kit when unavailable")
     H.eq(resolve_style("auto"), "kit", "auto degrades to kit when mdview is unavailable")
     H.eq(resolve_style(nil), "kit", "nil behaves like auto")
+    -- Deliberately outside the alias: falling back to "auto" is the point.
+    ---@diagnostic disable-next-line: param-type-mismatch
     H.eq(resolve_style("nonsense"), "kit", "an unrecognized value behaves like auto")
 
     local ok, err = mdview_renderer.open({ "x" }, tmpdir .. "/mdview_open_test.md")
@@ -1976,28 +1984,38 @@ return function(H)
     mod.f()
 
     telemetry.setup({ report_style = "kit" })
-    local ok = pcall(vim.cmd, "RATelemetry open " .. namespace)
+    local ok = pcall(function()
+      vim.cmd("RATelemetry open " .. namespace)
+    end)
     H.eq(ok, true, ":RATelemetry open <ns> does not error with report_style = kit")
 
     telemetry.setup({ report_style = "file" })
-    ok = pcall(vim.cmd, "RATelemetry open " .. namespace)
+    ok = pcall(function()
+      vim.cmd("RATelemetry open " .. namespace)
+    end)
     H.eq(ok, true, ":RATelemetry open <ns> does not error with report_style = file")
     local report_file = require("runtime-analysis.telemetry.report_file")
     local path = report_file.namespace_path(namespace, { dir = tmpdir })
     H.ok(io.open(path, "r") ~= nil, "report_style = file wrote the per-namespace report")
 
     telemetry.setup({ report_style = "mdview" })
-    ok = pcall(vim.cmd, "RATelemetry open " .. namespace)
+    ok = pcall(function()
+      vim.cmd("RATelemetry open " .. namespace)
+    end)
     H.eq(
       ok,
       true,
       "report_style = mdview falls back to the kit float without erroring when mdview is unavailable"
     )
 
-    ok = pcall(vim.cmd, "RATelemetry open does-not-exist")
+    ok = pcall(function()
+      vim.cmd("RATelemetry open does-not-exist")
+    end)
     H.eq(ok, true, "an unknown namespace warns rather than erroring")
 
-    ok = pcall(vim.cmd, "RATelemetry open")
+    ok = pcall(function()
+      vim.cmd("RATelemetry open")
+    end)
     H.eq(ok, true, "bare open (every instance, combined) does not error")
 
     telemetry.setup({ report_style = "auto" }) -- restore default for any later spec
@@ -2196,7 +2214,9 @@ return function(H)
   end
 
   do
-    package.loaded["fakeauto_opts"] = { f = function() end }
+    -- Takes what a stand-in has to take: the call below hands it one
+    -- argument, which is what `profile_args = true` is checked against.
+    package.loaded["fakeauto_opts"] = { f = function(...) end }
     local inst = telemetry.auto({
       namespace = ns("auto_opts"),
       main = "fakeauto_opts",
@@ -2303,7 +2323,7 @@ return function(H)
       "returned name sanitized the same way store.sanitize_snapshot_name does"
     )
 
-    local snap = telemetry.load_snapshot(namespace, saved_name)
+    local snap = telemetry.load_snapshot(namespace, assert(saved_name))
     H.eq(
       snap.functions["mod.f"].calls,
       2,
@@ -2389,7 +2409,7 @@ return function(H)
       "a missing snapshot name returns nil rather than erroring"
     )
 
-    local cmp = telemetry.compare_snapshots(namespace, "before", "after")
+    local cmp = assert(telemetry.compare_snapshots(namespace, "before", "after"))
     H.eq(cmp.namespace, namespace, "namespace carried through")
     H.eq(cmp.name_a, "before", "name_a carried through")
     H.eq(cmp.name_b, "after", "name_b carried through")
@@ -2423,8 +2443,9 @@ return function(H)
     -- :RATelemetry snapshot-compare <ns> <a> <b>
     require("runtime-analysis.telemetry.command").setup()
     vim.cmd(("RATelemetry snapshot-compare %s before after"):format(namespace))
-    local ok =
-      pcall(vim.cmd, ("RATelemetry snapshot-compare %s before does-not-exist"):format(namespace))
+    local ok = pcall(function()
+      vim.cmd(("RATelemetry snapshot-compare %s before does-not-exist"):format(namespace))
+    end)
     H.eq(ok, true, "a missing snapshot name warns rather than erroring")
 
     inst.stop()

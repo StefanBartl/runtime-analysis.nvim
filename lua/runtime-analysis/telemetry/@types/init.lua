@@ -171,12 +171,19 @@
 ---@field depth integer      # how deep in the require chain this load started
 ---@field errored? boolean   # the module raised while loading; its timing is still recorded
 
----@class RA.Telemetry.Startup.Report
----@field running boolean
+--- The part of a startup report a renderer actually draws: the load order, the
+--- per-root totals and the sum. `renderers/flamegraph`'s `M.svg` reads nothing
+--- else, and saying so is what lets a caller (a test, a hand-built report) hand
+--- it those three fields instead of faking `running` and `modules` for a
+--- function that never looks at them.
+---@class RA.Telemetry.Startup.Drawable
 ---@field total_ms number                                  # sum of every module's self time
----@field modules RA.Telemetry.Startup.Entry[]
 ---@field roots { root: string, self_ms: number }[]        # per module-root (a plugin's own Lua namespace) totals, descending
 ---@field order RA.Telemetry.Startup.Entry[]               # the same entries in load order, never sorted and never truncated. A pre-order sequence plus each entry's `depth` determines the require tree uniquely, which is what `renderers/flamegraph.lua` rebuilds from; `modules` cannot serve because sorting loses the pre-order and `top` would drop whole subtrees
+
+---@class RA.Telemetry.Startup.Report : RA.Telemetry.Startup.Drawable
+---@field running boolean
+---@field modules RA.Telemetry.Startup.Entry[]
 
 -- ---------------------------------------------------------------------------
 -- Cost vs. use
@@ -221,6 +228,12 @@
 ---@field flush fun(): boolean
 ---@field data_path fun(): string                     # the file this instance's counters are written to, for telling a reader where their data went
 ---@field wrapped_keys fun(): string[]
+--- The two fields `M.setup()` stores on the instance itself rather than in a
+--- closure, because `telemetry.command` and the module-level entry points read
+--- them back off a namespace's instance. Underscored by convention, not
+--- private: both are read from other files.
+---@field _cache_opts { dir: string }         # where this namespace's data, reports and toggles live
+---@field _snapshot_retention integer|nil     # per-instance override for M.SNAPSHOT_RETENTION; nil = read the module default at snapshot() time
 
 ---@class RA.Telemetry.AutoOpts
 ---@field namespace string

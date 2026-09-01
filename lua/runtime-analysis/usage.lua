@@ -59,7 +59,10 @@ local augroup = nil
 ---@param mode string|string[]
 ---@return string
 local function mode_key(mode)
-  return type(mode) == "table" and table.concat(mode, ",") or mode
+  if type(mode) == "table" then
+    return table.concat(mode, ",")
+  end
+  return mode
 end
 
 ---@internal
@@ -70,6 +73,12 @@ end
 local function wrap_keymap_set(mode, lhs, rhs, opts)
   if type(rhs) == "function" and inst then
     rhs = inst.wrap_fn(rhs, ("keymap %s %s"):format(mode_key(mode), lhs))
+  end
+  -- Only installed as `vim.keymap.set` while `original_keymap_set` holds the
+  -- real one, so this is unreachable in practice -- but a stale reference
+  -- surviving a teardown would otherwise be a nil call, not a no-op.
+  if not original_keymap_set then
+    return
   end
   return original_keymap_set(mode, lhs, rhs, opts)
 end
@@ -83,6 +92,9 @@ end
 ---@internal
 ---@param name string
 local function record_command(name)
+  if not inst then
+    return
+  end
   local record = wrapped_commands[name]
   if not record then
     record = inst.wrap_fn(function() end, "command " .. name)

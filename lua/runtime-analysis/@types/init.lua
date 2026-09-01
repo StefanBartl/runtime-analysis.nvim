@@ -34,6 +34,7 @@
 ---@field container_kind "global"|"module" how `container_path` resolved
 ---@field field string the final path segment
 ---@field telemetry { wrapped: boolean, namespaces: string[] } exact — this plugin's own registry
+---@field proc_trace boolean exact — true when `lib.nvim.system.proc_trace` is currently wrapping this path (it wraps four, and only while running)
 ---@field source { what: string, short_src: string, linedefined: integer }? best-effort — where the function currently there was actually defined
 
 ---One node in `runtime-analysis.inspect`.s walked tree. A tagged union on `kind`; which other fields are populated depends

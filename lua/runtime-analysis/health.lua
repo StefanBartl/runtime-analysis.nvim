@@ -16,7 +16,25 @@ local h_start = H.start or H.report_start
 local h_ok = H.ok or H.report_ok
 local h_warn = H.warn or H.report_warn
 local h_error = H.error or H.report_error
-local h_info = H.info or H.report_info
+local h_info_raw = H.info or H.report_info
+
+---An info line, with the advice `vim.health.info` has no parameter for.
+---
+---`warn` and `error` take advice as varargs and render it under the message;
+---`info` takes the message and nothing else, so the second argument four of
+---the calls below pass was being dropped on the floor -- none of that advice
+---ever reached `:checkhealth`. It is rendered into the message here instead,
+---in the shape `vim.health`'s own `format_report_message` gives a warning's
+---advice, so an info line and a warning line read alike. Same wrapper, same
+---reason, as documentation.nvim's `editor/health.lua`.
+---@param msg string
+---@param advice string[]? Rendered under the message, one line each.
+local function h_info(msg, advice)
+  if advice and #advice > 0 then
+    msg = msg .. "\n- ADVICE:\n  - " .. table.concat(advice, "\n  - ")
+  end
+  h_info_raw(msg)
+end
 
 local MIN_NVIM = { 0, 10, 0 }
 
@@ -168,8 +186,11 @@ function M.check()
 
   local ok_usage, usage = pcall(require, "runtime-analysis.usage")
   if ok_usage then
-    if usage.is_running() then
-      local report = usage.report()
+    -- `usage.report()` returns nil exactly when nothing is running, so the
+    -- report itself is the running check -- one question instead of two that
+    -- have to agree.
+    local report = usage.report()
+    if report then
       h_ok(
         ("tracking — %d mapping(s)/command(s) seen, %d press(es) total"):format(
           report.wrapped,

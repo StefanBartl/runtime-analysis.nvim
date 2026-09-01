@@ -140,7 +140,7 @@ local function resolve_container(container_path)
 end
 
 ---@param path string dotted path, e.g. `"vim.notify"` or `"lib.nvim.notify.create"`
----@return { path: string, container_path: string, container_kind: "global"|"module", field: string, telemetry: { wrapped: boolean, namespaces: string[] }, source: { what: string, short_src: string, linedefined: integer }? }? info
+---@return RA.Provenance.Info? info
 ---@return string? err
 function M.inspect(path)
   local container_path, field = path:match("^(.+)%.([^.]+)$")

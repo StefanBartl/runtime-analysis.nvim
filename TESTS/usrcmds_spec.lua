@@ -21,16 +21,16 @@ return function(H)
   ---returned live (the same table further connections append to), so a
   ---test can inspect it after each send without re-wiring the callback.
   ---@return integer port
-  ---@return uv_tcp_t server
+  ---@return uv.uv_tcp_t server
   ---@return string[] requests
   local function start_server()
     local requests = {}
-    local server = uv.new_tcp()
+    local server = assert(uv.new_tcp())
     assert(server:bind("127.0.0.1", 0))
     local port = server:getsockname().port
     server:listen(128, function(listen_err)
       assert(not listen_err, listen_err)
-      local client = uv.new_tcp()
+      local client = assert(uv.new_tcp())
       server:accept(client)
       client:read_start(function(_, chunk)
         if chunk then
@@ -53,16 +53,16 @@ return function(H)
   ---rendered.
   ---@param delay_ms integer
   ---@return integer port
-  ---@return uv_tcp_t server
+  ---@return uv.uv_tcp_t server
   ---@return string[] requests
   local function start_delayed_server(delay_ms)
     local requests = {}
-    local server = uv.new_tcp()
+    local server = assert(uv.new_tcp())
     assert(server:bind("127.0.0.1", 0))
     local port = server:getsockname().port
     server:listen(128, function(listen_err)
       assert(not listen_err, listen_err)
-      local client = uv.new_tcp()
+      local client = assert(uv.new_tcp())
       server:accept(client)
       client:read_start(function(_, chunk)
         if not chunk then
@@ -321,14 +321,14 @@ return function(H)
   ---echoing machinery, which this doesn't need.
   ---@param response string
   ---@return integer port
-  ---@return uv_tcp_t server
+  ---@return uv.uv_tcp_t server
   local function start_fixed_server(response)
-    local fixed_server = uv.new_tcp()
+    local fixed_server = assert(uv.new_tcp())
     assert(fixed_server:bind("127.0.0.1", 0))
     local fixed_port = fixed_server:getsockname().port
     fixed_server:listen(128, function(listen_err)
       assert(not listen_err, listen_err)
-      local client = uv.new_tcp()
+      local client = assert(uv.new_tcp())
       fixed_server:accept(client)
       client:read_start(function(_, chunk)
         if chunk then
@@ -347,16 +347,16 @@ return function(H)
   ---above only needs the line), so a test can inspect what
   ---`resolve_request_shape` actually put on the wire.
   ---@return integer port
-  ---@return uv_tcp_t server
+  ---@return uv.uv_tcp_t server
   ---@return string[] raw_requests
   local function start_capturing_server()
     local raw_requests = {}
-    local capture_server = uv.new_tcp()
+    local capture_server = assert(uv.new_tcp())
     assert(capture_server:bind("127.0.0.1", 0))
     local capture_port = capture_server:getsockname().port
     capture_server:listen(128, function(listen_err)
       assert(not listen_err, listen_err)
-      local client = uv.new_tcp()
+      local client = assert(uv.new_tcp())
       capture_server:accept(client)
       client:read_start(function(_, chunk)
         if chunk then

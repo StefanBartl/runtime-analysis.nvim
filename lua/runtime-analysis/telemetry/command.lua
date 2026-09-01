@@ -462,6 +462,9 @@ local function export(path, pdf_callback)
   -- positional-only (see the module doc-comment), and ".md means Markdown"
   -- needs no flag grammar to be unambiguous.
   if target:sub(-4):lower() == ".pdf" then
+    -- Required for this branch and only this branch (see the @param above):
+    -- without it the asynchronous result would have nowhere to go.
+    assert(pdf_callback, "export(): a .pdf target needs a callback")
     export_pdf(target, pdf_callback)
     return nil
   end
