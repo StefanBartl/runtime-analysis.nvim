@@ -1412,6 +1412,40 @@ function M.export_all(target_dir, opts)
   return written, failed
 end
 
+---Every namespace this plugin knows about by name, sorted — live in this
+---process (`instances`) unioned with everything ever persisted
+---(`store.namespaces()`). Neither source alone is "every namespace": a
+---plugin loaded this session but never flushed is missing from the second,
+---and one that recorded last week and has not loaded yet is missing from
+---the first.
+---
+---Names only, and deliberately cheap: `M.status_reports()` below builds a
+---whole report per namespace (and flushes every live instance to do it),
+---which is far too much work for `:RATelemetry <Tab>`'s own completion
+---list — the other caller of this.
+---@param opts? { dir?: string }
+---@return string[] namespaces
+function M.known_namespaces(opts)
+  local cache_opts = { dir = (opts and opts.dir) or DEFAULT_CACHE_DIR }
+
+  local names, seen = {}, {}
+  for _, namespace in ipairs(store.namespaces(cache_opts)) do
+    if not seen[namespace] then
+      seen[namespace] = true
+      names[#names + 1] = namespace
+    end
+  end
+  for _, inst in ipairs(instances) do
+    if not seen[inst.namespace] then
+      seen[inst.namespace] = true
+      names[#names + 1] = inst.namespace
+    end
+  end
+
+  table.sort(names)
+  return names
+end
+
 ---Every namespace this plugin knows about, live this process right now or
 ---only ever persisted — `:RATelemetry status`'s one building block. Neither
 ---`M.report_all()` (`instances`, this process's live ones only) nor
@@ -1442,18 +1476,7 @@ function M.status_reports(opts)
     live_by_ns[inst.namespace] = inst
   end
 
-  local names, seen = {}, {}
-  for _, namespace in ipairs(store.namespaces(cache_opts)) do
-    seen[namespace] = true
-    names[#names + 1] = namespace
-  end
-  for namespace in pairs(live_by_ns) do
-    if not seen[namespace] then
-      seen[namespace] = true
-      names[#names + 1] = namespace
-    end
-  end
-  table.sort(names)
+  local names = M.known_namespaces({ dir = cache_opts.dir })
 
   local rows = {}
   for _, namespace in ipairs(names) do

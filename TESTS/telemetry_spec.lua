@@ -1442,26 +1442,44 @@ return function(H)
       "status_reports: disk-only namespace has a real file size too"
     )
 
-    -- Rendering: `M.status_lines` — a compact block per row, each one still
-    -- opening with the exact `<namespace>  —  <state>` header format
-    -- `command.lua`'s drilldown parses off the cursor line. `rows` here
-    -- (not the full `status_reports({dir=tmpdir})` sweep) so this stays
-    -- about these two namespaces regardless of what earlier blocks in this
-    -- same spec left behind in the shared `tmpdir`.
+    -- Rendering: `M.status_lines` — an aligned table, one ROW per namespace,
+    -- each starting with its namespace in column 0 (which is what
+    -- `command.lua`'s `<CR>` reads back off the cursor line). Only these two
+    -- rows are passed, not the full `status_reports({dir=tmpdir})` sweep, so
+    -- this stays about these two namespaces regardless of what earlier
+    -- blocks in this same spec left behind in the shared `tmpdir`.
     local lines = report_mod.status_lines({ live_row, disk_row })
     local joined = table.concat(lines, "\n")
-    H.ok(joined:find(live_ns .. "  —  running", 1, true) ~= nil, "status_lines: live row header")
-    H.ok(
-      joined:find(disk_ns .. "  —  stopped", 1, true) ~= nil,
-      "status_lines: disk-only row header"
-    )
+
+    H.ok(lines[1]:find("NAMESPACE", 1, true) == 1, "status_lines: heading row comes first")
+    for _, column in ipairs({ "STATE", "MODE", "WRAPPED", "CALLS", "SIZE", "SINCE" }) do
+      H.ok(lines[1]:find(column, 1, true) ~= nil, ("status_lines: heading names %s"):format(column))
+    end
+
+    local live_line, disk_line
+    for _, line in ipairs(lines) do
+      if line:find(live_ns, 1, true) == 1 then
+        live_line = line
+      elseif line:find(disk_ns, 1, true) == 1 then
+        disk_line = line
+      end
+    end
+    H.ok(live_line ~= nil, "status_lines: the live namespace starts its own row")
+    H.ok(live_line:find("running", 1, true) ~= nil, "status_lines: ...carrying its state")
+    H.ok(disk_line ~= nil, "status_lines: the disk-only namespace starts its own row")
+    H.ok(disk_line:find("stopped", 1, true) ~= nil, "status_lines: ...carrying its state too")
+
     H.ok(
       joined:find("m.g", 1, true) == nil,
       "status_lines: no per-function entries, unlike lines()"
     )
     H.ok(
-      joined:find("no data on disk", 1, true) == nil,
-      "status_lines: both rows here have real files"
+      lines[#lines]:find("2 namespace(s)", 1, true) ~= nil,
+      "status_lines: a fleet summary closes the table"
+    )
+    H.ok(
+      lines[#lines]:find("1 running", 1, true) ~= nil,
+      "status_lines: ...counting how many are actually recording"
     )
 
     local empty_lines = report_mod.status_lines({})
@@ -1604,6 +1622,33 @@ return function(H)
     local completions = vim.fn.getcompletion("RATelemetry stop ", "cmdline")
     H.ok(vim.tbl_contains(completions, ns_a), "namespace offered after 'stop '")
     H.eq(vim.tbl_contains(completions, "start"), false, "subcommands not repeated as a 2nd arg")
+
+    -- FIRST argument, nothing typed yet: this command's own vocabulary only.
+    -- Namespaces are deliberately held back here — a completion front-end is
+    -- free to re-sort what it is handed (a fuzzy cmdline engine does), so the
+    -- only way to keep forty plugin names from landing between `snapshot` and
+    -- `startup` is not to offer them until a prefix narrows the list.
+    local subcommands = require("runtime-analysis.telemetry.command").SUBCOMMANDS
+    local bare = vim.fn.getcompletion("RATelemetry ", "cmdline")
+    H.ok(#bare > 0, "the bare first argument completes something")
+    local only_subcommands = true
+    for _, candidate in ipairs(bare) do
+      only_subcommands = only_subcommands and vim.tbl_contains(subcommands, candidate)
+    end
+    H.eq(only_subcommands, true, "...and it is subcommands only, with no namespaces mixed in")
+
+    -- ...but a prefix brings them back, subcommands first, since a namespace
+    -- may well share a prefix with a subcommand (`open` / `open.nvim`).
+    local prefixed = vim.fn.getcompletion("RATelemetry " .. ns_a:sub(1, 6), "cmdline")
+    H.ok(vim.tbl_contains(prefixed, ns_a), "a prefix that matches a namespace offers it")
+
+    -- A subcommand that takes no namespace completes nothing in that slot,
+    -- rather than offering namespaces where none is read.
+    H.eq(
+      #vim.fn.getcompletion("RATelemetry status ", "cmdline"),
+      0,
+      "no namespace completion after a subcommand that takes none"
+    )
 
     local ok = pcall(function()
       vim.cmd("RATelemetry stop does-not-exist")

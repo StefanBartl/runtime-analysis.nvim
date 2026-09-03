@@ -37,14 +37,19 @@ calls." The same read works from a CLI with no editor at all:
 
 `:RATelemetry status` answers "which of my repos are recording, in what
 mode, and is there anything on disk worth reading" as one screenful
-regardless of how many namespaces exist — a compact block per namespace
-(state, mode, size and path on disk), not the bare `report` view's full
-per-function breakdown for every live instance at once. It covers a
-namespace that recorded last week and has simply not loaded yet this
-session too, not only this process's live instances: `M.status_reports()`
-is the union of `telemetry.instances()` and `telemetry.store.namespaces()`,
-one row each. `<CR>` on a row still opens that namespace's own full report,
-the same drilldown the bare view offers.
+regardless of how many namespaces exist — an **aligned table**, one row per
+namespace (state, mode, wrapped/call/session counts, size on disk, start
+date) closed by a fleet summary, not the bare `report` view's full
+per-function breakdown for every live instance at once. The question is
+comparative, so the answer is columns; the shape is deliberately
+reposcope.nvim's `:Reposcope status`, down to the gutter and the winbar key
+legend, so two overviews from one ecosystem need learning only once. It
+covers a namespace that recorded last week and has simply not loaded yet
+this session too, not only this process's live instances:
+`M.status_reports()` is the union of `telemetry.instances()` and
+`telemetry.store.namespaces()`, one row each. `<CR>` on a row opens that
+namespace's own full report — itself a column-aligned table of functions,
+naming the exact file the data lives in.
 
 The lifecycle reminder this pairs with (see the telemetry README's own
 "Lifecycle reminder" section for the trigger itself) used to notify once

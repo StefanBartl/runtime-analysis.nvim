@@ -481,10 +481,12 @@ the rest of this plugin. Command surface: >
 
   :RATelemetry                 report across every live instance
   :RATelemetry lsp.nvim        report for one namespace
-  :RATelemetry status          one compact block per namespace this plugin
-                               knows about -- live this session or only ever
-                               persisted -- state, mode, and what is on disk.
-                               <CR> on a row opens its full report
+  :RATelemetry status          the fleet board: one aligned row per namespace
+                               this plugin knows about -- live this session or
+                               only ever persisted -- with state, mode,
+                               counts, size on disk and start date. <CR> on a
+                               row opens its full report; keys are listed in
+                               the window's winbar and under ?
   :RATelemetry start [ns]      every instance, or just one
   :RATelemetry stop [ns]       every instance, or just one
   :RATelemetry reset [ns]      back up (one prompt, only if anything would

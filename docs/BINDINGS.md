@@ -179,7 +179,7 @@ Module: [`lua/runtime-analysis/loaded.lua`](../lua/runtime-analysis/loaded.lua).
 | --- | --- |
 | `:RATelemetry` | report across every live instance, in a kit float |
 | `:RATelemetry <ns>` | report for one namespace |
-| `:RATelemetry status` | one compact block per namespace this plugin knows about — live this session or only ever persisted — naming its state, mode and what is actually on disk. `<CR>` on a row opens that namespace's own full report |
+| `:RATelemetry status` | the fleet board: one aligned row per namespace this plugin knows about — live this session or only ever persisted — with state, mode, wrapped/call/session counts, size on disk and start date, closed by a summary. `<CR>` on a row opens that namespace's own full report; `r` re-reads, `?` lists the keys (also shown in the window's winbar) |
 | `:RATelemetry start [ns]` | every instance, or just one |
 | `:RATelemetry stop [ns]` | every instance, or just one |
 | `:RATelemetry reset [ns]` | back up (prompted once for a directory, only if anything exists), then drop the aggregate — every instance, or just one |

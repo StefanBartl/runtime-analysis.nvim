@@ -20,6 +20,63 @@ Newest first, by date; original document order within a date.
 
 ## 2026-09-03
 
+### The status board as a real table, and `<Tab>` that stops mixing the two vocabularies
+
+Same-day follow-up to the two entries below, from looking at the thing on a
+real fleet (31 namespaces) rather than at two test rows.
+
+**The board was prose where the question is comparative.** `status` first
+shipped as `summary_lines` per namespace — four lines each, the same shape
+a single-namespace report opens with. That reads fine for one namespace and
+falls apart at thirty: "which of these is still recording", "which one is
+quietly the biggest on disk", "which one has collected nothing since
+August" are all comparisons, and a comparison has to line up in columns.
+Rebuilt as one aligned row per namespace (state, mode, wrapped/calls/
+sessions, size, start date) closed by a fleet summary. `mode_badge` exists
+because the prose form (`counting + args + timing + errors + call_tree`, 45
+cells) is a third of the board's width spent on a value most rows spell the
+same way; the column form is `count+args+time`.
+
+The shape is **reposcope.nvim's `:Reposcope status`, deliberately** — same
+two-space gutter, same heading row, same `<CR>` on the row under the
+cursor, same winbar key legend. Two overviews from one ecosystem should not
+have to be learned twice, and that repo had already solved the parts that
+are easy to get wrong (padding in display cells rather than bytes, so one
+multi-byte character does not shift a row's whole tail).
+
+**The keys were there and invisible.** Every `show()` float has had `r`,
+`<CR>`, `gO` and `?` for a while, with nothing on screen saying so. They are
+now listed in the window's winbar, built from the same list that wires the
+keymaps, so the legend cannot advertise a key this particular view does not
+have — and `?` still opens the full cheatsheet for the ones too long to fit.
+
+**The drilldown was a wall.** The per-function report grew a heading row and
+real columns (FUNCTION / CALLS / Ø MS / MAX MS / ERRORS, the last three only
+when this report has anything to put in them), a blank line after any entry
+that grew sub-rows so a fingerprint list stops running into the next
+function's row, and a word next to the `└`/`✗`/`←` markers saying which of
+the three lists it is. One real gap surfaced while looking at it: with 30
+distinct arguments recorded and three printed, nothing said the other 27
+existed — `<27 more, not shown>` now does, kept separate from the existing
+`<other: N distinct>` row because "kept but not printed" and "never kept"
+are different claims.
+
+**`<Tab>` mixed the command's vocabulary with its data.** The first argument
+offered every subcommand *and* every namespace — 22 + 31 entries, and since
+a fuzzy cmdline front-end re-sorts whatever it is handed, plugin names
+landed between `snapshot` and `startup`. Returning them in a second block
+cannot fix that (the front-end sorts anyway), so the first argument now
+offers subcommands only until a prefix narrows the list, at which point
+namespaces join in — that being when a bare `:RATelemetry <namespace>` is
+actually being typed, and both are offered then since a namespace can share
+a prefix with a subcommand (`open` / `open.nvim`). The namespace slot
+itself became per-subcommand: live instances for `start`/`stop`/`flush`/
+`reset`, configured+loaded targets for `setup`/`full`, and every known
+namespace (disk included) for the ones that genuinely read without a live
+instance. `flush` and `report` were missing from that set entirely and now
+complete; `export`/`export-all`/`flamegraph` take a path and now offer
+nothing rather than namespaces.
+
 ### Reminder batching — one notification, not one per namespace
 
 Raised directly, not from the numbered backlog: a config wrapping several

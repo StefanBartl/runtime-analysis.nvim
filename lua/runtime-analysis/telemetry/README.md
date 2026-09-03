@@ -670,9 +670,9 @@ require("runtime-analysis.telemetry.command").setup()
 ```vim
 :RATelemetry                 " report across every live instance, in a kit float
 :RATelemetry lsp.nvim        " report for one namespace
-:RATelemetry status          " one compact block per namespace this plugin knows about --
-                              " live this session or only ever persisted -- state, mode,
-                              " what is on disk. <CR> on a row opens its full report
+:RATelemetry status          " the fleet board: one aligned row per namespace this plugin
+                              " knows about -- live this session or only ever persisted --
+                              " state, mode, counts, size on disk. <CR> opens its full report
 :RATelemetry start [ns]      " every instance, or just one
 :RATelemetry stop [ns]       " every instance, or just one
 :RATelemetry flush [ns]      " write what is collected so far, WITHOUT stopping -- every instance, or just one
@@ -691,11 +691,30 @@ require("runtime-analysis.telemetry.command").setup()
 
 `start`/`stop`/`reset`/`open`/`compare` take an optional namespace —
 `:RATelemetry stop markdown.nvim` steers just that instance, leaving every
-other one running. Omit it to act on every instance at once. `<Tab>` after
-`start `/`stop `/`reset `/`open `/`compare ` completes namespaces only
-(not the subcommand list again). `compare`'s own third, purely positional
-token overrides the default 7-day window — `:RATelemetry compare
-markdown.nvim 14`.
+other one running. Omit it to act on every instance at once. `compare`'s
+own third, purely positional token overrides the default 7-day window —
+`:RATelemetry compare markdown.nvim 14`.
+
+**What `<Tab>` offers, and where.** A bare `:RATelemetry <Tab>` completes
+**subcommands only** — with a few dozen plugins instrumented, appending
+every namespace to a twenty-entry vocabulary buries it, and returning them
+in a second block does not help, since a completion front-end is free to
+re-sort what it is handed (a fuzzy cmdline engine does — which is exactly
+how plugin names end up sitting between `snapshot` and `startup`).
+Namespaces join in as soon as a prefix narrows the list, which is when a
+bare `:RATelemetry <namespace>` is actually being typed, and both are
+offered then, since a namespace may share a prefix with a subcommand
+(`open` / `open.nvim`).
+
+In the namespace slot, each subcommand completes from the list it can
+actually act on: `start`/`stop`/`flush`/`reset` from live instances (they
+warn when there is none), `setup`/`full` from the configured, currently
+loaded targets, and `report`/`open`/`compare`/`disable`/`enable`/
+`snapshot*` from every namespace known — including ones with data on disk
+but nothing live this session, which is precisely the case those read from.
+A subcommand that takes no namespace (`status`, `disabled`, `coverage`,
+`cost`) or takes a path (`export`, `export-all`, `flamegraph`) completes
+nothing there rather than offering namespaces where none is read.
 
 ### When is my data actually on disk?
 

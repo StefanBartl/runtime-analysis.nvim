@@ -8,12 +8,14 @@
 ---
 ---   :RATelemetry                 report across every live instance
 ---   :RATelemetry lsp.nvim        report for one namespace
----   :RATelemetry status          one compact block per namespace this
----                                plugin knows about -- live this session or
----                                only ever persisted -- naming its state,
----                                mode and what is actually on disk for it.
----                                `<CR>` on a row still opens that
----                                namespace's own full report
+---   :RATelemetry status          one aligned ROW per namespace this plugin
+---                                knows about -- live this session or only
+---                                ever persisted -- with its state, mode,
+---                                wrapped/call/session counts, size on disk
+---                                and start date, closed by a fleet summary.
+---                                `<CR>` on a row opens that namespace's own
+---                                full report, `r` re-reads, `?` lists the
+---                                keys (they are also in the winbar)
 ---   :RATelemetry start [ns]      start every instance, or just one
 ---   :RATelemetry stop [ns]       stop every instance, or just one
 ---   :RATelemetry flush [ns]      write what has been collected so far to
@@ -224,6 +226,79 @@ local function telemetry()
 end
 
 ---@internal
+---Namespaces with a live instance in THIS process, sorted — the honest
+---completion list for a subcommand that acts on a running instance and
+---warns when there is none (`start`/`stop`/`flush`/`reset`).
+---@return string[]
+local function live_namespaces()
+  local out = {}
+  for _, inst in ipairs(telemetry().instances()) do
+    out[#out + 1] = inst.namespace
+  end
+  table.sort(out)
+  return out
+end
+
+---@internal
+---Every namespace known by name, live or merely persisted — for the
+---subcommands that genuinely work without a live instance (`disable` before
+---a plugin has ever loaded this session is the documented common case;
+---`open`/`compare`/`snapshot*` read from disk).
+---@return string[]
+local function known_namespaces()
+  return telemetry().known_namespaces()
+end
+
+---@internal
+---What `:RATelemetry setup|full <ns>` can actually act on: the configured,
+---currently-loaded targets `telemetry.lazy` resolves — which is a different
+---set from "has a live instance" (an `extra` target declared but not yet
+---wrapped is a candidate with no instance). `pcall`ed: without lazy.nvim
+---there are no candidates, which is a shorter completion list, not an error.
+---@return string[]
+local function candidate_namespaces()
+  local ok, candidates = pcall(function()
+    return require("runtime-analysis.telemetry.lazy").candidates()
+  end)
+  if not ok then
+    return {}
+  end
+  local out = {}
+  for _, candidate in ipairs(candidates) do
+    out[#out + 1] = candidate.namespace
+  end
+  table.sort(out)
+  return out
+end
+
+---Which namespace list each subcommand's second token completes from — and,
+---by being a lookup rather than a boolean, also which subcommands take a
+---namespace at all. A subcommand absent here completes nothing in that
+---position, which is right for `disabled`/`coverage`/`cost`/`startup`/
+---`status` (no second token) and for `export`/`export-all`/`flamegraph`
+---(a path, not a namespace — and offering namespaces where a path belongs
+---is worse than offering nothing).
+local NAMESPACE_SUBCOMMANDS = {
+  -- Act on a live instance, and say so when there is none.
+  start = live_namespaces,
+  stop = live_namespaces,
+  flush = live_namespaces,
+  reset = live_namespaces,
+  -- Configured + loaded, which is not the same set as "live".
+  setup = candidate_namespaces,
+  full = candidate_namespaces,
+  -- Work off what is on disk just as well as off a live instance.
+  report = known_namespaces,
+  open = known_namespaces,
+  compare = known_namespaces,
+  disable = known_namespaces,
+  enable = known_namespaces,
+  snapshot = known_namespaces,
+  snapshots = known_namespaces,
+  ["snapshot-compare"] = known_namespaces,
+}
+
+---@internal
 ---A header row's namespace, if `line` is one — every per-instance block in
 ---`report.lines()`/`report_lines()` starts with exactly
 ---`("%s  —  %s"):format(namespace, state)` (see report.lua).
@@ -266,16 +341,81 @@ local function show_help(title, rows)
   })
 end
 
+---Extmark namespace for the `:RATelemetry status` table's own heading and
+---summary highlights. One per module, reused on every redraw — extmarks in a
+---namespace are cleared wholesale by that namespace, which is what makes a
+---refresh idempotent instead of stacking a second set on top of the first.
+local STATUS_NS = vim.api.nvim_create_namespace("runtime_analysis_telemetry_status")
+
+---@internal
+---Highlight the status table's heading row and its trailing fleet summary.
+---
+---Linked to built-in groups (`Title`, `Comment`) rather than to groups of
+---this plugin's own: two rows of a float do not justify a highlight-group
+---vocabulary a colorscheme would then have to know about.
+---@param bufnr integer
+---@param lines string[]
+---@return nil
+local function status_highlights(bufnr, lines)
+  if not vim.api.nvim_buf_is_valid(bufnr) then
+    return
+  end
+  vim.api.nvim_buf_clear_namespace(bufnr, STATUS_NS, 0, -1)
+  if #lines == 0 then
+    return
+  end
+  vim.api.nvim_buf_set_extmark(bufnr, STATUS_NS, 0, 0, { end_col = #lines[1], hl_group = "Title" })
+  local last = #lines
+  if last > 1 then
+    vim.api.nvim_buf_set_extmark(
+      bufnr,
+      STATUS_NS,
+      last - 1,
+      0,
+      { end_col = #lines[last], hl_group = "Comment" }
+    )
+  end
+end
+
+---@internal
+---The one-line key legend a `show()` float carries in its `winbar`, built
+---from the very keymaps that call actually wired up — so it can never
+---advertise a key this particular view does not have. Same idea (and same
+---`key label  │  key label` shape) as reposcope.nvim's own status winbar:
+---a float with five bindings and nothing on screen saying so is a float
+---whose bindings nobody finds. `? Keys` is last and always present, since
+---it is how everything not worth a legend entry stays reachable.
+---@param entries { lhs: string, legend?: string }[]
+---@return string
+local function legend(entries)
+  local parts = {}
+  for _, e in ipairs(entries) do
+    if e.legend then
+      parts[#parts + 1] = ("%%#Special#%s %%#Comment#%s"):format(e.lhs, e.legend)
+    end
+  end
+  parts[#parts + 1] = "%#Special#? %#Comment#Keys"
+  return " " .. table.concat(parts, "%#NonText#  │  ") .. "%#Normal#"
+end
+
 ---@internal
 ---@param lines string[]
 ---@param title string
----@param opts { on_refresh: (fun(): string[])|nil, on_drilldown: (fun(namespace: string): string[]|nil, string|nil)|nil, on_open_html: (fun(): nil)|nil }|nil
+---@param opts { on_refresh: (fun(): string[])|nil, on_drilldown: (fun(namespace: string): string[]|nil, string|nil)|nil, on_open_html: (fun(): nil)|nil, namespace_at: (fun(line: string): string|nil)|nil, on_lines: (fun(bufnr: integer, lines: string[]): nil)|nil, table_view: boolean|nil }|nil
 ---`on_refresh` recomputes and returns fresh lines for the same view.
 ---`on_drilldown` is offered the namespace under the cursor on `<CR>` over a
 ---header row; returning `lines[, title]` swaps this same float to that
 ---namespace's own view in place, returning nothing leaves the float as is.
 ---`on_open_html` writes+opens this same report's HTML rendering in the
----system browser.
+---system browser. `namespace_at` overrides how the namespace under the
+---cursor is read off a line (default: `header_namespace`, the
+---`"<ns>  —  <state>"` header row every report block opens with) — a
+---column-aligned view names it in its first column instead.
+---`on_lines` runs after every set of lines is installed (the initial ones
+---and every refresh), for a view that highlights its own heading/summary
+---rows. `table_view` turns off wrapping and turns on `cursorline`: a
+---wrapped row in an aligned table destroys the alignment that is the whole
+---point of it, and a row-addressed view needs to show which row is current.
 local function show(lines, title, opts)
   opts = opts or {}
   local ok, kit = pcall(require, "lib.nvim.ui.kit")
@@ -287,38 +427,84 @@ local function show(lines, title, opts)
     return
   end
 
+  -- Built before the float opens, because the winbar legend is derived from
+  -- this same list and has to be set at open time.
+  local entries = {}
+  if opts.on_refresh then
+    entries[#entries + 1] = { lhs = "r", desc = "Refresh", legend = "Refresh" }
+  end
+  if opts.on_drilldown then
+    entries[#entries + 1] =
+      { lhs = "<CR>", desc = "Open the namespace under the cursor", legend = "Open" }
+  end
+  if opts.on_open_html then
+    entries[#entries + 1] =
+      { lhs = "gO", desc = "Open this report as HTML in the browser", legend = "HTML" }
+  end
+
   local surf = kit.viewer({
     lines = lines,
     title = (" %s "):format(title),
     width = math.min(110, math.max(60, vim.o.columns - 8)),
+    -- +1 for the winbar, which otherwise eats a row of content out of a
+    -- height sized to the line count (kit clamps it to the editor anyway).
+    height = math.min(#lines + 1, math.max(1, vim.o.lines - 6)),
   })
   if not surf then
     return
   end
 
+  if vim.api.nvim_win_is_valid(surf.winid) then
+    vim.api.nvim_set_option_value("winbar", legend(entries), { win = surf.winid })
+    if opts.table_view then
+      vim.api.nvim_set_option_value("wrap", false, { win = surf.winid })
+      vim.api.nvim_set_option_value("cursorline", true, { win = surf.winid })
+      -- Line 1 is the heading row; start on the first row that is actually a
+      -- namespace, so `<CR>` works without moving first.
+      pcall(vim.api.nvim_win_set_cursor, surf.winid, { math.min(2, #lines), 0 })
+    end
+  end
+  if opts.on_lines then
+    opts.on_lines(surf.bufnr, lines)
+  end
+
   local help_rows = { { lhs = "j/k", desc = "Move" } }
+  for _, e in ipairs(entries) do
+    help_rows[#help_rows + 1] = { lhs = e.lhs, desc = e.desc }
+  end
+  help_rows[#help_rows + 1] = { lhs = "q, <Esc>", desc = "Close" }
+
   local km = { noremap = true, silent = true, buffer = surf.bufnr }
   local keymap = require("lib.nvim.bindings.keymap")
 
+  ---Install a fresh set of lines, keeping whatever `on_lines` decoration the
+  ---view applies to them — a refresh that dropped the highlights would leave
+  ---the heading row looking like an ordinary row from then on.
+  ---@param fresh string[]
+  local function set_lines(fresh)
+    surf:set_lines(fresh)
+    if opts.on_lines then
+      opts.on_lines(surf.bufnr, fresh)
+    end
+  end
+
   if opts.on_refresh then
-    help_rows[#help_rows + 1] = { lhs = "r", desc = "Refresh" }
     keymap("n", "r", function()
       local fresh = opts.on_refresh()
       if fresh then
-        surf:set_lines(fresh)
+        set_lines(fresh)
       end
     end, km, "runtime-analysis.telemetry: refresh")
   end
   if opts.on_drilldown then
-    help_rows[#help_rows + 1] = { lhs = "<CR>", desc = "Open the namespace under the cursor" }
     keymap("n", "<CR>", function()
-      local ns = header_namespace(vim.api.nvim_get_current_line())
+      local ns = (opts.namespace_at or header_namespace)(vim.api.nvim_get_current_line())
       if not ns then
         return
       end
       local new_lines, new_title = opts.on_drilldown(ns)
       if new_lines then
-        surf:set_lines(new_lines)
+        set_lines(new_lines)
         if new_title then
           surf:set_title((" %s "):format(new_title))
         end
@@ -326,10 +512,8 @@ local function show(lines, title, opts)
     end, km, "runtime-analysis.telemetry: drill into namespace")
   end
   if opts.on_open_html then
-    help_rows[#help_rows + 1] = { lhs = "gO", desc = "Open this report as HTML in the browser" }
     keymap("n", "gO", opts.on_open_html, km, "runtime-analysis.telemetry: open as HTML")
   end
-  help_rows[#help_rows + 1] = { lhs = "q, <Esc>", desc = "Close" }
 
   keymap("n", "?", function()
     show_help(title, help_rows)
@@ -913,35 +1097,56 @@ function M.setup()
         "runtime-analysis.telemetry — disabled"
       )
     elseif first == "status" then
-      -- One compact block per namespace this plugin knows about — live this
-      -- session or only ever persisted — rather than `report`'s own
-      -- function-by-function dump of every instance at once. Answers "which
-      -- repos are recording, in what mode, and is there anything on disk
-      -- worth reading", the whole-fleet question `report` was never
-      -- shaped to answer quickly once more than a couple of namespaces
-      -- exist. `<CR>` still reaches the full per-function report for the
-      -- namespace under the cursor, the same drilldown every other
-      -- multi-instance view already offers.
+      -- One ROW per namespace this plugin knows about — live this session or
+      -- only ever persisted — rather than `report`'s own function-by-function
+      -- dump of every instance at once. Answers "which repos are recording,
+      -- in what mode, and is there anything on disk worth reading", the
+      -- whole-fleet question `report` was never shaped to answer quickly once
+      -- more than a couple of namespaces exist. `<CR>` still reaches the full
+      -- per-function report for the namespace under the cursor, the same
+      -- drilldown every other multi-instance view already offers.
       local report_mod_ = require("runtime-analysis.telemetry.report")
       local by_ns = {}
+      local count = 0
 
       local function build()
-        local rows = mod.status_reports({ report_opts = { sort = "calls" } })
-        by_ns = {}
+        -- `top = 40`, the same cap the bare report view uses: these reports
+        -- are what `<CR>` hands straight to `report.lines()`, and a namespace
+        -- with 800 wrapped functions would otherwise drill down into a
+        -- three-thousand-line float. The board's own numbers are unaffected —
+        -- `report.build` totals every entry before it truncates.
+        local rows = mod.status_reports({ report_opts = { sort = "calls", top = 40 } })
+        by_ns, count = {}, #rows
         for _, row in ipairs(rows) do
           by_ns[row.report.namespace] = row
         end
         return report_mod_.status_lines(rows)
       end
 
-      show(build(), "runtime-analysis.telemetry — status", {
+      local lines = build()
+      show(lines, ("runtime-analysis.telemetry — status · %d namespaces"):format(count), {
+        table_view = true,
         on_refresh = build,
+        -- Not `header_namespace`: a table row is `<namespace> <state> …`, so
+        -- the namespace is the first column rather than the left half of a
+        -- `"<ns>  —  <state>"` header. A row that names something `by_ns`
+        -- does not know (the heading row's "NAMESPACE", the summary line)
+        -- resolves to nothing and `<CR>` is a no-op there, which is the
+        -- correct behaviour for both.
+        namespace_at = function(line)
+          return line:match("^(%S+)")
+        end,
+        on_lines = status_highlights,
         on_drilldown = function(ns)
           local row = by_ns[ns]
           if not row then
             return nil
           end
-          return report_mod_.lines(row.report), ("runtime-analysis.telemetry — %s"):format(ns)
+          return report_mod_.lines(row.report, {
+            data_path = row.data_path,
+            data_bytes = row.data_bytes,
+          }),
+            ("runtime-analysis.telemetry — %s"):format(ns)
         end,
       })
     elseif first == "coverage" then
@@ -1192,45 +1397,44 @@ function M.setup()
     nargs = "*",
     desc = "runtime-analysis.telemetry: report|status|start|stop|reset|disable|enable|disabled|coverage|export|export-all|open|compare|startup|cost|snapshot|snapshots|snapshot-compare|setup|full [namespace] [days]",
     complete = function(arg_lead, cmd_line)
-      -- Second token of `start`/`stop`/`reset`/`open`/`compare` is always a
-      -- namespace, never another subcommand — narrow completion there
-      -- instead of offering "start"/"stop"/... again as if it were a third
-      -- grammar position. `compare`'s own third token (a day count) has no
-      -- useful completion list, so it is simply left uncompleted rather
-      -- than offering namespaces there too.
       local before = cmd_line:sub(1, #cmd_line - #arg_lead)
       local sub = before:match("^%S+%s+(%S+)%s+%S*$")
 
-      local takes_namespace = sub == "start"
-        or sub == "stop"
-        or sub == "reset"
-        or sub == "disable"
-        or sub == "enable"
-        or sub == "open"
-        or sub == "compare"
-        or sub == "snapshot"
-        or sub == "snapshots"
-        or sub == "snapshot-compare"
-        or sub == "setup"
-        or sub == "full"
-
-      local out = {}
-      if takes_namespace then
-        for _, inst in ipairs(telemetry().instances()) do
-          out[#out + 1] = inst.namespace
-        end
-      else
-        for _, s in ipairs(SUBCOMMANDS) do
-          out[#out + 1] = s
-        end
-        for _, inst in ipairs(telemetry().instances()) do
-          out[#out + 1] = inst.namespace
-        end
+      local function matches(list)
+        return vim.tbl_filter(function(c)
+          return c:find(arg_lead or "", 1, true) == 1
+        end, list)
       end
 
-      return vim.tbl_filter(function(c)
-        return c:find(arg_lead or "", 1, true) == 1
-      end, out)
+      -- Second token of a namespace-taking subcommand is a namespace, never
+      -- another subcommand — narrow completion there instead of offering
+      -- "start"/"stop"/... again as if it were a third grammar position.
+      -- `compare`'s own third token (a day count) has no useful completion
+      -- list, so it is left uncompleted rather than offering namespaces there.
+      if sub then
+        local namespaces = NAMESPACE_SUBCOMMANDS[sub]
+        if not namespaces then
+          return {}
+        end
+        return matches(namespaces())
+      end
+
+      -- FIRST token. Subcommands only while nothing has been typed yet:
+      -- appending forty-odd namespaces to a twenty-entry subcommand list
+      -- makes the list this command's own vocabulary lives in unreadable —
+      -- and the order they are returned in cannot fix that, since a
+      -- completion front-end is free to re-sort (a fuzzy cmdline engine does,
+      -- which is exactly how plugin names end up interleaved between
+      -- `snapshot` and `startup`). Namespaces join in as soon as a prefix
+      -- narrows the list, which is when a bare `:RATelemetry <namespace>` is
+      -- actually being typed — and both are offered then, since a namespace
+      -- may well share a prefix with a subcommand (`open` / `open.nvim`).
+      if arg_lead == "" then
+        return vim.list_slice(SUBCOMMANDS, 1, #SUBCOMMANDS)
+      end
+      local out = matches(SUBCOMMANDS)
+      vim.list_extend(out, matches(known_namespaces()))
+      return out
     end,
   })
 

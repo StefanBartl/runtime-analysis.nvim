@@ -708,26 +708,45 @@ HTML dashboard (§4.4,
 
 Subcommand table: [`docs/BINDINGS.md`](BINDINGS.md#ratelemetry-subcommands).
 
-`:RATelemetry status` is the whole-fleet view: one compact block per
+`:RATelemetry status` is the whole-fleet board: one **aligned row** per
 namespace this plugin knows about — live this session or only ever
 persisted on disk, so a plugin that recorded last week and simply has not
-loaded yet this session still shows up — naming its state, its recording
-mode and what is actually sitting on disk for it (size and path). Unlike
-the bare `report` view (a full per-function breakdown for every live
-instance at once), it stays a screenful regardless of how many namespaces
-exist; `<CR>` on a row still opens that namespace's own full report, the
-same drilldown the bare view offers.
+loaded yet this session still shows up:
+
+```
+NAMESPACE              STATE    MODE             WRAPPED       CALLS  SESSIONS      SIZE  SINCE
+cascade.nvim           running  count+args+time      163     411 545        77   40.8 KB  2026-08-27
+documentation.nvim     stopped  count+args           185   2 368 131        41   76.2 KB  2026-08-05
+
+31 namespace(s) · 1 running · 0 disabled · 66 486 701 calls · 784.1 KB on disk
+```
+
+The question it answers is comparative — which of forty namespaces is still
+recording, which one is quietly the biggest on disk, which one has not
+collected anything since August — and a comparative answer has to line up in
+columns. The shape is deliberately
+[reposcope.nvim](https://github.com/StefanBartl/reposcope.nvim)'s
+`:Reposcope status`: same two-space gutter, same heading row, same
+`<CR>`-the-row-under-the-cursor, so two overviews from one ecosystem need
+learning only once. `<CR>` opens that namespace's own full report (which
+also names the exact file its data lives in), `r` re-reads everything, `?`
+lists the keys — and the keys are in the window's winbar, so they need no
+looking up. Unlike the bare `report` view (a full per-function breakdown for
+every live instance at once) it stays one screenful however many namespaces
+exist.
 
 **Keys on the `kit` report float** (`report`/`open` when `report_style`
 resolves to `"kit"`, and the mdview/preview-tab fallback of `open` when
-neither is actually loadable): `r` re-flushes and refreshes the view in
-place, `<CR>` on a namespace's header row (`"<namespace>  —  <state>"`) drills
-into that one namespace (bare "every instance" views only — a
-single-namespace float's own header is already itself), `gO` writes and opens
-this report's `report_style = "html"` rendering in the system browser
-(`:RATelemetry open` only — `report` has no HTML path to write), `?` shows
-the full cheatsheet for whichever of these the current view actually wired
-up, `q`/`<Esc>` closes.
+neither is actually loadable) — every one of them is also listed in the
+window's winbar, built from the keys that view actually wired up: `r`
+re-flushes and refreshes the view in place, `<CR>` drills into the namespace
+under the cursor (its header row, `"<namespace>  —  <state>"`, on the report
+views; its first column on the `status` table) — bare "every instance" views
+only, since a single-namespace float's own header is already itself —, `gO`
+writes and opens this report's `report_style = "html"` rendering in the
+system browser (`:RATelemetry open` only — `report` has no HTML path to
+write), `?` shows the full cheatsheet for whichever of these the current view
+actually wired up, `q`/`<Esc>` closes.
 
 ### Standalone `*All` aliases
 

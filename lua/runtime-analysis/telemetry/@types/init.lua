@@ -277,6 +277,7 @@
 ---@field markdown_all fun(opts?: RA.Telemetry.ReportOpts): string[]
 ---@field export_all fun(target_dir: string, opts?: { dir?: string, report_opts?: RA.Telemetry.ReportOpts }): string[], string[]
 ---@field status_reports fun(opts?: { dir?: string, report_opts?: RA.Telemetry.ReportOpts }): RA.Telemetry.StatusRow[]
+---@field known_namespaces fun(opts?: { dir?: string }): string[]
 ---@field setup fun(opts?: { report_style?: RA.Telemetry.ReportStyle }): nil
 ---@field start_all fun(): integer
 ---@field flush_all fun(): integer

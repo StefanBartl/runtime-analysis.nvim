@@ -245,6 +245,98 @@ local function mode_str(modes)
   return #parts > 0 and ("counting + " .. table.concat(parts, " + ")) or "counting"
 end
 
+---The same modes, short enough to be a table column rather than a sentence —
+---`counting + args + timing + errors + call_tree` is 45 cells, which is a
+---third of the status board's whole width for a value most rows spell the
+---same way. `mode_str` above stays the prose form every per-namespace header
+---uses; this is the column form.
+---@internal
+---@param modes { counting: boolean, args: boolean, timing: boolean, errors: boolean, call_tree: boolean }
+---@return string
+local function mode_badge(modes)
+  local parts = {}
+  if modes.args then
+    parts[#parts + 1] = "args"
+  end
+  if modes.timing then
+    parts[#parts + 1] = "time"
+  end
+  if modes.errors then
+    parts[#parts + 1] = "err"
+  end
+  if modes.call_tree then
+    parts[#parts + 1] = "tree"
+  end
+  return #parts > 0 and ("count+" .. table.concat(parts, "+")) or "count"
+end
+
+---`M.disable()` always stops a live instance before persisting, and
+---`inst.start()` refuses to run while disabled, so "disabled" and "running"
+---never overlap in practice.
+---@internal
+---@param report RA.Telemetry.Report
+---@return string
+local function state_of(report)
+  return report.disabled and "disabled" or (report.running and "running" or "stopped")
+end
+
+-- ---------------------------------------------------------------------------
+-- Column layout
+--
+-- Every aligned table below (`M.status_lines`' fleet board, `M.lines`' own
+-- per-function block) pads in *display cells* rather than bytes: a namespace
+-- or an argument fingerprint can carry multi-byte characters, and `%-20s`
+-- counts bytes, so one `·` in a cell used to shift that row's whole tail one
+-- column left of every other row's.
+-- ---------------------------------------------------------------------------
+
+--- Two spaces between every pair of columns — the same gutter reposcope.nvim's
+--- own status table uses, so two overviews from the same ecosystem do not
+--- disagree about what a column break looks like.
+local GAP = "  "
+
+---@internal
+---@param s string
+---@param width integer
+---@return string
+local function ljust(s, width)
+  local pad = width - vim.fn.strdisplaywidth(s)
+  return pad > 0 and (s .. (" "):rep(pad)) or s
+end
+
+---@internal
+---@param s string
+---@param width integer
+---@return string
+local function rjust(s, width)
+  local pad = width - vim.fn.strdisplaywidth(s)
+  return pad > 0 and ((" "):rep(pad) .. s) or s
+end
+
+---Truncate to `width` display cells, marking the cut with an ellipsis. Cuts
+---the tail: a namespace and a function key are both recognised by how they
+---start.
+---@internal
+---@param s string
+---@param width integer
+---@return string
+local function elide(s, width)
+  if vim.fn.strdisplaywidth(s) <= width then
+    return s
+  end
+  return vim.fn.strcharpart(s, 0, width - 1) .. "…"
+end
+
+---Join already-padded cells with the standard gutter, dropping trailing
+---whitespace so a right-padded last column does not leave a ragged edge for
+---`$`/visual selection to run into.
+---@internal
+---@param cells string[]
+---@return string
+local function join_cells(cells)
+  return (table.concat(cells, GAP):gsub("%s+$", ""))
+end
+
 ---The header block every per-namespace terminal view opens with —
 ---namespace/state, mode + counts, collecting-since, `info` — with no
 ---per-function entries. Split out of `M.lines` so `:RATelemetry status`
@@ -261,11 +353,7 @@ end
 function M.summary_lines(report)
   local out = {}
 
-  -- `M.disable()` always stops a live instance before persisting, and
-  -- `inst.start()` refuses to run while disabled, so "disabled" and
-  -- "running" never overlap in practice.
-  local state = report.disabled and "disabled" or (report.running and "running" or "stopped")
-  out[#out + 1] = ("%s  —  %s"):format(report.namespace, state)
+  out[#out + 1] = ("%s  —  %s"):format(report.namespace, state_of(report))
   out[#out + 1] = ("  %s · %s wrapped · %s calls · %d session(s)%s"):format(
     mode_str(report.modes),
     num(report.wrapped),
@@ -283,10 +371,88 @@ function M.summary_lines(report)
   return out
 end
 
+--- Widest a function key is allowed to get before it is elided. A key is a
+--- module path plus a function name (`bindings.actions.next_heading`), and
+--- letting the longest one in a plugin set the column pushes CALLS off the
+--- right edge for every other row.
+local MAX_KEY_W = 44
+
+---@internal
+---One fingerprint list (arguments, errors, callers) as indented sub-rows
+---under the entry they belong to. All three render identically apart from
+---their marker and label — they *are* the same shape (see `M.build`, which
+---derives all three through `top_fingerprints`), so they were three
+---near-identical loops until this.
+---
+---The label is what the marker alone never said: `└`/`✗`/`←` are only
+---legible once you already know the report, and "which of the three lists
+---is this" is the first question a reader has. Both are kept — the symbols
+---because `renderers/html.lua` deliberately mirrors them, the word because
+---it is the half that actually answers the question.
+---@param out string[]
+---@param marker string
+---@param label string
+---@param list { fingerprint: string, share: number }[]
+---@param other integer|nil
+---@param other_share number
+---@param distinct integer|nil
+local function push_fingerprints(out, marker, label, list, other, other_share, distinct)
+  local shown = 0
+  for _, a in ipairs(list) do
+    shown = shown + 1
+    if shown > ARGS_SHOWN then
+      break
+    end
+    out[#out + 1] = ("    %s %-4s %3.0f %%  %s"):format(marker, label, a.share * 100, a.fingerprint)
+  end
+
+  -- The values this report KNOWS and simply did not print (`ARGS_SHOWN` caps
+  -- the list at three). Distinct from the `<other>` row below, which is the
+  -- values that were never kept in the first place (`max_arg_values`), and
+  -- worth its own line rather than being folded into it: without one, three
+  -- rows at 3 % each are all a reader sees of thirty recorded values, with
+  -- nothing on screen saying the other twenty-seven exist.
+  local rest_count, rest_share = 0, 0
+  for i = ARGS_SHOWN + 1, #list do
+    rest_count = rest_count + 1
+    rest_share = rest_share + list[i].share
+  end
+  if rest_count > 0 then
+    out[#out + 1] = ("    %s %-4s %3.0f %%  <%s more, not shown>"):format(
+      marker,
+      label,
+      rest_share * 100,
+      num(rest_count)
+    )
+  end
+
+  if (other or 0) > 0 then
+    out[#out + 1] = ("    %s %-4s %3.0f %%  <other: %s distinct>"):format(
+      marker,
+      label,
+      other_share * 100,
+      num(distinct or 0)
+    )
+  end
+end
+
 ---@param report RA.Telemetry.Report
+---@param opts? { data_path?: string, data_bytes?: integer }
+---When given, one more header line naming the file this namespace's
+---aggregate actually lives in, and how big it is. `:RATelemetry status`'s
+---own drilldown passes it — "where exactly is this data" is a question the
+---fleet board raises and only the per-namespace view has room to answer.
 ---@return string[]
-function M.lines(report)
+function M.lines(report, opts)
+  opts = opts or {}
+
   local out = M.summary_lines(report)
+  if opts.data_path then
+    out[#out + 1] = ("  %s · %s"):format(
+      opts.data_bytes and format_bytes(opts.data_bytes) or "no data on disk",
+      opts.data_path
+    )
+  end
   out[#out + 1] = ""
 
   if #report.entries == 0 then
@@ -294,74 +460,109 @@ function M.lines(report)
     return out
   end
 
-  local width = 0
+  -- Which optional columns this particular report has anything to put in.
+  -- A counting-only namespace rendering an empty Ø MS column, or a column of
+  -- "—" under ERRORS, is a third of the table's width spent saying "no".
+  local any_timing, any_errors = false, false
   for _, e in ipairs(report.entries) do
-    width = math.max(width, #e.key)
+    any_timing = any_timing or e.mean_ms ~= nil
+    any_errors = any_errors or (e.errors or 0) > 0
   end
-  width = math.min(width, 46)
 
-  for _, e in ipairs(report.entries) do
-    local line = ("  %-" .. width .. "s %10s calls"):format(e.key:sub(1, width), num(e.calls))
-    if e.mean_ms then
-      line = line .. ("  %7.2fms avg (%.2f–%.2f)"):format(e.mean_ms, e.min_ms, e.max_ms)
+  local keys, calls, avgs, maxes, errs = {}, {}, {}, {}, {}
+  local key_w, calls_w = #"FUNCTION", #"CALLS"
+  local avg_w, max_w, err_w = #"Ø MS", #"MAX MS", #"ERRORS"
+  for i, e in ipairs(report.entries) do
+    keys[i] = elide(e.key, MAX_KEY_W)
+    calls[i] = num(e.calls)
+    avgs[i] = e.mean_ms and ("%.2f"):format(e.mean_ms) or "—"
+    maxes[i] = e.max_ms and ("%.2f"):format(e.max_ms) or "—"
+    errs[i] = (e.errors or 0) > 0 and num(e.errors) or "—"
+
+    key_w = math.max(key_w, vim.fn.strdisplaywidth(keys[i]))
+    calls_w = math.max(calls_w, #calls[i])
+    avg_w = math.max(avg_w, #avgs[i])
+    max_w = math.max(max_w, #maxes[i])
+    err_w = math.max(err_w, #errs[i])
+  end
+
+  ---One table row (and, given the headings, the header itself — so the
+  ---headings can never sit over a different column than their values).
+  ---@param key string
+  ---@param call string
+  ---@param avg string
+  ---@param max string
+  ---@param err string
+  ---@return string
+  local function row(key, call, avg, max, err)
+    local cells = { "  " .. ljust(key, key_w), rjust(call, calls_w) }
+    if any_timing then
+      cells[#cells + 1] = rjust(avg, avg_w)
+      cells[#cells + 1] = rjust(max, max_w)
     end
-    if e.errors > 0 then
-      line = line .. ("  %s error(s)"):format(num(e.errors))
+    if any_errors then
+      cells[#cells + 1] = rjust(err, err_w)
     end
-    out[#out + 1] = line
+    return join_cells(cells)
+  end
+
+  local header = row("FUNCTION", "CALLS", "Ø MS", "MAX MS", "ERRORS")
+  out[#out + 1] = header
+  -- A rule under the headings, not `=`: `telemetry_spec.lua` asserts a report
+  -- with no `Options.info` renders no `=` anywhere, which is how it tells an
+  -- absent info line from an empty one.
+  out[#out + 1] = "  " .. ("─"):rep(math.max(0, vim.fn.strdisplaywidth(header) - 2))
+
+  for i, e in ipairs(report.entries) do
+    local before = #out
+    out[#out + 1] = row(keys[i], calls[i], avgs[i], maxes[i], errs[i])
 
     if e.args then
-      local shown = 0
-      for _, a in ipairs(e.args) do
-        shown = shown + 1
-        if shown > ARGS_SHOWN then
-          break
-        end
-        out[#out + 1] = ("      └ %3.0f %%  %s"):format(a.share * 100, a.fingerprint)
-      end
-      if (e.other or 0) > 0 then
-        out[#out + 1] = ("      └ %3.0f %%  <other: %d distinct>"):format(
-          e.calls > 0 and (e.other / e.calls * 100) or 0,
-          e.distinct or 0
-        )
-      end
+      push_fingerprints(
+        out,
+        "└",
+        "args",
+        e.args,
+        e.other,
+        e.calls > 0 and ((e.other or 0) / e.calls) or 0,
+        e.distinct
+      )
       if e.hint then
-        out[#out + 1] = ("      ⓘ %s"):format(e.hint)
+        out[#out + 1] = ("    ⓘ %s"):format(e.hint)
       end
     end
 
     if e.error_fp then
-      local shown = 0
-      for _, a in ipairs(e.error_fp) do
-        shown = shown + 1
-        if shown > ARGS_SHOWN then
-          break
-        end
-        out[#out + 1] = ("      ✗ %3.0f %%  %s"):format(a.share * 100, a.fingerprint)
-      end
-      if (e.error_other or 0) > 0 then
-        out[#out + 1] = ("      ✗ %3.0f %%  <other: %d distinct>"):format(
-          e.errors > 0 and (e.error_other / e.errors * 100) or 0,
-          e.error_distinct or 0
-        )
-      end
+      push_fingerprints(
+        out,
+        "✗",
+        "err",
+        e.error_fp,
+        e.error_other,
+        e.errors > 0 and ((e.error_other or 0) / e.errors) or 0,
+        e.error_distinct
+      )
     end
 
     if e.callers then
-      local shown = 0
-      for _, a in ipairs(e.callers) do
-        shown = shown + 1
-        if shown > ARGS_SHOWN then
-          break
-        end
-        out[#out + 1] = ("      ← %3.0f %%  %s"):format(a.share * 100, a.fingerprint)
-      end
-      if (e.callers_other or 0) > 0 then
-        out[#out + 1] = ("      ← %3.0f %%  <other: %d distinct>"):format(
-          e.calls > 0 and (e.callers_other / e.calls * 100) or 0,
-          e.callers_distinct or 0
-        )
-      end
+      push_fingerprints(
+        out,
+        "←",
+        "from",
+        e.callers,
+        e.callers_other,
+        e.calls > 0 and ((e.callers_other or 0) / e.calls) or 0,
+        e.callers_distinct
+      )
+    end
+
+    -- A blank line only after an entry that actually grew sub-rows, and never
+    -- after the last one. Without it a fingerprint list runs straight into the
+    -- next function's own row and the two read as one block; with it after
+    -- *every* entry, a counting-only report (no sub-rows at all) would be
+    -- double-spaced for no reason.
+    if #out > before + 1 and i < #report.entries then
+      out[#out + 1] = ""
     end
   end
 
@@ -534,17 +735,27 @@ function M.markdown_all(reports)
   return out
 end
 
----`:RATelemetry status`'s own view — one compact block per namespace this
----plugin knows about (`M.summary_lines`, no per-function entries) plus a
----line naming what is actually sitting on disk for it. Deliberately not
----`M.lines` for every instance concatenated (what the bare `:RATelemetry`
----view already is): that answers "what did each function do", a genuinely
----long read once more than a couple of namespaces are involved; this
----answers "which of my repos are recording, in what mode, and is there
----anything there worth reading" — a screenful regardless of how many
----namespaces exist. `<CR>` still reaches the full per-function report from
----here, the same `header_namespace()`/`on_drilldown` mechanism every other
----multi-instance view already uses (`M.summary_lines`'s own doc-comment).
+--- Widest a namespace is allowed to get in the status table before it is
+--- elided, so one long name cannot push the numeric columns off the float.
+local MAX_NS_W = 30
+
+---`:RATelemetry status`'s own view — ONE ROW per namespace this plugin knows
+---about, in an aligned table, not a paragraph each.
+---
+---**Why a table and not `M.summary_lines` per namespace** (which is what this
+---was first built as): the question is comparative — which of forty
+---namespaces is still running, which one is quietly the biggest on disk, which
+---one has not collected anything since August. Answers to a comparative
+---question have to line up in columns; four lines of prose per namespace is
+---the same data in the one shape that cannot be scanned. The shape is
+---deliberately reposcope.nvim's `:Reposcope status` — same two-space gutter,
+---same heading row, same `<CR>`-the-row-under-the-cursor — because a reader
+---moving between two overviews from the same ecosystem should not have to
+---learn two tables.
+---
+---Line 1 is the heading row and the last line is the fleet summary; the rows
+---in between each start with their namespace at column 0, which is what
+---`command.lua`'s `status_namespace_at()` reads back for `<CR>`.
 ---@param rows RA.Telemetry.StatusRow[]
 ---@return string[]
 function M.status_lines(rows)
@@ -552,17 +763,89 @@ function M.status_lines(rows)
     return { "no telemetry namespaces known -- nothing has run or persisted yet." }
   end
 
-  local out = {}
+  local dw = vim.fn.strdisplaywidth
+  local cells = {}
+  local w = {
+    ns = #"NAMESPACE",
+    state = #"STATE",
+    mode = #"MODE",
+    wrapped = #"WRAPPED",
+    calls = #"CALLS",
+    sessions = #"SESSIONS",
+    size = #"SIZE",
+    since = #"SINCE",
+  }
+
+  local total_calls, total_bytes, running, disabled = 0, 0, 0, 0
   for i, row in ipairs(rows) do
-    if i > 1 then
-      out[#out + 1] = ""
+    local r = row.report
+    cells[i] = {
+      ns = elide(r.namespace, MAX_NS_W),
+      state = state_of(r),
+      mode = mode_badge(r.modes),
+      wrapped = num(r.wrapped),
+      calls = num(r.total_calls),
+      sessions = num(r.sessions),
+      size = row.data_bytes and format_bytes(row.data_bytes) or "—",
+      -- Date only. The clock time a namespace happened to start collecting at
+      -- is real detail, but it is per-namespace detail: `M.lines`' own header
+      -- still carries it, and in a column it is eight cells of noise across
+      -- every row.
+      since = r.started_at and tostring(os.date("%Y-%m-%d", r.started_at)) or "—",
+    }
+    for key, value in pairs(cells[i]) do
+      w[key] = math.max(w[key], dw(value))
     end
-    vim.list_extend(out, M.summary_lines(row.report))
-    out[#out + 1] = ("  %s · %s"):format(
-      row.data_bytes and format_bytes(row.data_bytes) or "no data on disk",
-      row.data_path
-    )
+
+    total_calls = total_calls + (r.total_calls or 0)
+    total_bytes = total_bytes + (row.data_bytes or 0)
+    if r.running then
+      running = running + 1
+    end
+    if r.disabled then
+      disabled = disabled + 1
+    end
   end
+
+  ---@param c table<string, string>
+  ---@return string
+  local function line_of(c)
+    return join_cells({
+      ljust(c.ns, w.ns),
+      ljust(c.state, w.state),
+      ljust(c.mode, w.mode),
+      rjust(c.wrapped, w.wrapped),
+      rjust(c.calls, w.calls),
+      rjust(c.sessions, w.sessions),
+      rjust(c.size, w.size),
+      c.since,
+    })
+  end
+
+  local out = {
+    line_of({
+      ns = "NAMESPACE",
+      state = "STATE",
+      mode = "MODE",
+      wrapped = "WRAPPED",
+      calls = "CALLS",
+      sessions = "SESSIONS",
+      size = "SIZE",
+      since = "SINCE",
+    }),
+  }
+  for _, c in ipairs(cells) do
+    out[#out + 1] = line_of(c)
+  end
+
+  out[#out + 1] = ""
+  out[#out + 1] = ("%d namespace(s) · %d running · %d disabled · %s calls · %s on disk"):format(
+    #rows,
+    running,
+    disabled,
+    num(total_calls),
+    format_bytes(total_bytes)
+  )
   return out
 end
 
