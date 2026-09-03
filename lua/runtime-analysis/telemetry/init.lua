@@ -89,6 +89,46 @@ M.setup = telemetry_config.setup
 ---@type RA.Telemetry.Instance[]
 local instances = {}
 
+-- ---------------------------------------------------------------------------
+-- Reminder batching
+--
+-- `_check_reminder` runs per instance, and `VimEnter` fires every instance's
+-- own autocmd back to back, synchronously -- a session with a dozen plugins
+-- all crossing their 7-day threshold in the same week would otherwise show a
+-- dozen separate `vim.notify` popups in the same breath. Each hit is queued
+-- here instead of notified immediately; the FIRST one in an otherwise-empty
+-- queue schedules the one flush that actually calls `notify.info`, and by
+-- the time that scheduled callback runs (`vim.schedule` never runs inside
+-- the same synchronous burst that queued it), every reminder that fired
+-- alongside it has already joined the same queue. One notification, however
+-- many namespaces crossed their threshold at once; a reminder that fires in
+-- genuine isolation (a periodic flush hours apart from any other) still gets
+-- its own message, unbatched, because nothing else was ever queued with it.
+-- ---------------------------------------------------------------------------
+
+---@type string[]
+local pending_reminders = {}
+local reminder_flush_scheduled = false
+
+---@internal
+local function flush_reminders()
+  local messages = pending_reminders
+  pending_reminders = {}
+  reminder_flush_scheduled = false
+  if #messages == 0 then
+    return
+  end
+  if #messages == 1 then
+    notify.info(messages[1])
+    return
+  end
+  local combined = { ("%d namespaces have reminders due:"):format(#messages), "" }
+  vim.list_extend(combined, messages)
+  combined[#combined + 1] = ""
+  combined[#combined + 1] = "Overview of every namespace: :RATelemetry status"
+  notify.info(table.concat(combined, "\n"))
+end
+
 local DEFAULTS = {
   retention_days = 30,
   flush_interval_ms = 60000,
@@ -845,10 +885,16 @@ function M.new(opts)
   ---@param data RA.Telemetry.Data
   function inst._check_reminder(data)
     local msg = reminder.check(namespace, data, remind_after)
-    if msg then
-      vim.schedule(function()
-        notify.info(msg)
-      end)
+    if not msg then
+      return
+    end
+    -- Queued, not notified directly -- see the module-level "Reminder
+    -- batching" block above for why, and `flush_reminders` for what
+    -- actually calls `notify.info`.
+    pending_reminders[#pending_reminders + 1] = msg
+    if not reminder_flush_scheduled then
+      reminder_flush_scheduled = true
+      vim.schedule(flush_reminders)
     end
   end
 
@@ -1300,22 +1346,48 @@ function M.markdown_all(opts)
   return report_mod.markdown_all(M.report_all(opts))
 end
 
+---@internal
+---Build a report for a namespace purely from what is on disk — no live
+---instance exists (or the caller does not want to ask one). Shared by
+---`M.export_all` and `M.status_reports`, which both face the identical
+---problem for a namespace with no live instance: neither remembers what a
+---since-gone instance was started with, so `modes` is inferred from which
+---fields the stored calls actually populated (an `args` bucket on any entry
+---means argument profiling was on, etc.) rather than guessed at, and
+---`wrapped` is read back from `Data.modules` (every function
+---`wrap_loaded()` ever registered, whether or not it was called — the
+---honest disk-only substitute for "how many functions are wrapped right
+---now"). `running` is always false — nothing here is live.
+---@param namespace string
+---@param data RA.Telemetry.Data
+---@param cache_opts Lib.Cache.Opts
+---@param report_opts? RA.Telemetry.ReportOpts
+---@return RA.Telemetry.Report
+local function synth_report(namespace, data, cache_opts, report_opts)
+  local modes = { counting = true, args = false, timing = false, errors = false, call_tree = false }
+  for _, stats in pairs(data.functions or {}) do
+    modes.args = modes.args or stats.args ~= nil
+    modes.timing = modes.timing or stats.timing ~= nil
+    modes.errors = modes.errors or (stats.errors or 0) > 0 or stats.error_fp ~= nil
+    modes.call_tree = modes.call_tree or stats.callers ~= nil
+  end
+
+  local meta = {
+    running = false,
+    disabled = toggle.is_disabled(namespace, cache_opts),
+    wrapped = vim.tbl_count(data.modules or {}),
+    modes = modes,
+  }
+  return report_mod.build(namespace, data, meta, report_opts)
+end
+
 ---Render every namespace's aggregate to its own Markdown file under
 ---`target_dir` — live this process, live a different one, or no live
 ---instance at all. `markdown_all()`'s own combined document only ever sees
 ---`instances` (this process's live ones); this instead starts from
 ---`store.namespaces()`, so a namespace nothing has loaded THIS session still
----gets exported from whatever it last flushed.
----
----A synthesized `meta` stands in for what only a live instance would
----normally supply: `running` is always false (nothing here is live),
----`wrapped` is read back from `Data.modules` (every function `wrap_loaded()`
----ever registered, whether or not it was called — the honest disk-only
----substitute for "how many functions are wrapped right now"), and `modes`
----is inferred from which fields the stored calls actually populated (an
----`args` bucket on any entry means argument profiling was on, etc.) rather
----than guessed at, since nothing here remembers the options a since-gone
----instance was started with.
+---gets exported from whatever it last flushed. See `synth_report` for how a
+---disk-only namespace's report is built.
 ---@param target_dir string
 ---@param opts? { dir?: string, report_opts?: RA.Telemetry.ReportOpts }
 ---@return string[] written  # paths written, one per exported namespace
@@ -1328,22 +1400,7 @@ function M.export_all(target_dir, opts)
   for _, namespace in ipairs(store.namespaces(cache_opts)) do
     local data = store.load_readonly(namespace, cache_opts)
     if data then
-      local modes =
-        { counting = true, args = false, timing = false, errors = false, call_tree = false }
-      for _, stats in pairs(data.functions or {}) do
-        modes.args = modes.args or stats.args ~= nil
-        modes.timing = modes.timing or stats.timing ~= nil
-        modes.errors = modes.errors or (stats.errors or 0) > 0 or stats.error_fp ~= nil
-        modes.call_tree = modes.call_tree or stats.callers ~= nil
-      end
-
-      local meta = {
-        running = false,
-        disabled = toggle.is_disabled(namespace, cache_opts),
-        wrapped = vim.tbl_count(data.modules or {}),
-        modes = modes,
-      }
-      local report = report_mod.build(namespace, data, meta, opts.report_opts)
+      local report = synth_report(namespace, data, cache_opts, opts.report_opts)
       local path = target_dir .. "/" .. store.sanitize(namespace) .. ".md"
       if report_file.write(path, report_mod.markdown(report)) then
         written[#written + 1] = path
@@ -1353,6 +1410,80 @@ function M.export_all(target_dir, opts)
     end
   end
   return written, failed
+end
+
+---Every namespace this plugin knows about, live this process right now or
+---only ever persisted — `:RATelemetry status`'s one building block. Neither
+---`M.report_all()` (`instances`, this process's live ones only) nor
+---`store.namespaces()` (the cache directory only) answers "every namespace"
+---on its own; this is the union of both, one row each, sorted by namespace.
+---
+---A live instance is flushed and asked for its own `report()` — the
+---authoritative answer for "which mode is it recording in *right now*",
+---since a fresh `:RATelemetry setup` can change that before any call under
+---the new policy has been persisted. Everything else falls back to
+---`synth_report` — inferred from whatever the data on disk actually
+---contains.
+---
+---**Best-effort across cache directories, like `M.disabled()`/
+---`M.export_all()` before it.** `store.namespaces()` only scans one
+---directory (`opts.dir` or the default); a namespace persisted under a
+---live instance's own custom `dir` is still found via `instances` even so —
+---but one persisted under a custom `dir` with NO live instance this session
+---stays invisible here, the same acknowledged gap those two already have.
+---@param opts? { dir?: string, report_opts?: RA.Telemetry.ReportOpts }
+---@return RA.Telemetry.StatusRow[]
+function M.status_reports(opts)
+  opts = opts or {}
+  local cache_opts = { dir = opts.dir or DEFAULT_CACHE_DIR }
+
+  local live_by_ns = {}
+  for _, inst in ipairs(instances) do
+    live_by_ns[inst.namespace] = inst
+  end
+
+  local names, seen = {}, {}
+  for _, namespace in ipairs(store.namespaces(cache_opts)) do
+    seen[namespace] = true
+    names[#names + 1] = namespace
+  end
+  for namespace in pairs(live_by_ns) do
+    if not seen[namespace] then
+      seen[namespace] = true
+      names[#names + 1] = namespace
+    end
+  end
+  table.sort(names)
+
+  local rows = {}
+  for _, namespace in ipairs(names) do
+    local inst = live_by_ns[namespace]
+    local this_cache_opts = (inst and inst._cache_opts) or cache_opts
+
+    local report
+    if inst then
+      inst.flush()
+      report = inst.report(opts.report_opts)
+    else
+      -- `namespace` came from `store.namespaces(cache_opts)` or a live
+      -- instance's own table — either way something was persisted for it,
+      -- so `load_readonly` cannot come back nil here.
+      local data = store.load_readonly(namespace, this_cache_opts)
+      assert(data, ("status_reports(): %q listed but nothing persisted"):format(namespace))
+      report = synth_report(namespace, data, this_cache_opts, opts.report_opts)
+    end
+
+    local path = store.data_path(namespace, this_cache_opts)
+    local stat = uv.fs_stat(path)
+
+    rows[#rows + 1] = {
+      report = report,
+      live = inst ~= nil,
+      data_path = path,
+      data_bytes = stat and stat.size or nil,
+    }
+  end
+  return rows
 end
 
 ---Start every live instance that is not already running. Symmetric with

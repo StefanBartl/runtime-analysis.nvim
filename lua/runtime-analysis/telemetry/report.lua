@@ -30,6 +30,21 @@ local function num(n)
   return (out:gsub("^%s+", ""))
 end
 
+---A file size for `M.status_lines`' own "how much is actually on disk"
+---column — three tiers only (B/KB/MB), because a namespace's own aggregate
+---(counts, fingerprint buckets) realistically never reaches GB.
+---@internal
+---@param bytes integer
+---@return string
+local function format_bytes(bytes)
+  if bytes >= 1024 * 1024 then
+    return ("%.1f MB"):format(bytes / (1024 * 1024))
+  elseif bytes >= 1024 then
+    return ("%.1f KB"):format(bytes / 1024)
+  end
+  return ("%d B"):format(bytes)
+end
+
 ---Render `Options.info`/`Data.info` as one deterministic, sorted line —
 ---shared by `M.lines` and `M.markdown` so the two never disagree on key
 ---order. `nil` when there is nothing to show, so callers can skip the line
@@ -205,25 +220,46 @@ function M.build(namespace, data, meta, opts)
   }
 end
 
+---`report.modes` (the 5 booleans `M.build`'s `meta.modes` carries in) as the
+---one word every renderer of a report shows next to its namespace —
+---`M.lines`, `M.markdown` and `M.summary_lines` all called this same
+---four-if block inline until they didn't; kept here once so the three can
+---never render it differently.
+---@internal
+---@param modes { counting: boolean, args: boolean, timing: boolean, errors: boolean, call_tree: boolean }
+---@return string
+local function mode_str(modes)
+  local parts = {}
+  if modes.args then
+    parts[#parts + 1] = "args"
+  end
+  if modes.timing then
+    parts[#parts + 1] = "timing"
+  end
+  if modes.errors then
+    parts[#parts + 1] = "errors"
+  end
+  if modes.call_tree then
+    parts[#parts + 1] = "call_tree"
+  end
+  return #parts > 0 and ("counting + " .. table.concat(parts, " + ")) or "counting"
+end
+
+---The header block every per-namespace terminal view opens with —
+---namespace/state, mode + counts, collecting-since, `info` — with no
+---per-function entries. Split out of `M.lines` so `:RATelemetry status`
+---(`M.status_lines`) can show one namespace per THREE-ish lines instead of
+---its full function-by-function report; `M.lines` itself is unchanged,
+---just this block plus the entries loop it always had.
+---
+---Deliberately produces the exact same header row `M.lines` always has —
+---`("%s  —  %s"):format(report.namespace, state)` — so `command.lua`'s
+---`header_namespace()`/`<CR>`-drilldown keeps working on a `status` row
+---exactly the way it already does on a full report's own header.
 ---@param report RA.Telemetry.Report
 ---@return string[]
-function M.lines(report)
+function M.summary_lines(report)
   local out = {}
-
-  local modes = {}
-  if report.modes.args then
-    modes[#modes + 1] = "args"
-  end
-  if report.modes.timing then
-    modes[#modes + 1] = "timing"
-  end
-  if report.modes.errors then
-    modes[#modes + 1] = "errors"
-  end
-  if report.modes.call_tree then
-    modes[#modes + 1] = "call_tree"
-  end
-  local mode_str = #modes > 0 and ("counting + " .. table.concat(modes, " + ")) or "counting"
 
   -- `M.disable()` always stops a live instance before persisting, and
   -- `inst.start()` refuses to run while disabled, so "disabled" and
@@ -231,7 +267,7 @@ function M.lines(report)
   local state = report.disabled and "disabled" or (report.running and "running" or "stopped")
   out[#out + 1] = ("%s  —  %s"):format(report.namespace, state)
   out[#out + 1] = ("  %s · %s wrapped · %s calls · %d session(s)%s"):format(
-    mode_str,
+    mode_str(report.modes),
     num(report.wrapped),
     num(report.total_calls),
     report.sessions,
@@ -244,6 +280,13 @@ function M.lines(report)
   if info_line then
     out[#out + 1] = ("  %s"):format(info_line)
   end
+  return out
+end
+
+---@param report RA.Telemetry.Report
+---@return string[]
+function M.lines(report)
+  local out = M.summary_lines(report)
   out[#out + 1] = ""
 
   if #report.entries == 0 then
@@ -336,28 +379,13 @@ end
 function M.markdown(report)
   local out = {}
 
-  local modes = {}
-  if report.modes.args then
-    modes[#modes + 1] = "args"
-  end
-  if report.modes.timing then
-    modes[#modes + 1] = "timing"
-  end
-  if report.modes.errors then
-    modes[#modes + 1] = "errors"
-  end
-  if report.modes.call_tree then
-    modes[#modes + 1] = "call_tree"
-  end
-  local mode_str = #modes > 0 and ("counting + " .. table.concat(modes, " + ")) or "counting"
-
   local state = report.disabled and "disabled" or (report.running and "running" or "stopped")
 
   out[#out + 1] = ("# %s — telemetry"):format(report.namespace)
   out[#out + 1] = ""
   out[#out + 1] = ("**%s** · %s · %s wrapped · %s calls · %d session(s)%s"):format(
     state,
-    mode_str,
+    mode_str(report.modes),
     num(report.wrapped),
     num(report.total_calls),
     report.sessions,
@@ -503,6 +531,38 @@ function M.markdown_all(reports)
     vim.list_extend(out, section)
   end
 
+  return out
+end
+
+---`:RATelemetry status`'s own view — one compact block per namespace this
+---plugin knows about (`M.summary_lines`, no per-function entries) plus a
+---line naming what is actually sitting on disk for it. Deliberately not
+---`M.lines` for every instance concatenated (what the bare `:RATelemetry`
+---view already is): that answers "what did each function do", a genuinely
+---long read once more than a couple of namespaces are involved; this
+---answers "which of my repos are recording, in what mode, and is there
+---anything there worth reading" — a screenful regardless of how many
+---namespaces exist. `<CR>` still reaches the full per-function report from
+---here, the same `header_namespace()`/`on_drilldown` mechanism every other
+---multi-instance view already uses (`M.summary_lines`'s own doc-comment).
+---@param rows RA.Telemetry.StatusRow[]
+---@return string[]
+function M.status_lines(rows)
+  if #rows == 0 then
+    return { "no telemetry namespaces known -- nothing has run or persisted yet." }
+  end
+
+  local out = {}
+  for i, row in ipairs(rows) do
+    if i > 1 then
+      out[#out + 1] = ""
+    end
+    vim.list_extend(out, M.summary_lines(row.report))
+    out[#out + 1] = ("  %s · %s"):format(
+      row.data_bytes and format_bytes(row.data_bytes) or "no data on disk",
+      row.data_path
+    )
+  end
   return out
 end
 

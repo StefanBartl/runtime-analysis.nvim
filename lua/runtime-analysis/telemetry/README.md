@@ -670,6 +670,9 @@ require("runtime-analysis.telemetry.command").setup()
 ```vim
 :RATelemetry                 " report across every live instance, in a kit float
 :RATelemetry lsp.nvim        " report for one namespace
+:RATelemetry status          " one compact block per namespace this plugin knows about --
+                              " live this session or only ever persisted -- state, mode,
+                              " what is on disk. <CR> on a row opens its full report
 :RATelemetry start [ns]      " every instance, or just one
 :RATelemetry stop [ns]       " every instance, or just one
 :RATelemetry flush [ns]      " write what is collected so far, WITHOUT stopping -- every instance, or just one
@@ -1314,6 +1317,13 @@ stop with :RATelemetry stop.
 - Both a time and a volume trigger, whichever comes first — 7 days of a
   barely-used function is not enough data; 50 000 calls in one afternoon is.
 - Escalates once at 4× the configured duration, then stops for good.
+- **Batched, not one popup per namespace.** `VimEnter` checks every live
+  instance's own reminder back to back, synchronously — with several
+  namespaces wired up (`opts.telemetry.plugins`, most configs) more than one
+  can cross its threshold in the same session. Those collapse into a single
+  `vim.notify` call naming every namespace due at once, plus a pointer at
+  `:RATelemetry status` for the overview; a reminder that fires alone still
+  gets its own, unbatched message, unchanged from before.
 
 ## What to instrument, and what not to
 

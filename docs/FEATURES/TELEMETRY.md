@@ -33,6 +33,36 @@ calls." The same read works from a CLI with no editor at all:
 - **Docs:** [`lua/runtime-analysis/telemetry/README.md`](../../lua/runtime-analysis/telemetry/README.md)
   "Reading without an instance" section.
 
+## Whole-fleet status, and a reminder that stays quiet unless several fire at once
+
+`:RATelemetry status` answers "which of my repos are recording, in what
+mode, and is there anything on disk worth reading" as one screenful
+regardless of how many namespaces exist — a compact block per namespace
+(state, mode, size and path on disk), not the bare `report` view's full
+per-function breakdown for every live instance at once. It covers a
+namespace that recorded last week and has simply not loaded yet this
+session too, not only this process's live instances: `M.status_reports()`
+is the union of `telemetry.instances()` and `telemetry.store.namespaces()`,
+one row each. `<CR>` on a row still opens that namespace's own full report,
+the same drilldown the bare view offers.
+
+The lifecycle reminder this pairs with (see the telemetry README's own
+"Lifecycle reminder" section for the trigger itself) used to notify once
+per namespace independently — with several namespaces wired up, a session
+where more than one crosses its threshold together produced one popup per
+namespace, back to back. Reminders now queue instead of notifying directly;
+the first one due schedules a single flush, and everything that fires
+alongside it (a `VimEnter` sweep across every live instance, chiefly) joins
+the same queue before that flush runs. One notification names every
+namespace due at once and points at `:RATelemetry status`; a reminder
+firing alone still gets its own, unbatched message.
+
+- **Module:** `telemetry/init.lua` (`M.status_reports`), `telemetry/
+  report.lua` (`M.summary_lines`, `M.status_lines`)
+- **Usercmds:** `:RATelemetry status`
+- **Docs:** [`lua/runtime-analysis/telemetry/README.md`](../../lua/runtime-analysis/telemetry/README.md)
+  "Lifecycle reminder" section.
+
 ## Named, dated snapshots
 
 `telemetry.snapshot(namespace, name?)` captures the current aggregate

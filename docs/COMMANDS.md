@@ -708,6 +708,16 @@ HTML dashboard (§4.4,
 
 Subcommand table: [`docs/BINDINGS.md`](BINDINGS.md#ratelemetry-subcommands).
 
+`:RATelemetry status` is the whole-fleet view: one compact block per
+namespace this plugin knows about — live this session or only ever
+persisted on disk, so a plugin that recorded last week and simply has not
+loaded yet this session still shows up — naming its state, its recording
+mode and what is actually sitting on disk for it (size and path). Unlike
+the bare `report` view (a full per-function breakdown for every live
+instance at once), it stays a screenful regardless of how many namespaces
+exist; `<CR>` on a row still opens that namespace's own full report, the
+same drilldown the bare view offers.
+
 **Keys on the `kit` report float** (`report`/`open` when `report_style`
 resolves to `"kit"`, and the mdview/preview-tab fallback of `open` when
 neither is actually loadable): `r` re-flushes and refreshes the view in

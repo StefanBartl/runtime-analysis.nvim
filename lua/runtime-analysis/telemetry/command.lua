@@ -8,6 +8,12 @@
 ---
 ---   :RATelemetry                 report across every live instance
 ---   :RATelemetry lsp.nvim        report for one namespace
+---   :RATelemetry status          one compact block per namespace this
+---                                plugin knows about -- live this session or
+---                                only ever persisted -- naming its state,
+---                                mode and what is actually on disk for it.
+---                                `<CR>` on a row still opens that
+---                                namespace's own full report
 ---   :RATelemetry start [ns]      start every instance, or just one
 ---   :RATelemetry stop [ns]       stop every instance, or just one
 ---   :RATelemetry flush [ns]      write what has been collected so far to
@@ -188,6 +194,7 @@ end
 
 local SUBCOMMANDS = {
   "report",
+  "status",
   "start",
   "stop",
   "flush",
@@ -905,6 +912,38 @@ function M.setup()
         #list > 0 and list or { "no namespace is currently disabled." },
         "runtime-analysis.telemetry — disabled"
       )
+    elseif first == "status" then
+      -- One compact block per namespace this plugin knows about — live this
+      -- session or only ever persisted — rather than `report`'s own
+      -- function-by-function dump of every instance at once. Answers "which
+      -- repos are recording, in what mode, and is there anything on disk
+      -- worth reading", the whole-fleet question `report` was never
+      -- shaped to answer quickly once more than a couple of namespaces
+      -- exist. `<CR>` still reaches the full per-function report for the
+      -- namespace under the cursor, the same drilldown every other
+      -- multi-instance view already offers.
+      local report_mod_ = require("runtime-analysis.telemetry.report")
+      local by_ns = {}
+
+      local function build()
+        local rows = mod.status_reports({ report_opts = { sort = "calls" } })
+        by_ns = {}
+        for _, row in ipairs(rows) do
+          by_ns[row.report.namespace] = row
+        end
+        return report_mod_.status_lines(rows)
+      end
+
+      show(build(), "runtime-analysis.telemetry — status", {
+        on_refresh = build,
+        on_drilldown = function(ns)
+          local row = by_ns[ns]
+          if not row then
+            return nil
+          end
+          return report_mod_.lines(row.report), ("runtime-analysis.telemetry — %s"):format(ns)
+        end,
+      })
     elseif first == "coverage" then
       local lines = {}
       for _, inst in ipairs(mod.instances()) do
@@ -1151,7 +1190,7 @@ function M.setup()
     end
   end, {
     nargs = "*",
-    desc = "runtime-analysis.telemetry: report|start|stop|reset|disable|enable|disabled|coverage|export|export-all|open|compare|startup|cost|snapshot|snapshots|snapshot-compare|setup|full [namespace] [days]",
+    desc = "runtime-analysis.telemetry: report|status|start|stop|reset|disable|enable|disabled|coverage|export|export-all|open|compare|startup|cost|snapshot|snapshots|snapshot-compare|setup|full [namespace] [days]",
     complete = function(arg_lead, cmd_line)
       -- Second token of `start`/`stop`/`reset`/`open`/`compare` is always a
       -- namespace, never another subcommand — narrow completion there

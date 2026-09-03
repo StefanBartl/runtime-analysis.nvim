@@ -1317,6 +1317,166 @@ return function(H)
   end
 
   -- -------------------------------------------------------------------------
+  -- lifecycle reminder: several instances reminding in the same synchronous
+  -- burst (VimEnter's own for-loop over every instance's autocmd, chiefly)
+  -- collapse into ONE notification, not one per namespace — see
+  -- `telemetry/init.lua`'s "Reminder batching" block. A reminder that fires
+  -- alone still gets its own, unbatched message.
+  -- -------------------------------------------------------------------------
+  do
+    local orig_vim_notify = vim.notify
+    local function stub()
+      local calls = {}
+      -- A test double over typed `vim.*` surface: replacing the field is the
+      -- point of the case, not a second definition of it.
+      ---@diagnostic disable-next-line: duplicate-set-field
+      vim.notify = function(msg, level)
+        calls[#calls + 1] = { msg = msg, level = level }
+      end
+      return calls
+    end
+
+    -- Two instances, both due, checked back to back — the shape a
+    -- `VimEnter` sweep across every live instance actually produces.
+    local ns1, ns2 = ns("remind_batch_a"), ns("remind_batch_b")
+    local t1 = telemetry.new({ namespace = ns1, persist = false })
+    local t2 = telemetry.new({ namespace = ns2, persist = false })
+
+    local data1 = store.empty()
+    data1.functions.f = { calls = 60000 }
+    local data2 = store.empty()
+    data2.functions.g = { calls = 60000 }
+
+    local calls = stub()
+    t1._check_reminder(data1)
+    t2._check_reminder(data2)
+    vim.wait(200, function()
+      return #calls > 0
+    end)
+
+    H.eq(#calls, 1, "two reminders firing together produce exactly one notify() call")
+    H.ok(calls[1].msg:find(ns1, 1, true) ~= nil, "combined message names the first namespace")
+    H.ok(calls[1].msg:find(ns2, 1, true) ~= nil, "combined message names the second namespace")
+    H.ok(
+      calls[1].msg:find(":RATelemetry status", 1, true) ~= nil,
+      "combined message points at the status overview"
+    )
+
+    -- A third instance, reminding on its own (nothing else queued
+    -- alongside it) — still exactly one call, and the plain single-namespace
+    -- message, not the "N namespaces" wrapper above.
+    local ns3 = ns("remind_batch_c")
+    local t3 = telemetry.new({ namespace = ns3, persist = false })
+    local data3 = store.empty()
+    data3.functions.h = { calls = 60000 }
+
+    calls = stub()
+    t3._check_reminder(data3)
+    vim.wait(200, function()
+      return #calls > 0
+    end)
+
+    H.eq(#calls, 1, "a lone reminder still produces exactly one notify() call")
+    H.ok(
+      calls[1].msg:find("namespaces have reminders due", 1, true) == nil,
+      "a lone reminder is not wrapped in the multi-namespace message"
+    )
+
+    vim.notify = orig_vim_notify
+  end
+
+  -- -------------------------------------------------------------------------
+  -- status_reports(): union of live instances and disk-only namespaces, one
+  -- row each — :RATelemetry status's one building block. Isolated via
+  -- dir=tmpdir, same reasoning every other disk-touching block here gives.
+  -- -------------------------------------------------------------------------
+  do
+    local live_ns = ns("status_live")
+    local disk_ns = ns("status_disk")
+
+    local mod = { f = function() end }
+    local t = telemetry.new({ namespace = live_ns, persist = true, dir = tmpdir })
+    t.wrap(mod)
+    t.start()
+    mod.f()
+    t.flush()
+
+    -- Data on disk, no live instance this session — exactly the namespace
+    -- `telemetry.instances()` alone would miss entirely, and the reason
+    -- `status_reports()` also reads `store.namespaces()`.
+    local disk_data = store.empty()
+    disk_data.functions["m.g"] = { calls = 7 }
+    store.save(disk_ns, disk_data, { dir = tmpdir })
+
+    local rows = telemetry.status_reports({ dir = tmpdir })
+    local by_ns = {}
+    for _, row in ipairs(rows) do
+      by_ns[row.report.namespace] = row
+    end
+
+    local live_row = by_ns[live_ns]
+    H.ok(live_row ~= nil, "status_reports: sees the live namespace")
+    H.eq(live_row.live, true, "status_reports: live namespace marked live")
+    H.eq(live_row.report.running, true, "status_reports: live namespace reports running")
+    H.ok(
+      live_row.data_bytes ~= nil and live_row.data_bytes > 0,
+      "status_reports: live namespace has a real file size"
+    )
+
+    local disk_row = by_ns[disk_ns]
+    H.ok(disk_row ~= nil, "status_reports: sees the disk-only namespace")
+    H.eq(disk_row.live, false, "status_reports: disk-only namespace marked not live")
+    H.eq(disk_row.report.running, false, "status_reports: disk-only namespace reports not running")
+    H.eq(
+      disk_row.report.total_calls,
+      7,
+      "status_reports: disk-only namespace's calls read back correctly"
+    )
+    H.eq(
+      disk_row.report.modes.args,
+      false,
+      "status_reports: disk-only namespace's mode inferred as counting-only (no args bucket stored)"
+    )
+    H.ok(
+      disk_row.data_bytes ~= nil and disk_row.data_bytes > 0,
+      "status_reports: disk-only namespace has a real file size too"
+    )
+
+    -- Rendering: `M.status_lines` — a compact block per row, each one still
+    -- opening with the exact `<namespace>  —  <state>` header format
+    -- `command.lua`'s drilldown parses off the cursor line. `rows` here
+    -- (not the full `status_reports({dir=tmpdir})` sweep) so this stays
+    -- about these two namespaces regardless of what earlier blocks in this
+    -- same spec left behind in the shared `tmpdir`.
+    local lines = report_mod.status_lines({ live_row, disk_row })
+    local joined = table.concat(lines, "\n")
+    H.ok(joined:find(live_ns .. "  —  running", 1, true) ~= nil, "status_lines: live row header")
+    H.ok(
+      joined:find(disk_ns .. "  —  stopped", 1, true) ~= nil,
+      "status_lines: disk-only row header"
+    )
+    H.ok(
+      joined:find("m.g", 1, true) == nil,
+      "status_lines: no per-function entries, unlike lines()"
+    )
+    H.ok(
+      joined:find("no data on disk", 1, true) == nil,
+      "status_lines: both rows here have real files"
+    )
+
+    local empty_lines = report_mod.status_lines({})
+    H.eq(#empty_lines, 1, "status_lines: honest empty state is a single line")
+    H.eq(
+      empty_lines[1],
+      "no telemetry namespaces known -- nothing has run or persisted yet.",
+      "status_lines: honest empty state names what to do about it"
+    )
+
+    t.stop()
+    t.unwrap()
+  end
+
+  -- -------------------------------------------------------------------------
   -- module-level registry
   -- -------------------------------------------------------------------------
   do

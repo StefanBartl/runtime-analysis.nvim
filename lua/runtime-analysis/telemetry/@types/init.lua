@@ -157,6 +157,21 @@
 ---@field info table<string, string>
 ---@field entries RA.Telemetry.ReportEntry[]
 
+---One row of `:RATelemetry status` / `M.status_reports()` — a namespace this
+---plugin knows about, live this process or only ever persisted, alongside
+---what is actually sitting on disk for it. `report.modes`/`report.running`
+---already answer "which mode is it recording in right now" (or, for a
+---namespace with no live instance, the mode inferred from the shape of its
+---last-persisted data — see `synth_report` in telemetry/init.lua); `report`
+---is the SAME `RA.Telemetry.Report` every other view renders, `entries`
+---included, so `<CR>`-drilldown (`report.status_lines`'s doc-comment) needs
+---no second fetch.
+---@class RA.Telemetry.StatusRow
+---@field report RA.Telemetry.Report
+---@field live boolean           # true when this process itself has a live instance for it right now
+---@field data_path string       # where this namespace's aggregate is (or would be) written
+---@field data_bytes integer?    # size of that file on disk; nil when it does not exist
+
 -- ---------------------------------------------------------------------------
 -- Startup attribution
 -- ---------------------------------------------------------------------------
@@ -234,6 +249,7 @@
 --- private: both are read from other files.
 ---@field _cache_opts { dir: string }         # where this namespace's data, reports and toggles live
 ---@field _snapshot_retention integer|nil     # per-instance override for M.SNAPSHOT_RETENTION; nil = read the module default at snapshot() time
+---@field _check_reminder fun(data: RA.Telemetry.Data): nil  # queues a reminder message (see telemetry/init.lua's "Reminder batching" block) if `data` crosses `remind_after`; called at flush and at VimEnter, and directly by TESTS/telemetry_spec.lua to exercise the batching without waiting on real thresholds
 
 ---@class RA.Telemetry.AutoOpts
 ---@field namespace string
@@ -260,6 +276,7 @@
 ---@field report_all fun(opts?: RA.Telemetry.ReportOpts): RA.Telemetry.Report[]
 ---@field markdown_all fun(opts?: RA.Telemetry.ReportOpts): string[]
 ---@field export_all fun(target_dir: string, opts?: { dir?: string, report_opts?: RA.Telemetry.ReportOpts }): string[], string[]
+---@field status_reports fun(opts?: { dir?: string, report_opts?: RA.Telemetry.ReportOpts }): RA.Telemetry.StatusRow[]
 ---@field setup fun(opts?: { report_style?: RA.Telemetry.ReportStyle }): nil
 ---@field start_all fun(): integer
 ---@field flush_all fun(): integer

@@ -18,6 +18,78 @@ Newest first, by date; original document order within a date.
 
 ---
 
+## 2026-09-03
+
+### Reminder batching — one notification, not one per namespace
+
+Raised directly, not from the numbered backlog: a config wrapping several
+dozen personal plugins (`opts.telemetry.plugins`, every entry `deep = true`
+by default) has that many `runtime-analysis.telemetry` instances, each with
+its own `VimEnter` autocmd checking its own lifecycle reminder
+([`reminder.lua`](../lua/runtime-analysis/telemetry/reminder.lua)). Nothing
+staggers those checks — Neovim runs every `VimEnter` callback for a given
+event back to back, synchronously — so a week where several namespaces cross
+their 7-day threshold in the same session produced one `vim.notify` popup
+per namespace, back to back. A reminder whose whole premise is "say it once,
+say it actionably, then stop" turns into a nag the moment it fires more than
+one at a time.
+
+**Queued, not notified directly.** `telemetry/init.lua` now holds a
+module-level queue shared by every instance. `_check_reminder` appends its
+message instead of calling `notify.info` itself; the first message into an
+otherwise-empty queue is the one that schedules a flush
+(`vim.schedule`), and because that callback never runs inside the same
+synchronous burst that queued it, every reminder that fires alongside it —
+the entire `VimEnter` sweep across every live instance, in particular — has
+already joined the same queue by the time it actually runs. One
+`vim.notify` call regardless of how many namespaces crossed their threshold
+together; a reminder that fires in genuine isolation (a periodic flush
+hours apart from any other) still gets its own message, unbatched, exactly
+as before. A batched message also names `:RATelemetry status` — the natural
+next question once more than one namespace is due at once is "which of my
+repos are in this state", answered by the entry below.
+
+### `:RATelemetry status` — a whole-fleet overview
+
+Also raised directly. The bare `:RATelemetry` view already reports across
+every live instance, but it is a full per-function report for each one —
+useful for "what did this plugin actually do", the wrong shape for "which
+of my repos are recording right now, in what mode, and is there anything
+worth reading" once more than a couple of namespaces are involved. Answering
+that second question also meant reaching further than `:RATelemetry`'s own
+`instances()` sees: a namespace that recorded last week and simply has not
+loaded yet this session is not "live", but it is still a real answer to
+"which data has already been collected".
+
+**`telemetry.status_reports()`** is the new building block: the union of
+`instances()` (live this process, right now) and `store.namespaces()`
+(everything ever persisted, this process or a different one), one row per
+namespace, sorted. A live namespace is flushed and asked for its own
+`report()` — the authoritative answer for "which mode is it recording in
+right now". Everything else falls back to the same disk-only synthesis
+`export_all()` already used (now shared as `synth_report`, not duplicated a
+second time): `modes` inferred from which fields the stored calls actually
+populated, since nothing remembers what a since-gone instance was started
+with. Each row also carries the aggregate's real file size and path —
+"which data has already been collected, and where" does not stop at a call
+count.
+
+**Rendering reuses the existing report machinery rather than inventing a
+second one.** `report.lua`'s per-instance header block (namespace/state,
+mode + counts, collecting-since, `info`) was already computed inline at the
+top of `M.lines`; split out as `M.summary_lines` so `M.status_lines` can
+render the identical block for every namespace, with no per-function
+entries, and `M.lines` itself is unchanged. The header row it produces —
+`"<namespace>  —  <state>"` — is the exact format `command.lua`'s
+`header_namespace()` already parses off the cursor line, so `<CR>` on a
+`status` row drills into that namespace's own full report through the same
+`on_drilldown` mechanism the bare view already offers — the two reports
+were already built (`status_reports()` fetches the real thing, not a
+summary, and status_lines just doesn't render the entries part of it), so
+drilldown is a lookup, not a second fetch.
+
+---
+
 ## 2026-08-11
 
 ### §3.6 Benchmark comparisons — `runtime-analysis.bench`
