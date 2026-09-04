@@ -568,6 +568,12 @@ split into quick wins, medium and large.
 
 ## Where this is going
 
+- [`docs/README.md`](docs/README.md) — **start here for the documentation
+  itself**: what is where, and which question each page answers.
+- [`docs/FEATURES/README.md`](docs/FEATURES/README.md) — one page per area, each
+  pointing into the decision record for the reasoning behind it.
+- [`docs/WORKFLOW.md`](docs/WORKFLOW.md) — which command answers which question
+  about a running session, rather than what each one reports.
 - [`docs/FEATURE_LOG.md`](docs/FEATURE_LOG.md) — the decision record behind
   everything that has shipped — what, and why.
 - [`docs/IDEAS.md`](docs/IDEAS.md) — ideas that only exist *between* plugins:
