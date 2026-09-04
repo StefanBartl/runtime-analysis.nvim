@@ -1,15 +1,16 @@
 # Commands
 
 One compound verb, two flat aliases, and one second compound command —
-split along the same line documentation.nvim's own `docs/COMMANDS.md` draws
+split along the same line documentation.nvim's own `docs/commands.md` draws
 between `:DocMap` and `:DocBrowse`: `:RA` **does** something to a request,
 `:RATelemetry` **reports** on what has already run.
 
 None exists until `setup()` runs — `require("runtime-analysis").setup()`
-registers all four unconditionally; there is no `opts.command_name` to
+registers every one of them unconditionally (`:RA`, `:RARequest`, `:RASend`,
+`:RATelemetry` and its five `*All` aliases); there is no `opts.command_name` to
 rename them yet, unlike the sibling plugins, because nothing here has hit a
 collision that would motivate one (see the Global-surface collision check in
-[`docs/BINDINGS.md`](BINDINGS.md)).
+[`BINDINGS.md`](BINDINGS.md)).
 
 ---
 
@@ -29,7 +30,7 @@ case, a committed file holding several.
 
 `M.open_request(lines)` (the same function this command calls with no
 argument) is also this plugin's public integration surface — see
-`docs/IDEAS.md` and the module doc-comment in
+[`api.md`](api.md), [`IDEAS.md`](IDEAS.md) and the module doc-comment in
 [`lua/runtime-analysis/init.lua`](../lua/runtime-analysis/init.lua) for how
 documentation.nvim's `:DocBrowse` Endpoints mode calls it with a pre-filled
 `METHOD path` instead of the default template.
@@ -137,8 +138,8 @@ the cursor, so landing exactly on a `###` line resolves to the block
 a single-block buffer (no `###` at all splits into exactly one block
 covering everything) — there is one code path, not a special case for the
 common single-request buffer. **Always the block under the cursor, never
-the whole buffer, never a picker** — the answer the roadmap
-already settled before this was built.
+the whole buffer, never a picker** — settled before this was built, and
+unchanged since.
 
 This is also what makes a **real, committed `.http` or `.rest` file** work
 with no new command at all: open one directly with `:e requests.http` (or
@@ -150,7 +151,7 @@ path.
 
 ## GraphQL and multipart request bodies
 
-the roadmap, named "for completeness" and shipped once a real
+Named "for completeness" when it was still an idea and shipped once a real
 need existed: two request-body shapes beyond plain JSON/text, both VS
 Code REST Client's own conventions rather than invented here — the same
 "match an existing tool, don't design a third shape" posture the whole
@@ -318,7 +319,7 @@ a backup step meaningfully protects anything worth the friction.
 
 `{{name}}` inside a request buffer's url, header values or body — `{{baseUrl}}/users/:id`
 — resolves against a *named* environment (`dev`/`staging`/`prod`, or any
-name a project.s own files define). With an argument,
+name a project's own files define). With an argument,
 selects that environment directly (or reports the available names if it
 doesn't exist, rather than silently doing nothing); with none, offers every
 defined name via `vim.ui.select`, the same picker `:RA history` already
@@ -330,8 +331,9 @@ writing to disk.
 
 Two per-project JSON files at the project root — the same split IntelliJ's
 HTTP Client already uses for exactly this problem, matched rather than
-invented (the same reasoning the "Deliberately not: owning
-the `.http` filetype" already gives for `parse.lua`'s own request shape):
+invented (the same reasoning [`IDEAS.md`](IDEAS.md)'s "Deliberately not:
+owning the `.http` filetype" already gives for `parse.lua`'s own request
+shape):
 
 ```
 http-client.env.json          shared, safe to commit — non-secret
@@ -391,7 +393,7 @@ as a literal string.
 
 ## Response assertions (`# @expect status N`)
 
-a smoke-test shape for a local API, deliberately
+A smoke-test shape for a local API, deliberately
 narrow — "is this endpoint still 200," not a general assertion language.
 A comment line anywhere in a `###` block —
 
@@ -416,8 +418,7 @@ own line, naming both the expected and actual status. `:copen` to see it.
 
 ## `:RA import` and `:RA export`
 
-paste a `curl` command line, get a request buffer;
-the reverse for sharing. Both are built on
+Paste a `curl` command line, get a request buffer; the reverse for sharing. Both are built on
 [`lua/runtime-analysis/curl.lua`](../lua/runtime-analysis/curl.lua) — a
 real (if bounded) `curl`-argument parser, not string templating.
 
@@ -469,8 +470,8 @@ unresolved. Exporting is sharing, and a `{{token}}` must render as
 
 ## `:RA provenance <path>`
 
-"who wrapped this function," the narrow slice of
-`:RA inspect` (§5.1, below) worth shipping on its own first.
+"Who wrapped this function" — the narrow slice of `:RA inspect`
+([`FEATURE_LOG.md`](FEATURE_LOG.md) §5.1) worth shipping on its own first.
 
 ```vim
 :RA provenance vim.notify
@@ -516,7 +517,7 @@ appear; typing its path out by hand still works, because `inspect` does call
   about wrappers contradicts itself.
 
 **No shared wrapper registry, and that was a decision rather than an
-omission.** `docs/IDEAS.md` §4.1 proposed one in `lib.nvim` so every
+omission.** [`IDEAS.md`](IDEAS.md) §4.1 proposed one in `lib.nvim` so every
 instance of this technique could be named. It was declined: there is one
 consumer of the answer, and the case that would justify a convention — a
 third-party monkey-patch — is precisely the one a convention cannot reach,
@@ -526,7 +527,9 @@ entry for what would reopen the question.
 
 ## `:RA startup start|watch|report|probe`
 
-Finds what blocks Neovim's main loop during and after startup.
+Finds what blocks Neovim's main loop during and after startup. Full
+narrative, options table and the sample timeline:
+[`FEATURES/STARTUP.md`](FEATURES/STARTUP.md); the Lua API: [`api.md`](api.md).
 
 **What it does that `--startuptime` and `:profile` cannot.**
 `--startuptime` stops at the first screen redraw and never sees a later
@@ -563,7 +566,8 @@ contributed too. The report arrives as a notification and is written to
 
 ## `:RA inspect <module>`
 
-"Runtime inspection — a second pillar." Walks a
+"Runtime inspection — a second pillar"
+([`FEATURE_LOG.md`](FEATURE_LOG.md) §5.1). Walks a
 live `package.loaded[module]` table and renders it: functions (upvalue
 counts, source location), nested tables (their own shape), metatables,
 and what a direct key *shadows* through `__index`. lib.nvim's own roadmap
@@ -577,7 +581,8 @@ future tool as the right home; this is that tool.
 
 `<Tab>`-completes against `package.loaded`, live — whatever is actually
 loaded in this session, not a list frozen at `setup()`.
-`runtime-analysis.loaded` (§5.3) already answers the flat, one-level
+`runtime-analysis.loaded` ([`FEATURE_LOG.md`](FEATURE_LOG.md) §5.3) already
+answers the flat, one-level
 question "what functions does this module have right now", the half
 documentation.nvim's own `:DocBrowse` "loaded" mode joins against; this
 answers the deeper one a config author actually needs — what a table
@@ -606,8 +611,7 @@ resolved:**
 
 ## `:RA usage`, `:RA usage start`, `:RA usage stop`
 
-which of your own keymaps and typed commands you
-actually press. A different *product* from everything else `:RA` does —
+Which of your own keymaps and typed commands you actually press. A different *product* from everything else `:RA` does —
 instrumenting the editor rather than instrumenting code — and the first
 feature in this plugin that records *what the person did* rather than
 *what the code did*.
@@ -625,8 +629,9 @@ function-callback mapping registered from that point on counts its own
 presses, and installs a `CmdlineLeave` hook that counts a typed command by
 name once it actually commits (an aborted, `<Esc>`-cancelled command line
 records nothing). Built on `runtime-analysis.telemetry` itself — one real
-instance underneath, the same `wrap_fn` mechanism §7.2's cost-vs-use report
-already reads for code, pointed at editor input instead.
+instance underneath, the same `wrap_fn` mechanism the cost-vs-use report
+([`FEATURE_LOG.md`](FEATURE_LOG.md) §7.2) already reads for code, pointed at
+editor input instead.
 
 **Honest limits, not silently dropped cases.** Only mappings set *after*
 `:RA usage start` are ever seen. A string-rhs mapping
@@ -638,7 +643,7 @@ combined into one count, not tracked per buffer.
 
 ## `:RA loaded snapshot <prefix> [name]` and `:RA loaded snapshots <prefix>`
 
-`docs/FEATURE_LOG.md` §5.4: persisted, named captures of
+[`FEATURE_LOG.md`](FEATURE_LOG.md) §5.4: persisted, named captures of
 `runtime-analysis.loaded`'s live read, so it can be viewed later, or from a
 process that never itself loaded the code in question —
 documentation.nvim's `:DocMap serve` Loaded Analysis panel is the consumer
@@ -674,7 +679,7 @@ prefixes (`"loaded/"` vs. telemetry's own) so they never collide on disk.
 
 Module: [`lua/runtime-analysis/loaded.lua`](../lua/runtime-analysis/loaded.lua)
 (`M.snapshot`, `M.list_snapshots`, `M.load_snapshot`). Feature-level
-overview: [`docs/FEATURES/LOADED.md`](FEATURES/LOADED.md).
+overview: [`FEATURES/LOADED.md`](FEATURES/LOADED.md).
 
 ### Why `:RARequest`/`:RASend` exist as separate flat commands, not only `:RA request`/`:RA send`
 
@@ -703,10 +708,10 @@ for the full API this command is a thin front-end over: instances, scoping
 see that README's own "Table tracking" section for why), the lifecycle
 (`start`/`stop`/`unwrap`), persistent enable/disable, argument profiling,
 report metadata, the mdview browser bridge, and the sortable/filterable
-HTML dashboard (§4.4,
+HTML dashboard ([`FEATURE_LOG.md`](FEATURE_LOG.md) §4.4,
 `report_style = "html"`).
 
-Subcommand table: [`docs/BINDINGS.md`](BINDINGS.md#ratelemetry-subcommands).
+Subcommand table: [`BINDINGS.md`](BINDINGS.md#ratelemetry-subcommands).
 
 `:RATelemetry status` is the whole-fleet board: one **aligned row** per
 namespace this plugin knows about — live this session or only ever
@@ -882,7 +887,7 @@ One verb per plugin is the default `NEW_PROJECT.md`'s checklist prefers, but
 not an absolute rule — the checklist itself names `replacer.nvim`'s
 `:Replace` + `:Surround` split as a documented exception when a second
 concern doesn't belong under the first verb. Telemetry is that case here:
-it is a large, independent surface (11 subcommands, namespace completion,
+it is a large, independent surface (23 subcommands, namespace completion,
 its own extensive README) about a plugin's *runtime history* in general,
 not specifically about the request runner `:RA` is named for. Nesting it as
 `:RA telemetry start markdown.nvim` buries a namespace argument three
@@ -894,14 +899,14 @@ not `:DocMap browse ...`, split along the same "does something" vs.
 ## What is not a command
 
 - **No keymaps, and no user-facing autocommands.** See
-  [`docs/BINDINGS.md`](BINDINGS.md) — every entry point here is one of the
-  commands above. The handful of real registrations that do exist are opt-in
-  plumbing behind telemetry and usage tracking, listed there; nothing watches
-  buffer or window events.
+  [`BINDINGS.md`](BINDINGS.md) — every entry point here is one of the
+  commands above. The eleven real registrations that do exist are opt-in
+  plumbing behind telemetry, usage tracking or a running stall measurement,
+  all listed there; nothing watches buffer or window events.
 - **`M.open_request`/`M.setup` are Lua API, not commands.** Documented in
   [`lua/runtime-analysis/init.lua`](../lua/runtime-analysis/init.lua)'s own
-  module doc-comment and in `docs/IDEAS.md` §1 as the integration surface
-  another plugin calls into directly.
+  module doc-comment, in [`api.md`](api.md), and in [`IDEAS.md`](IDEAS.md) §1
+  as the integration surface another plugin calls into directly.
 - **`scripts/telemetry.lua` is a headless CLI script, not a usercommand.**
   It runs *instead of* a Neovim session with this plugin's `setup()`
   loaded, not alongside one — see the note under `:RATelemetry` above.

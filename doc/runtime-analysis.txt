@@ -80,6 +80,8 @@ same as: >lua
   require("runtime-analysis").setup({
     split = "vsplit",           -- default; "split" for a horizontal one
     request_filetype = "http",  -- default
+    deps_popup = true,          -- default
+    history_max_entries = 200,  -- default
     telemetry = nil,            -- see |runtime-analysis-telemetry|
   })
 <
@@ -97,7 +99,21 @@ opts.request_filetype ~
   plugin-specific name so VS Code's REST Client / IntelliJ's HTTP Client
   syntax highlighting, already installed by most readers, applies unchanged.
 
-                                                 *runtime-analysis-opts.telemetry*
+                                                *runtime-analysis-opts.deps_popup*
+opts.deps_popup ~
+  Type: `boolean`. Default: `true`.
+  The one-time "which CLI tools does this plugin want, and why" popup on
+  the first `setup()` after install, via lib.nvim's `deps` module. `false`
+  disables it for this plugin alone, right here in its own spec.
+
+                                     *runtime-analysis-opts.history_max_entries*
+opts.history_max_entries ~
+  Type: `integer`. Default: `200`.
+  How many past sends |:RA-history| keeps, per project. A ring: the file's
+  size stays a function of how much the plugin is used, not of how long ago
+  it was first started.
+
+                                               *runtime-analysis-opts.telemetry*
 opts.telemetry ~
   Type: `table|nil`. Default: `nil` (no auto-instrumentation).
   Forwarded verbatim to `runtime-analysis.telemetry.lazy`'s `setup()` — see
@@ -608,7 +624,7 @@ untimed first, so comparison *order* does not bias the result. Pure Lua
 API, no usercmd — a candidate is a real function value, and there is no
 command-line shape for "type the two closures you want compared".
 Compare-now only: no persistence, no named runs. See
-`docs/FEATURES/BENCH.md` and the decision record in `docs/FINISHED.md`
+`docs/FEATURES/BENCH.md` and the decision record in `docs/FEATURE_LOG.md`
 (§3.6).
 
 ==============================================================================
@@ -632,7 +648,7 @@ the method and path are pre-filled and the reader completes the base URL
 >lua
   local M = {}
 
-  ---@field opts { split: string, request_filetype: string }
+  ---@field opts { split: string, request_filetype: string, deps_popup: boolean, history_max_entries: integer }
   ---@field open_request fun(lines?: string[])
   ---@field setup fun(opts?: table)
 <

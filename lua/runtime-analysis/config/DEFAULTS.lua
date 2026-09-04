@@ -19,10 +19,10 @@ M.DEFAULTS = {
   -- One-time "which CLI tools does this plugin want, and why" popup on
   -- first setup() after install (via lib.nvim.deps). false disables it for
   -- this plugin specifically, right here in the spec passed to setup() —
-  -- no vim.g needed. See README.
+  -- no vim.g needed. See docs/installation.md.
   deps_popup = true,
 
-  -- How many past requests `:RAHistory` keeps. A ring, so the file's size
+  -- How many past requests `:RA history` keeps. A ring, so the file's size
   -- stays a function of how much the plugin is used rather than of how long
   -- ago it was first started -- which holds at any bound, so the bound is
   -- yours to pick.

@@ -13,7 +13,7 @@ assertion language a `.http` file would need its own parser generation to
 extend safely.
 
 - **Module:** `assertions.lua` (`M.extract`, `M.strip`)
-- **Docs:** [`docs/COMMANDS.md`](../COMMANDS.md) "`:RA send`" section.
+- **Docs:** [`docs/commands.md`](../commands.md) "`:RA send`" section.
 
 ## GraphQL body shorthand
 
@@ -25,7 +25,8 @@ convention VS Code's REST Client already uses, matched deliberately rather
 than invented.
 
 - **Module:** `graphql.lua` (`M.is_graphql`, `M.resolve`)
-- **Docs:** [`README.md`](../../README.md) "Commands" section.
+- **Docs:** [`docs/commands.md`](../commands.md) "GraphQL and multipart
+  request bodies" section.
 
 ## Multipart/form-data with real local files
 
@@ -36,7 +37,8 @@ script into a request buffer like any other.
 
 - **Module:** `multipart.lua` (`M.is_multipart`, `M.resolve`,
   `M.to_curl_flags`)
-- **Docs:** [`README.md`](../../README.md) "Commands" section.
+- **Docs:** [`docs/commands.md`](../commands.md) "GraphQL and multipart
+  request bodies" section.
 
 ## Environment-scoped variables
 
@@ -51,7 +53,7 @@ the same reason `:RA export`ing a request never bakes a secret in either.
 - **Module:** `env.lua` (`M.resolve`, `M.list_names`, `M.set_current`)
 - **Usercmds:** `:RA env [name]` (see
   [BINDINGS.md](../BINDINGS.md#user-commands))
-- **Docs:** [`docs/COMMANDS.md`](../COMMANDS.md) "`:RA env`" section.
+- **Docs:** [`docs/commands.md`](../commands.md) "`:RA env`" section.
 
 ## Request history, request-only
 
@@ -65,4 +67,4 @@ project's history.
 - **Module:** `history.lua` (`M.record`, `M.list`, `M.clear`)
 - **Usercmds:** `:RA history [clear]` (see
   [BINDINGS.md](../BINDINGS.md#user-commands))
-- **Docs:** [`docs/COMMANDS.md`](../COMMANDS.md) "`:RA history`" section.
+- **Docs:** [`docs/commands.md`](../commands.md) "`:RA history`" section.

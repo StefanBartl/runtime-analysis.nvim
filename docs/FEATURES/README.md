@@ -11,8 +11,7 @@ commit shipped it), a different document for a different reader.
 
 Deliberately not exhaustive — the point of this folder is a real,
 representative sample, not full coverage of every command this plugin
-has. [`README.md`](../../README.md) and [`docs/COMMANDS.md`](../COMMANDS.md)
-remain the complete reference.
+has. [`docs/commands.md`](../commands.md) remains the complete reference.
 
 ## Files
 
@@ -26,6 +25,10 @@ remain the complete reference.
   loaded-vs-declared live read documentation.nvim joins against its own
   IR, and persisted snapshots of it for cold viewing outside the session
   that took them.
+- **[STARTUP.md](STARTUP.md)** — `runtime-analysis.startup`: a libuv timer
+  measuring its own lateness, so a main-loop block shows up whatever caused
+  it — including during startup, where `--startuptime` and `:profile` both
+  give up.
 - **[BENCH.md](BENCH.md)** — `runtime-analysis.bench`: timed comparisons
   between candidate functions, deliberately not built on telemetry's own
   wrap/count machinery.

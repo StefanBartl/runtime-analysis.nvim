@@ -65,7 +65,7 @@ function M.open_request(lines)
 end
 
 ---Plugin entry point.
----@param opts? { split?: string, request_filetype?: string, telemetry?: RA.Telemetry.LazyOpts, deps_popup?: boolean }
+---@param opts? { split?: string, request_filetype?: string, deps_popup?: boolean, history_max_entries?: integer, telemetry?: RA.Telemetry.LazyOpts }
 function M.setup(opts)
   require("runtime-analysis.config.validate").check(
     opts,

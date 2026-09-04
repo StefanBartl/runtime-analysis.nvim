@@ -43,7 +43,7 @@ When it *is* on:
 
 **Ranges, not single numbers, and reproducible rather than quoted from
 memory** — `scripts/bench_overhead.lua` (the answer;
-decision record in `docs/FINISHED.md`) is what actually measures this
+decision record in `docs/FEATURE_LOG.md`) is what actually measures this
 table, run fresh for it rather than hand-typed. It is a plain repo script,
 not a dev-only tool: **run it yourself** —
 `nvim --headless -l scripts/bench_overhead.lua` — to get numbers for your
@@ -407,7 +407,7 @@ uses), then `start()`s it with either the target's own configured
 `:RATelemetry setup|full <ns>` passes, and the only way to select an
 `extra` target, which has no repo to name it by.
 
-`:RATelemetrySetupAll`/`:RATelemetrySetupAllFull` (`docs/COMMANDS.md`) are
+`:RATelemetrySetupAll`/`:RATelemetrySetupAllFull` (`docs/commands.md`) are
 the UI over this: one `vim.ui.input()` prompt for the whole run — never one
 per plugin — asks where to back up, and only appears when at least one
 candidate actually has data to lose.
