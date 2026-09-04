@@ -1,7 +1,8 @@
 # Workflow — getting real use out of runtime-analysis.nvim day to day
 
-Every command here is documented on its own elsewhere ([`README.md`](../README.md),
-[`docs/COMMANDS.md`](COMMANDS.md), [`lua/runtime-analysis/telemetry/README.md`](../lua/runtime-analysis/telemetry/README.md)).
+Every command here is documented on its own elsewhere
+([`docs/commands.md`](commands.md), [`docs/BINDINGS.md`](BINDINGS.md),
+[`lua/runtime-analysis/telemetry/README.md`](../lua/runtime-analysis/telemetry/README.md)).
 This is the different question: once several pieces exist — a request
 runner, telemetry, the introspection commands — *how do they actually
 combine* into something worth reaching for regularly, not just once after

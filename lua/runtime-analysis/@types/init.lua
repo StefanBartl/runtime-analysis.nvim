@@ -6,9 +6,9 @@
 --- module, `RA`.
 
 ---@class RA
----@field opts { split: string, request_filetype: string }
+---@field opts { split: string, request_filetype: string, deps_popup: boolean, history_max_entries: integer }
 ---@field open_request fun(lines?: string[])
----@field setup fun(opts?: { split?: string, request_filetype?: string, telemetry?: RA.Telemetry.LazyOpts })
+---@field setup fun(opts?: { split?: string, request_filetype?: string, deps_popup?: boolean, history_max_entries?: integer, telemetry?: RA.Telemetry.LazyOpts })
 
 ---One `###`-separated request block — `runtime-analysis.parse.split`'s own
 ---output, and what `runtime-analysis.parse.block_at`/`parse` are handed.
@@ -37,7 +37,7 @@
 ---@field proc_trace boolean exact — true when `lib.nvim.system.proc_trace` is currently wrapping this path (it wraps four, and only while running)
 ---@field source { what: string, short_src: string, linedefined: integer }? best-effort — where the function currently there was actually defined
 
----One node in `runtime-analysis.inspect`.s walked tree. A tagged union on `kind`; which other fields are populated depends
+---One node in `runtime-analysis.inspect`'s walked tree. A tagged union on `kind`; which other fields are populated depends
 ---on it and, for `kind == "table"`, on `cyclic`/`truncated`. `key` is
 ---absent only on the tree's own root.
 ---@class RA.Inspect.Node

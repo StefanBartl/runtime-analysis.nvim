@@ -193,8 +193,7 @@ automatically, the same key shape documentation.nvim's own IR uses.
 
 - **Module:** `telemetry/init.lua` (`inst.wrap_loaded`,
   `inst.resolved_modules`)
-- **Docs:** [`README.md`](../../README.md) "Integration with
-  documentation.nvim" section, documentation.nvim's own
+- **Docs:** [`docs/api.md`](../api.md), documentation.nvim's own
   [`docs/PIPELINE.md`](https://github.com/StefanBartl/documentation.nvim/blob/main/docs/PIPELINE.md)
   "Telemetry" section for the consumer side of the same join.
 

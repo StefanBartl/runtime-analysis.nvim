@@ -1,6 +1,6 @@
 -- scripts/bench_overhead.lua — reproducible measurement backing the
 -- overhead table in lua/runtime-analysis/telemetry/README.md ("Off costs
--- nothing — literally"), and the answer to "measuring this module.s own
+-- nothing — literally"), and the answer to "measuring this module's own
 -- instrumentation overhead": how much does turning on
 -- each telemetry feature actually cost, per call, in isolation.
 --
@@ -10,7 +10,7 @@
 -- per call" in its own README. That exclusion is what lets this exist
 -- without reopening the "not a general profiler"
 -- rejection: nothing here is installed, left running, or user-toggleable —
--- see §3.7's own decision record in docs/FINISHED.md for the full
+-- see §3.7's own decision record in docs/FEATURE_LOG.md for the full
 -- reasoning.
 --
 -- Usage:

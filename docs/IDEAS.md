@@ -202,7 +202,7 @@ is where they **disagree**:
   `calls.lua`'s `confidence` field exists to admit uncertainty about.
 
 **Was strictly gated on `call_tree` shipping — it now has, 2026-08-04**
-(see `docs/FINISHED.md`, `call_tree` opt-in via `debug.getinfo(2, "Sl")`).
+(see `docs/FEATURE_LOG.md`, `call_tree` opt-in via `debug.getinfo(2, "Sl")`).
 Written down here because it was the payoff that justified paying that
 cost, not because it is ready to build on its own: this idea is still the
 cross-repo join itself (documentation.nvim's static require graph against
@@ -278,7 +278,7 @@ coverage line.
 
 ### 1.7 Endpoint inventory × request history × response shape
 
-§6.2 (see `docs/FINISHED.md`, shipped 2026-08-04) covers "which declared
+§6.2 (see `docs/FEATURE_LOG.md`, shipped 2026-08-04) covers "which declared
 routes were never sent". The extension worth recording: the request
 runner sees **what the endpoint actually returned**. Crossing a real response against the handler's documented
 `@return` — or against a route whose handler carries no doc block at all
@@ -564,7 +564,7 @@ Cheapest idea in this section by a wide margin.
 
 ### 2.3 The request runner's response pane, rendered
 
-A JSON or HTML response body in a plain split is the runner.s weakest surface.
+A JSON or HTML response body in a plain split is the runner's weakest surface.
 Markdown is not the right target for a JSON body — but a
 **session log** is: a request/response transcript written as Markdown, watched
 by the relay, is a browser tab that updates itself as you send. mdview's

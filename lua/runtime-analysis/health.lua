@@ -40,7 +40,7 @@ local MIN_NVIM = { 0, 10, 0 }
 
 ---The lib.nvim modules this plugin actually requires — as module paths
 ---rather than one `lib.nvim` probe, so a missing piece is named rather than
----only "something is missing". See the README's own Dependencies section for
+---only "something is missing". See `docs/installation.md` for
 ---which feature needs which.
 ---@type string[]
 local DEPS = {
@@ -248,7 +248,7 @@ function M.check()
   end
 
   h_start("runtime-analysis.nvim: commands")
-  -- All four are registered unconditionally by `require("runtime-analysis")
+  -- All four checked here are registered unconditionally by `require("runtime-analysis")
   -- .setup()` — nothing here is independently opt-in the way `telemetry`'s
   -- own auto-instrumentation is (that is the `opts.telemetry` check above).
   local cmds = vim.api.nvim_get_commands({})
