@@ -700,7 +700,7 @@ local function open_report(namespace)
         return
       end
       local ok_open = pcall(function()
-        require("lib.nvim.fs.open.url.system_opener").open(html_path)
+        require("lib.nvim.cross.open_default")(html_path)
       end)
       if ok_open then
         notify.info("wrote and opened " .. html_path)
@@ -1254,7 +1254,7 @@ function M.setup()
       end
 
       local ok_open = pcall(function()
-        require("lib.nvim.fs.open.url.system_opener").open(path)
+        require("lib.nvim.cross.open_default")(path)
       end)
       notify.info(
         ok_open and ("wrote and opened " .. path)
