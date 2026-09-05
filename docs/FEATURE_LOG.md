@@ -488,7 +488,7 @@ callers), using the identical `└`/`✗`/`←`/`ⓘ` symbols the terminal
 report already uses. New `report_style = "html"` (alongside
 `"auto"`/`"kit"`/`"mdview"`/`"file"`), reachable via `:RATelemetry open
 [ns]` — written to disk and opened with
-`lib.nvim.fs.open.url.system_opener`, the same cross-platform opener
+`lib.nvim.cross.open_default`, the same cross-platform opener
 `:DocMap open` already uses.
 
 **A real bug found writing the tests, not guessed at.** Data is embedded
