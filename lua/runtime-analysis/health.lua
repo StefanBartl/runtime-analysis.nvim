@@ -80,7 +80,11 @@ function M.check()
         MIN_NVIM[2],
         MIN_NVIM[3]
       ),
-      { "The request runner uses vim.system; telemetry uses vim.uv.hrtime." }
+      {
+        "Upgrade Neovim to "
+          .. ("%d.%d.%d"):format(MIN_NVIM[1], MIN_NVIM[2], MIN_NVIM[3])
+          .. "+ — the request runner uses vim.system, telemetry uses vim.uv.hrtime.",
+      }
     )
   end
 
