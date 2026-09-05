@@ -15,11 +15,15 @@ read_globals = {
 -- 212: unused argument — colon-syntax methods (`function M:name()`) that
 -- close over their data via upvalues rather than `self` are idiomatic here
 -- (see doc/lib.nvim-window.txt's `attach` construct).
+-- 212/...: stand-in functions in the specs are declared `function(...) end`
+-- on purpose — the point of the fake is that it accepts whatever the wrapped
+-- call hands it, and the `...` says so at the call site.
 -- 542: empty if/else branch — used deliberately as a documented no-op
 -- (each instance carries an explanatory comment, e.g. a commented-out debug
 -- notify call kept for local debugging).
 ignore = {
   "212/self",
+  "212/%.%.%.",
   "542",
 }
 
