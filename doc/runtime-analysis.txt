@@ -234,7 +234,7 @@ Response assertions ~
                                 that message. Warns rather than erroring
                                 when nothing is in flight.
 
-  A *logical* cancel, not a process kill: lib.nvim.net.curl.fetch_raw does
+  A logical cancel, not a process kill: lib.nvim.net.curl.fetch_raw does
   not hand back the vim.SystemObj a hard kill would need, so the
   underlying curl process keeps running to completion in the background —
   only this plugin's own interest in its result is withdrawn. Extending
@@ -347,7 +347,7 @@ Request history ~
   Capped at `history.MAX_ENTRIES` (200) total, oldest dropped first.
 
   Every outcome is recorded exactly once: a real response, a transport
-  failure, an explicit |:RA-cancel|, and even a *superseded* send's real
+  failure, an explicit |:RA-cancel|, and even a superseded send's real
   eventual result once it is known. Never recorded twice for the same
   send.
 
@@ -448,7 +448,7 @@ Keymap and command usage ~
   command once it actually commits (an `<Esc>`-aborted line counts
   nothing).
 
-  Honest limits: only mappings set *after* `:RA usage start` are ever
+  Honest limits: only mappings set after `:RA usage start` are ever
   seen; a string-rhs mapping (`vim.keymap.set('n', 'x',
   ':SomeCommand<CR>')`) has no function to wrap; a buffer-local mapping
   sharing the same mode+lhs as a different mapping elsewhere is combined
@@ -620,7 +620,7 @@ directly, unwrapped.
   end
 <
 `opts.warmup` (default `min(100, iterations)`) runs each candidate
-untimed first, so comparison *order* does not bias the result. Pure Lua
+untimed first, so comparison order does not bias the result. Pure Lua
 API, no usercmd — a candidate is a real function value, and there is no
 command-line shape for "type the two closures you want compared".
 Compare-now only: no persistence, no named runs. See
@@ -697,7 +697,7 @@ its commands yet in this session.
 9. FURTHER READING                                   *runtime-analysis-roadmap*
 
 What has shipped, and why: docs/FEATURE_LOG.md. Ideas
-that only exist *between* this plugin and its siblings (documentation.nvim,
+that only exist between this plugin and its siblings (documentation.nvim,
 mdview.nvim, lib.nvim): docs/IDEAS.md.
 
 ==============================================================================
