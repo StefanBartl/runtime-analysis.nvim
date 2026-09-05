@@ -923,7 +923,7 @@ require("runtime-analysis.telemetry").setup({ report_style = "html" })
 
 Written to `stdpath("cache")/runtime-analysis.nvim/telemetry/<namespace>.html`
 (or `report.html` for the combined, no-namespace case) and opened with
-`lib.nvim.fs.open.url.system_opener` — the same cross-platform "hand this
+`lib.nvim.cross.open_default` — the same cross-platform "hand this
 to the OS" mechanism `:DocMap open` already uses.
 
 **Deliberately not documentation.nvim's own renderer, reused wholesale.**
