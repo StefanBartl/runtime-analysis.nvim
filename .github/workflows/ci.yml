@@ -38,6 +38,7 @@ jobs:
         with:
           repository: StefanBartl/lib.nvim
           path: .deps/lib.nvim
+          ref: ci-verified
       - uses: rhysd/action-setup-vim@v1
         with:
           neovim: true
@@ -66,6 +67,7 @@ jobs:
         with:
           repository: StefanBartl/lib.nvim
           path: .deps/lib.nvim
+          ref: ci-verified
       - uses: actions/checkout@v5
         with:
           repository: StefanBartl/documentation.nvim
