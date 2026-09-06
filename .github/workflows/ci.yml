@@ -70,6 +70,16 @@ jobs:
         with:
           repository: StefanBartl/documentation.nvim
           path: .deps/documentation.nvim
+      # gen_map.lua's `siblings` table resolves external-link *shape*
+      # (`…/autocmd/init.lua` vs the flat `…/autocmd.lua`) against a real
+      # checkout at `../<repo>`. Without these, every cross-repo link in the
+      # generated map takes the flat fallback and `--check` calls the committed
+      # artifact stale for something the tree never changed. Symlinks, not more
+      # clones: `actions/checkout` refuses a path outside the workspace, and the
+      # `.deps/` copies already exist for `require`.
+      - run: |
+          ln -s "$PWD/.deps/lib.nvim" ../lib.nvim
+          ln -s "$PWD/.deps/documentation.nvim" ../documentation.nvim
       - uses: rhysd/action-setup-vim@v1
         with:
           neovim: true
