@@ -621,7 +621,7 @@ deliberately thin — `M.functions(module_id)` walks `package.loaded[module_id]`
 one level deep and returns its string-keyed, function-valued fields;
 `M.is_loaded(module_id)` is a plain existence check. No cycle handling, no
 `__index` traversal, none of the three open design questions §5.1's
-`:RAInspect` still carries unanswered — this module answers a much
+`:RA inspect` had to answer — this module answers a much
 narrower question (*is this field a function, right now, on this table*)
 that needs none of them. The one honest limit that shapes everything
 built on top of it: `package.loaded` reflects *this* Neovim process, so
@@ -851,9 +851,9 @@ across future roadmap edits.
 ### §5.2 Wrapper provenance
 
 Given a function, say who wrapped it — the narrow, high-value slice of §5.1
-("Runtime inspection — a second pillar," still unbuilt, still carrying its
-own three open design questions inherited from lib.nvim's rejection of the
-idea) the roadmap entry itself said should ship first. The entry's own
+("Runtime inspection — a second pillar," with its own three open design
+questions inherited from lib.nvim's rejection of the idea) the roadmap entry
+itself said should ship first. The entry's own
 framing turned out to be exactly right about the shape of the answer: this
 plugin's own telemetry wraps are answerable precisely; everything else
 (`lib.nvim.system.proc_trace`, any of the many plugins that monkey-patch

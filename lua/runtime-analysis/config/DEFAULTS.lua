@@ -28,7 +28,7 @@ M.DEFAULTS = {
   -- yours to pick.
   history_max_entries = 200,
 
-  -- `telemetry` is the fourth accepted option (see `KNOWN_OPTS` in
+  -- `telemetry` is the fifth accepted option (see `KNOWN_OPTS` in
   -- `runtime-analysis.init`), and it deliberately has **no default here**.
   -- Auto-instrumentation is opt-in: the absence of the key is what means "do
   -- not instrument", exactly as if `telemetry.auto()` were never called. A

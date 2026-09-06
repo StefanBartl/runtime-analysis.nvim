@@ -11,7 +11,7 @@ CONTENTS                                          *runtime-analysis-contents*
   6. Telemetry ................................... |runtime-analysis-telemetry|
   7. Integration with documentation.nvim ....... |runtime-analysis-integration|
   8. Health check .................................. |runtime-analysis-health|
-  9. Roadmap ....................................... |runtime-analysis-roadmap|
+  9. Further reading .............................. |runtime-analysis-roadmap|
 
 ==============================================================================
 1. INTRODUCTION                                       *runtime-analysis-intro*
@@ -21,13 +21,21 @@ runtime-analysis.nvim answers what documentation.nvim
 codebase *declares*, but what actually happens when it runs. See that
 plugin's docs/ECOSYSTEM.md for the architecture this pairing is part of.
 
-Two features today:
+The main pieces:
 
   - An in-editor HTTP request runner (|:RARequest|, |:RASend|) — no browser,
     no server, no CORS, no token, because none of those problems exist for a
     request Neovim itself sends via `curl`.
   - `runtime-analysis.telemetry` (|:RATelemetry|) — opt-in call counting and
     usage statistics for any Lua/Neovim plugin, moved here from lib.nvim.
+  - `runtime-analysis.loaded` — what `package.loaded` actually holds right
+    now, the live half of a loaded-vs-declared diff (see
+    |runtime-analysis-loaded|).
+  - Main-loop stall detection (|:RA-startup|) — a libuv timer measuring its
+    own lateness, so a freeze shows up whatever caused it.
+
+Plus |:RA-provenance|, |:RA-inspect|, |:RA-usage| and `runtime-analysis.bench`
+(|runtime-analysis-bench|) — see the sections below.
 
 ==============================================================================
 2. REQUIREMENTS                                *runtime-analysis-requirements*
@@ -311,6 +319,37 @@ Response assertions ~
 
                                 See |runtime-analysis-usage| below.
 
+                                                            *:RA-inspect*
+:RA inspect {module}            Walk a live `package.loaded[{module}]` table
+                                and render it: functions (upvalue counts,
+                                source location), nested tables (their own
+                                shape), metatables, and which direct keys
+                                *shadow* a table `__index` (reported, never
+                                called). `<Tab>`-completes against
+                                `package.loaded`, live. The deeper companion
+                                to |:RA-provenance| ("who wrapped this one
+                                function") — this answers "what does this
+                                whole table contain, right now".
+
+                                                            *:RA-startup*
+:RA startup start               Watch the main loop for stalls and report
+                                after 12s. A libuv timer measures its own
+                                lateness, so a block is caught wherever it
+                                comes from — including libuv callbacks,
+                                which `:profile` cannot see.
+:RA startup watch               The same measurement, kept running until
+                                |:RA-startup| `report`.
+:RA startup report              Stop measuring and show the timeline:
+                                plugin loads (with lazy's load time AND the
+                                reason it loaded), `VimEnter`, `VeryLazy`,
+                                `LspAttach`, LSP progress, all on one clock.
+                                Written to `ra-startup.log` in the cwd.
+:RA startup probe               Print and yank the `--cmd` line that
+                                measures a startup from before the config
+                                runs — the timer has to tick before any
+                                plugin manager exists, which a lazily
+                                loaded plugin cannot arrange for itself.
+
                                                      *:RA-loaded-snapshot*
 :RA loaded snapshot {prefix} [name]
                                 Persist every currently-loaded module
@@ -416,7 +455,7 @@ curl import/export ~
                                               *runtime-analysis-provenance*
 Wrapper provenance ~
   |:RA-provenance| — "who wrapped this function": the
-  narrow slice of the still-unbuilt `:RAInspect` (§5.1) worth shipping on
+  narrow slice of `:RA inspect` (§5.1) worth shipping on
   its own first. `{path}` is a dotted string, resolved via a global-table
   walk first, then require() of the whole prefix — and stops there; it
   does not guess where a module boundary sits inside a longer path.

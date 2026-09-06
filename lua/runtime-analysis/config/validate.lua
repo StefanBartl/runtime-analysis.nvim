@@ -1,6 +1,6 @@
 ---@module 'runtime-analysis.config.validate'
 --- Unknown-key ("did you mean") validation for `opts` tables, run once
---- before any merge — `LUA_NVIM.md`'s "Config- und Merge-Sicherheit": a
+--- before any merge — `LUA_NVIM.md`'s "config and merge safety": a
 --- typo in a nested option (`profil_args` for `profile_args`) currently
 --- vanishes silently into whatever the default already was, with no signal
 --- anywhere that the key was never read. Fail-open by design: an unknown
