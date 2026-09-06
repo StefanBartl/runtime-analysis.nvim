@@ -82,18 +82,17 @@ flowchart LR
 
 ## Drift
 
-0 errors · 9 warnings · 5 info
+0 errors · 8 warnings · 5 info
 
 | Severity | Check | Message |
 |---|---|---|
 | warn | `sibling-reference-missing` | docs/IDEAS.md references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
-| warn | `sibling-reference-missing` | docs/api.md references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
-| warn | `sibling-reference-missing` | docs/FEATURE_LOG.md references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
-| warn | `sibling-reference-missing` | README.md references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
 | warn | `sibling-reference-missing` | docs/FEATURES/README.md references 'documentation.nvim/docs/FEATURES_FORMAT.md', which does not exist in the documentation.nvim checkout |
+| warn | `sibling-reference-missing` | docs/FEATURE_LOG.md references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
 | warn | `sibling-reference-missing` | lua/runtime-analysis/telemetry/README.md references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
+| warn | `sibling-reference-missing` | README.md references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
+| warn | `sibling-reference-missing` | docs/api.md references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
 | warn | `sibling-reference-missing` | lua/runtime-analysis/init.lua references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
-| warn | `sibling-reference-missing` | lua/runtime-analysis/runner.lua references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
 | warn | `sibling-reference-missing` | lua/runtime-analysis/view.lua references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
 
 <details>
