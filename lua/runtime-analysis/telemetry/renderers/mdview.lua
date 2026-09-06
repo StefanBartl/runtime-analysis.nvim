@@ -2,7 +2,7 @@
 --- Bridges a rendered report to a browser tab via mdview.nvim's own
 --- `:MDView standalone` — which already does exactly the right thing for
 --- this, so the bridge is thin. See the "Browser report" section of
---- lua/lib/nvim/telemetry/README.md for the reasoning.
+--- lua/runtime-analysis/telemetry/README.md for the reasoning.
 ---
 --- `:MDView standalone` hands a FILE PATH to the relay binary's own --watch
 --- mode and steps out of the chain entirely: the relay watches the file on

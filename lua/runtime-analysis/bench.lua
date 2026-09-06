@@ -7,7 +7,7 @@
 ---
 --- **Deliberately NOT built on `runtime-analysis.telemetry`'s own
 --- wrap/count machinery**, despite what the roadmap note assumed.
---- the own measured numbers (see
+--- This repo's own measured numbers (see
 --- `scripts/bench_overhead.lua`) put counting-only overhead at ~10-15ns
 --- per call and argument profiling at ~600-700ns — real costs that would
 --- swamp the very comparison a benchmark is meant to make for anything

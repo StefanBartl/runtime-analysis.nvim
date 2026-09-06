@@ -19,7 +19,7 @@
 ---@field remind_after? RA.Telemetry.RemindAfter|false # lifecycle reminder (default { days = 7, calls = 50000 })
 ---@field persist? boolean                              # false keeps everything in memory (default true)
 ---@field max_arg_values? integer                       # distinct fingerprints kept per function (default 32)
----@field report_file? boolean                          # keep this namespace's Markdown report on disk, rewritten at every flush (default false); see lua/lib/nvim/telemetry/report_file.lua
+---@field report_file? boolean                          # keep this namespace's Markdown report on disk, rewritten at every flush (default false); see lua/runtime-analysis/telemetry/report_file.lua
 ---@field info? table<string, string>                   # free-form metadata bundled with the report (branch, version/release tag, commit, …) — see lib.nvim.git.info() for a ready-made source; the caller supplies it, this module never inspects a repo to guess it
 ---@field snapshot_retention? integer                    # per-instance override for how many named snapshots (M.snapshot()) this namespace keeps before the oldest are evicted — default M.SNAPSHOT_RETENTION (20) when unset
 

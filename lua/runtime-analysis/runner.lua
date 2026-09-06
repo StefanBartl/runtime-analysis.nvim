@@ -1,15 +1,17 @@
 ---@module 'runtime-analysis.runner'
---- Executes a parsed request via `lib.nvim.net.curl.fetch_raw_blocking` and
---- formats the result into plain lines for `view.lua` to display.
+--- Executes a parsed request via `lib.nvim.net.curl` and formats the result
+--- into plain lines for `view.lua` to display.
 ---
---- Blocking, not async, for this first version: `documentation.nvim/docs/ECOSYSTEM.md`'s own
---- sequencing (documentation.nvim's, the plugin this one pairs with) calls
---- the in-editor request runner "the cheap first version" specifically
---- because it has no CORS problem, no socket, no token — blocking keeps
---- that same spirit: no request state machine, no "is one already in
---- flight" tracking, just call and wait. A real request against a real API
---- is bounded in the seconds, not minutes; async is a real improvement, not
---- attempted in this first version.
+--- Two entry points over one formatter (`format_response`, so the two can
+--- never drift): `M.run` blocks via `fetch_raw_blocking`; `M.run_async` is
+--- the non-blocking twin `:RA send` uses, with its callback guaranteed to
+--- run outside Neovim's fast event context. Pending-request tracking and
+--- `:RA cancel` live in `bindings/usrcmds.lua`, not here — this module has
+--- no request state machine of its own.
+---
+--- A transport failure (unreachable host, timeout) comes back as an error
+--- string; a real-but-unwelcome HTTP status (404, 500, …) is not an error
+--- at all and renders as an ordinary response.
 
 local curl = require("lib.nvim.net.curl")
 local json_encode = require("lib.lua.json.encode")

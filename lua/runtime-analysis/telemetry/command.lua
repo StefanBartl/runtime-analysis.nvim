@@ -1395,7 +1395,7 @@ function M.setup()
     end
   end, {
     nargs = "*",
-    desc = "runtime-analysis.telemetry: report|status|start|stop|reset|disable|enable|disabled|coverage|export|export-all|open|compare|startup|cost|snapshot|snapshots|snapshot-compare|setup|full [namespace] [days]",
+    desc = "runtime-analysis.telemetry: report|status|start|stop|flush|reset|disable|enable|disabled|coverage|export|export-all|open|compare|startup|flamegraph|cost|snapshot|snapshots|snapshot-compare|setup|full [namespace] [days]",
     complete = function(arg_lead, cmd_line)
       local before = cmd_line:sub(1, #cmd_line - #arg_lead)
       local sub = before:match("^%S+%s+(%S+)%s+%S*$")
