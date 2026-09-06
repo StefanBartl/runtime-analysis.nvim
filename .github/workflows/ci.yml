@@ -103,3 +103,20 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -am "docs(map): regenerate module map [skip ci]"
           git push
+
+  # See lib.nvim's templates/README.md ("Pinning lib.nvim in CI") for why:
+  # ci-verified only moves once stylua+luacheck+tests are green here, so
+  # consumers (documentation.nvim, lib.nvim) can pin ref: ci-verified instead
+  # of main and never see a red build that's actually this repo's WIP. `map`
+  # is excluded from `needs` on purpose — it is housekeeping (a generated
+  # artifact sync), not a correctness gate on the repo being testable.
+  publish-ci-verified:
+    name: publish ci-verified branch
+    needs: [stylua, luacheck, tests]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - run: git push origin HEAD:refs/heads/ci-verified --force
