@@ -9,7 +9,7 @@ jobs:
   stylua:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: JohnnyMorganz/stylua-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -19,22 +19,22 @@ jobs:
   luacheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: leafo/gh-actions-lua@v10
         with:
           luaVersion: "5.4"
       - uses: leafo/gh-actions-luarocks@v4
-      - run: luarocks install luacheck
+      - run: luarocks install luacheck 1.2.0
       - run: luacheck lua TESTS scripts ftdetect
 
   tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       # lib.nvim is a runtime dependency (net.curl) — the same reason
       # documentation.nvim's own tests job checks it out to .deps/lib.nvim
       # rather than assuming it is already on the runner.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           repository: StefanBartl/lib.nvim
           path: .deps/lib.nvim
@@ -44,21 +44,29 @@ jobs:
           version: stable
       - run: nvim --headless -u NONE -l TESTS/run.lua
 
-  # Housekeeping: scripts/gen_map.lua + documentation.nvim as
-  # a dev dependency, adopted per that project's own docs/REUSE.md. `--check`
-  # verifies the committed docs/map/ is current and drift-free; it writes
-  # nothing, so a stale map fails loudly here instead of quietly rotting on
-  # main with nobody noticing (the pre-commit hook in scripts/hooks/ catches
-  # the same thing locally, but it is opt-in per clone).
+  # Housekeeping: scripts/gen_map.lua + documentation.nvim as a dev dependency,
+  # adopted per that project's own docs/REUSE.md.
+  #
+  # Self-healing: on a PR, drift in the regenerated map fails the job (the
+  # contributor is told to run gen_map.lua and commit). On a push to main the
+  # same drift is committed back automatically ([skip ci] so it does not loop),
+  # so a generated artifact never rots on — or blocks — the branch it lives on.
+  # The pre-commit hook in scripts/hooks/ still catches it locally (opt-in).
   map:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+        with:
+          # A branch, not the default detached HEAD, so the self-heal push
+          # below has somewhere to land.
+          ref: ${{ github.head_ref || github.ref_name }}
+      - uses: actions/checkout@v5
         with:
           repository: StefanBartl/lib.nvim
           path: .deps/lib.nvim
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           repository: StefanBartl/documentation.nvim
           path: .deps/documentation.nvim
@@ -66,4 +74,20 @@ jobs:
         with:
           neovim: true
           version: stable
-      - run: nvim --headless -l scripts/gen_map.lua --check
+      - name: Regenerate the module map
+        run: nvim --headless -l scripts/gen_map.lua
+      - name: Verify (PR) or commit the regenerated map (push to main)
+        run: |
+          if git diff --quiet; then
+            echo "module map is up to date"
+            exit 0
+          fi
+          if [ "${{ github.event_name }}" != "push" ] || [ "${{ github.ref_name }}" != "main" ]; then
+            echo "::error::module map is stale — run 'nvim --headless -l scripts/gen_map.lua' and commit the result"
+            git --no-pager diff --stat
+            exit 1
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "docs(map): regenerate module map [skip ci]"
+          git push
