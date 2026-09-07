@@ -27,6 +27,12 @@ is the short version of all of it.
 | [FEATURE_LOG.md](FEATURE_LOG.md) | The decision record: what shipped and the trade-off behind it. Referenced by section from the feature pages, which is what makes it load-bearing rather than a changelog — a backlog item that ships is moved here in full instead of being struck through where it stood |
 | [IDEAS.md](IDEAS.md) | Why an idea is cut the way it is, what it would cost, and what argues against it. Explicitly *not* a queue — what gets built next lives in one plan across all three repositories — and its "deliberately not" section is the part that keeps earning its place |
 
+## Working on it
+
+| Page | Answers |
+| --- | --- |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Ground rules, project layout, and the steps for adding a command or an instrumentation — including why a shipped idea is moved out of IDEAS.md into FEATURE_LOG.md in full |
+
 ## Not here yet
 
 **`troubleshooting.md` has no page of its own, on purpose.** Every symptom
