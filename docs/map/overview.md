@@ -90,7 +90,7 @@ flowchart LR
 | warn | `sibling-reference-missing` | docs/FEATURES/README.md references 'documentation.nvim/docs/FEATURES_FORMAT.md', which does not exist in the documentation.nvim checkout |
 | warn | `sibling-reference-missing` | docs/FEATURE_LOG.md references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
 | warn | `sibling-reference-missing` | lua/runtime-analysis/telemetry/README.md references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
-| warn | `sibling-reference-missing` | README.md references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
+| warn | `sibling-reference-missing` | docs/FEATURES/README.md references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
 | warn | `sibling-reference-missing` | docs/api.md references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
 | warn | `sibling-reference-missing` | lua/runtime-analysis/init.lua references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
 | warn | `sibling-reference-missing` | lua/runtime-analysis/view.lua references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
