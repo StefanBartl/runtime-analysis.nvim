@@ -8,6 +8,7 @@ is the short version of all of it.
 | Page | Answers |
 | --- | --- |
 | [installation.md](installation.md) | Requirements, one spec per package manager, what each dependency is actually for, and how to silence the `curl` popup |
+| [quickstart.md](quickstart.md) | The first thing to run after installing |
 | [configuration.md](configuration.md) | Every `setup()` key and its default — five of them, `telemetry` the only one with structure of its own |
 
 ## Using it
