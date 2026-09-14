@@ -606,7 +606,7 @@ resolved:**
   trade-off `documentation.core.loaded_diff` and `endpoint_coverage.lua`
   already take elsewhere in this ecosystem.
 - **Renders via the same float every other report in this plugin already
-  uses** — `lib.nvim.ui.kit.viewer`, falling back to `vim.notify` when
+  uses** — `ui.kit.viewer`, falling back to `vim.notify` when
   kit is unavailable, exactly like `:RATelemetry` and `:RA usage`.
 
 ## `:RA usage`, `:RA usage start`, `:RA usage stop`

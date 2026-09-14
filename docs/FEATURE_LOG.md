@@ -601,7 +601,7 @@ each resolved on its own terms, not by default:**
    "record it, don't guess it" trade-off `documentation.core.loaded_diff`
    and `endpoint_coverage.lua` already take elsewhere in this ecosystem
    (§5.3, §6.2). `:RA inspect` stays a pure read.
-3. **Where the result renders.** `lib.nvim.ui.kit.viewer`, falling back
+3. **Where the result renders.** `ui.kit.viewer`, falling back
    to `vim.notify` when kit is unavailable — not actually a fresh
    decision by the time this shipped: `telemetry/command.lua`'s own
    `show` and `:RA usage` already established this exact convention for
@@ -983,7 +983,7 @@ heuristically (a leading range/count and a trailing `!` stripped), which
 can occasionally misparse an unusual range.
 
 New route family under `:RA`: a bare `:RA usage` reports current counts (a
-`lib.nvim.ui.kit` float if available, `vim.notify` otherwise — the same
+`ui.kit` float if available, `vim.notify` otherwise — the same
 soft-dependency fallback `:RATelemetry`'s own `show` helper already uses);
 `:RA usage start`/`:RA usage stop` toggle collection explicitly.
 
