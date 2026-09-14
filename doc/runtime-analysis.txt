@@ -306,7 +306,7 @@ Response assertions ~
                                                              *:RA-usage*
 :RA usage                       Report keymap/command press counts
                                 collected since |:RA-usage-start|. A kit
-                                float if `lib.nvim.ui.kit` is available,
+                                float if `ui.kit` is available,
                                 `vim.notify` otherwise.
 
                                                        *:RA-usage-start*

@@ -221,9 +221,9 @@ function M.check()
     })
   end
 
-  local ok_kit = pcall(require, "lib.nvim.ui.kit")
+  local ok_kit = pcall(require, "ui.kit")
   if not ok_kit then
-    h_info("lib.nvim.ui.kit not available — :RATelemetry's report float falls back to :messages")
+    h_info("ui.kit not available — :RATelemetry's report float falls back to :messages")
   end
 
   local ok_pp, pdfport = pcall(require, "pdfport")

@@ -178,7 +178,7 @@ local function prompt_backup_dir(on_backup, on_abort)
     on_backup(dir)
   end
 
-  local ok_kit, kit = pcall(require, "lib.nvim.ui.kit")
+  local ok_kit, kit = pcall(require, "ui.kit")
   if ok_kit then
     kit.input({
       title = BACKUP_PROMPT,
@@ -332,7 +332,7 @@ local function show_help(title, rows)
   for _, l in ipairs(lines) do
     width = math.max(width, vim.fn.strdisplaywidth(l))
   end
-  require("lib.nvim.ui.kit").viewer({
+  require("ui.kit").viewer({
     lines = lines,
     title = title .. " Keys",
     filetype = "runtime-analysis-telemetry-help",
@@ -418,7 +418,7 @@ end
 ---point of it, and a row-addressed view needs to show which row is current.
 local function show(lines, title, opts)
   opts = opts or {}
-  local ok, kit = pcall(require, "lib.nvim.ui.kit")
+  local ok, kit = pcall(require, "ui.kit")
   if not ok then
     -- No kit (a stripped runtimepath, a headless session): the data still
     -- has to be reachable, so fall back to the message area rather than

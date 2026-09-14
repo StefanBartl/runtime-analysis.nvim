@@ -538,7 +538,7 @@ local function browse_history(ra)
     ra.open_request({ ("%s %s"):format(choice.method, choice.url), "" })
   end
 
-  local ok_kit, kit = pcall(require, "lib.nvim.ui.kit")
+  local ok_kit, kit = pcall(require, "ui.kit")
   if ok_kit then
     -- respect_override: defer to the reader's own configured picker
     -- (telescope/fzf-lua/snacks/...) when one has replaced vim.ui.select,
@@ -601,7 +601,7 @@ local function select_environment(name)
     end
   end
 
-  local ok_kit, kit = pcall(require, "lib.nvim.ui.kit")
+  local ok_kit, kit = pcall(require, "ui.kit")
   if ok_kit then
     kit.select({ selection = names, title = prompt, respect_override = true, on_select = on_select })
   else
@@ -794,7 +794,7 @@ local function do_inspect(module_id)
   end
 
   local lines = inspect.lines(report)
-  local ok_kit, kit = pcall(require, "lib.nvim.ui.kit")
+  local ok_kit, kit = pcall(require, "ui.kit")
   if ok_kit then
     kit.viewer({
       lines = lines,
@@ -843,7 +843,7 @@ local function do_usage(sub)
   end
 
   local lines = usage.lines({ sort = "calls", top = 60 })
-  local ok_kit, kit = pcall(require, "lib.nvim.ui.kit")
+  local ok_kit, kit = pcall(require, "ui.kit")
   if ok_kit then
     kit.viewer({
       lines = lines,

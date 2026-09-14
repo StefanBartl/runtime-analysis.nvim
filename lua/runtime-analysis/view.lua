@@ -1,7 +1,7 @@
 ---@module 'runtime-analysis.view'
 --- The response pane: a persistent vertical split, reused across sends
 --- rather than a new window every time. Deliberately not
---- `lib.nvim.ui.kit`'s `viewer`/`surface` components — those are floats
+--- `ui.kit`'s `viewer`/`surface` components — those are floats
 --- that close as soon as focus leaves them, which is exactly wrong here:
 --- `documentation.nvim/docs/ECOSYSTEM.md`'s own description is "a Neovim split holding a
 --- request buffer and a response buffer", because the whole workflow is

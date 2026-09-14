@@ -13,6 +13,7 @@ lives here.
 | `curl` on `PATH` | required for `:RA send` only — every other feature works without it |
 | [mdview.nvim](https://github.com/StefanBartl/mdview.nvim) | optional, soft: renders a telemetry report as a live browser tab |
 | [pdfport.nvim](https://github.com/StefanBartl/pdfport.nvim) | optional, soft: `.pdf` export of a telemetry report |
+| [ui.nvim](https://github.com/StefanBartl/ui.nvim) | optional, soft: `ui.kit`'s `viewer`/`input` back every report float and a couple of prompts, falling back to `:messages`/`vim.ui.input` when absent |
 
 `:checkhealth runtime-analysis` verifies all of it on your own system.
 
@@ -101,8 +102,12 @@ Not a convenience import — this plugin is the reason several of these exist:
 | `progress` | the sending/cancel indicator, and telemetry's own reports |
 | `fs.project_key` + `cache.disk` | per-project request history, and telemetry persistence |
 | `fs.find_root` + `fs.json` | the environment files behind `:RA env` |
-| `ui.kit` | every report float |
 | `git`, `usercmd`, `notify`, `autocmd` | the ordinary plumbing |
+
+`ui.kit` moved out of `lib.nvim` into the separate
+[ui.nvim](https://github.com/StefanBartl/ui.nvim) in 2026-09 — see the
+Requirements table above; it backs every report float but is optional,
+degrading to `:messages`/`vim.ui.input`.
 
 ## The `curl` dependency popup
 

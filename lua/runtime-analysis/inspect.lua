@@ -37,7 +37,7 @@
 ---      time this question came up (`documentation.core.loaded_diff` and
 ---      `endpoint_coverage.lua`'s own "record it, don't guess it" rule).
 ---   3. **Renders via the same float every other report in this plugin
----      already uses** — `lib.nvim.ui.kit.viewer`, falling back to
+---      already uses** — `ui.kit.viewer`, falling back to
 ---      `vim.notify` when kit is unavailable, exactly like
 ---      `telemetry/command.lua`'s own `show` and `:RA usage`'s own
 ---      rendering. Not a fresh decision — this module's own `M.lines`

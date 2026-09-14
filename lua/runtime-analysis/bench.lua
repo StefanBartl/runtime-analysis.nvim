@@ -142,7 +142,7 @@ end
 
 ---Render a `M.compare` result as plain lines — the same `M.lines(report)`
 ---shape `runtime-analysis.usage`/`runtime-analysis.inspect` already use for
----a `lib.nvim.ui.kit.viewer`/`vim.notify` fallback pair.
+---a `ui.kit.viewer`/`vim.notify` fallback pair.
 ---@param result RA.Bench.Result
 ---@return string[]
 function M.lines(result)
