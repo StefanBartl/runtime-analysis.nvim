@@ -25,6 +25,13 @@ match, a quickfix entry on a mismatch — cheap enough to leave in a
 committed `.http` file permanently rather than writing a separate test for
 "does the health endpoint still return 200."
 
+The response split shows the body as the server sent it — often one long,
+unindented line for a JSON API. If you have
+[`data.nvim`](https://github.com/StefanBartl/data.nvim) installed, `:JSON
+pretty` in that split reformats it in place, and `:JSON lines`/`:JSON
+filter` flatten a large payload down to the one or two fields you're
+actually checking.
+
 ## `.http` files are the collection; `:RA history` is the recall
 
 Two different things worth not confusing. A `.http`/`.rest` file,
