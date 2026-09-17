@@ -18,9 +18,10 @@
 
 Runtime truth for a Neovim project: what actually ran, not what the source says.
 An in-editor HTTP request runner, opt-in call counting for any Lua plugin, a
-live read of what is really in `package.loaded`, and stall detection that finds
+live read of what is really in `package.loaded`, stall detection that finds
 what blocks the main loop — including during startup, where `--startuptime` and
-`:profile` both give up.
+`:profile` both give up — and a startup profiler that runs `--startuptime`
+enough times for its numbers to survive being read.
 
 ---
 
