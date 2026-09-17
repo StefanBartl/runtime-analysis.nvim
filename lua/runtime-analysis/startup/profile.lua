@@ -5,20 +5,24 @@
 --- **This plugin defines itself against `--startuptime` everywhere else, so
 --- the first thing this module owes the reader is why it now runs it.**
 ---
---- `--startuptime` is not wrong. It is *early and file-shaped*: it stops
---- writing at the first screen redraw, and it counts files, not modules. The
---- two measurements this plugin already had are late and module-shaped:
+--- `--startuptime` is not wrong. It is *early and flat*: it starts at
+--- millisecond zero and stops writing at the first screen redraw, and every
+--- line it writes is a peer of every other. On Neovim 0.11 it does log
+--- `require('...')` alongside `sourcing <file>`, so "files, not modules" is
+--- too glib — what it genuinely cannot express is the *shape*: which load
+--- happened inside which, and therefore what any one of them cost on its
+--- own. The two measurements this plugin already had are late and shaped:
 ---
 --- - `runtime-analysis.startup` watches the main loop's own lateness. It sees
 ---   a block whatever caused it — including a libuv callback no profiler can
 ---   instrument — but it never says what a single file cost.
---- - `runtime-analysis.telemetry.startup` times every `require` cache miss,
----   which is the only way to see *inside* a plugin. Its own doc-comment
----   states the honest limit: nothing already in `package.loaded` when it
----   arms is ever seen. On a real config that is Neovim's whole runtime,
----   lazy.nvim itself, and every plugin loaded before this one — and none of
----   those arrive through `require` at all. They are `source`d, which is
----   precisely what `--startuptime` counts.
+--- - `runtime-analysis.telemetry.startup` times every `require` cache miss
+---   and keeps a stack while it does, so it reports self time with children
+---   subtracted and a nesting depth to reconstruct the tree from — the
+---   waterfall a flat log cannot be turned into. Its own doc-comment states
+---   the honest limit: nothing already in `package.loaded` when it arms is
+---   ever seen. On a real config that is Neovim's whole runtime, lazy.nvim
+---   itself, and every plugin loaded before this one.
 ---
 --- Three instruments, three blind spots, and the blind spots do not overlap.
 --- That is the argument for this module existing; "vim-startuptime has a nice

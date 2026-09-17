@@ -16,8 +16,8 @@ before the interesting part.
 
 Which is why `:RA startup profile` exists alongside this one and runs
 `--startuptime` itself, N times over — see below. `--startuptime` is not
-wrong, it is *early and file-shaped*, and that is a different blind spot from
-this page's, not a worse one.
+wrong, it is *early and flat*, and that is a different blind spot from this
+page's, not a worse one.
 
 `:profile` instruments Vimscript and Lua calls, and is therefore blind to
 libuv callbacks — which is exactly where filesystem work, subprocesses and LSP
@@ -153,18 +153,24 @@ expects to take ten seconds. Run the command again instead.
 
 | | Sees | Blind to |
 | --- | --- | --- |
-| `:RA startup profile` | every file `source`d, whatever sourced it, from the very first millisecond | anything after the first screen redraw; module-level cost inside one file |
+| `:RA startup profile` | everything sourced or required, whatever pulled it in, from the very first millisecond | anything after the first screen redraw; which load happened *inside* which, so no self time and no tree |
 | `:RA startup` | the main loop blocking, whatever blocked it — including libuv callbacks nothing can instrument | what any single file cost |
-| `:RATelemetry startup` | inside a plugin: which *module* the cost sits in, as a require waterfall | everything already in `package.loaded` when it armed — Neovim's own runtime, lazy.nvim, every earlier plugin |
+| `:RATelemetry startup` | inside a plugin: self time with children subtracted, and the nesting to read it as a waterfall | everything already in `package.loaded` when it armed — Neovim's own runtime, lazy.nvim, every earlier plugin |
 
 The blind spots do not overlap, which is the whole reason all three exist. The
 profiler is the one that sees the earliest and knows the least; the telemetry
 waterfall is the one that sees the least and knows the most.
 
 **This does mean the plugin now runs the tool it defines itself against.**
-`--startuptime` was never wrong — it is early and file-shaped, and it stops at
-the first redraw. What it could not do alone was be *believed*, because one
-log is scatter. Five are an argument.
+`--startuptime` was never wrong — it is early and flat, and it stops at the
+first redraw. What it could not do alone was be *believed*, because one log is
+scatter. Five are an argument.
+
+On Neovim 0.11 its log names `require('...')` as well as `sourcing <file>`, so
+the profiler's rows are not only files. What stays out of reach is the
+*shape*: every line is a peer of every other, which is why a `require`
+waterfall is still a separate instrument rather than a nicer render of this
+one.
 
 ### Two honest limits
 
