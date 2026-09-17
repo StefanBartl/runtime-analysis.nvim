@@ -308,39 +308,6 @@ local function header_namespace(line)
   return line:match("^(%S[^\n]-)  —  %S+$")
 end
 
----@internal
----Read-only cheatsheet for a `show()` float — only lists the actions this
----particular call actually wired up.
----@param title string
----@param rows { lhs: string, desc: string }[]
----@return nil
-local function show_help(title, rows)
-  local widest = #"?"
-  for _, r in ipairs(rows) do
-    widest = math.max(widest, #r.lhs)
-  end
-  local lines = { "", (" %s keys"):format(title), "" }
-  local function row(lhs, desc)
-    lines[#lines + 1] = ("  %-" .. widest .. "s   %s"):format(lhs, desc)
-  end
-  for _, r in ipairs(rows) do
-    row(r.lhs, r.desc)
-  end
-  row("?", "Show this help")
-  lines[#lines + 1] = ""
-  local width = 40
-  for _, l in ipairs(lines) do
-    width = math.max(width, vim.fn.strdisplaywidth(l))
-  end
-  require("ui.kit").viewer({
-    lines = lines,
-    title = title .. " Keys",
-    filetype = "runtime-analysis-telemetry-help",
-    width = math.min(width + 2, math.floor(vim.o.columns * 0.9)),
-    height = math.min(#lines, math.floor(vim.o.lines * 0.8)),
-  })
-end
-
 ---Extmark namespace for the `:RATelemetry status` table's own heading and
 ---summary highlights. One per module, reused on every redraw — extmarks in a
 ---namespace are cleared wholesale by that namespace, which is what makes a
@@ -378,146 +345,26 @@ local function status_highlights(bufnr, lines)
 end
 
 ---@internal
----The one-line key legend a `show()` float carries in its `winbar`, built
----from the very keymaps that call actually wired up — so it can never
----advertise a key this particular view does not have. Same idea (and same
----`key label  │  key label` shape) as reposcope.nvim's own status winbar:
----a float with five bindings and nothing on screen saying so is a float
----whose bindings nobody finds. `? Keys` is last and always present, since
----it is how everything not worth a legend entry stays reachable.
----@param entries { lhs: string, legend?: string }[]
----@return string
-local function legend(entries)
-  local parts = {}
-  for _, e in ipairs(entries) do
-    if e.legend then
-      parts[#parts + 1] = ("%%#Special#%s %%#Comment#%s"):format(e.lhs, e.legend)
-    end
-  end
-  parts[#parts + 1] = "%#Special#? %#Comment#Keys"
-  return " " .. table.concat(parts, "%#NonText#  │  ") .. "%#Normal#"
-end
-
----@internal
+---`runtime-analysis.ui.float`'s `show` with this module's own defaults: the
+---row key under the cursor is read off the `"<ns>  —  <state>"` header row
+---every report block opens with unless a view overrides it, and the keymap
+---descriptions name telemetry rather than the plugin at large.
+---
+---The float itself — winbar legend, `?` cheatsheet, refresh/drilldown/HTML
+---keys — moved out of this file the moment `:RA startup profile` needed the
+---same one. Two copies would have meant two legends drifting apart, and the
+---legend's whole point is that it is built from the entries that were
+---actually wired up.
 ---@param lines string[]
 ---@param title string
----@param opts { on_refresh: (fun(): string[])|nil, on_drilldown: (fun(namespace: string): string[]|nil, string|nil)|nil, on_open_html: (fun(): nil)|nil, namespace_at: (fun(line: string): string|nil)|nil, on_lines: (fun(bufnr: integer, lines: string[]): nil)|nil, table_view: boolean|nil }|nil
----`on_refresh` recomputes and returns fresh lines for the same view.
----`on_drilldown` is offered the namespace under the cursor on `<CR>` over a
----header row; returning `lines[, title]` swaps this same float to that
----namespace's own view in place, returning nothing leaves the float as is.
----`on_open_html` writes+opens this same report's HTML rendering in the
----system browser. `namespace_at` overrides how the namespace under the
----cursor is read off a line (default: `header_namespace`, the
----`"<ns>  —  <state>"` header row every report block opens with) — a
----column-aligned view names it in its first column instead.
----`on_lines` runs after every set of lines is installed (the initial ones
----and every refresh), for a view that highlights its own heading/summary
----rows. `table_view` turns off wrapping and turns on `cursorline`: a
----wrapped row in an aligned table destroys the alignment that is the whole
----point of it, and a row-addressed view needs to show which row is current.
+---@param opts table|nil See `RA.UI.Float.Opts`. `namespace_at` is accepted as the telemetry-flavoured spelling of `row_key_at`.
+---@return nil
 local function show(lines, title, opts)
-  opts = opts or {}
-  local ok, kit = pcall(require, "ui.kit")
-  if not ok then
-    -- No kit (a stripped runtimepath, a headless session): the data still
-    -- has to be reachable, so fall back to the message area rather than
-    -- failing.
-    notify.info(table.concat(lines, "\n"))
-    return
-  end
-
-  -- Built before the float opens, because the winbar legend is derived from
-  -- this same list and has to be set at open time.
-  local entries = {}
-  if opts.on_refresh then
-    entries[#entries + 1] = { lhs = "r", desc = "Refresh", legend = "Refresh" }
-  end
-  if opts.on_drilldown then
-    entries[#entries + 1] =
-      { lhs = "<CR>", desc = "Open the namespace under the cursor", legend = "Open" }
-  end
-  if opts.on_open_html then
-    entries[#entries + 1] =
-      { lhs = "gO", desc = "Open this report as HTML in the browser", legend = "HTML" }
-  end
-
-  local surf = kit.viewer({
-    lines = lines,
-    title = (" %s "):format(title),
-    width = math.min(110, math.max(60, vim.o.columns - 8)),
-    -- +1 for the winbar, which otherwise eats a row of content out of a
-    -- height sized to the line count (kit clamps it to the editor anyway).
-    height = math.min(#lines + 1, math.max(1, vim.o.lines - 6)),
-  })
-  if not surf then
-    return
-  end
-
-  if vim.api.nvim_win_is_valid(surf.winid) then
-    vim.api.nvim_set_option_value("winbar", legend(entries), { win = surf.winid })
-    if opts.table_view then
-      vim.api.nvim_set_option_value("wrap", false, { win = surf.winid })
-      vim.api.nvim_set_option_value("cursorline", true, { win = surf.winid })
-      -- Line 1 is the heading row; start on the first row that is actually a
-      -- namespace, so `<CR>` works without moving first.
-      pcall(vim.api.nvim_win_set_cursor, surf.winid, { math.min(2, #lines), 0 })
-    end
-  end
-  if opts.on_lines then
-    opts.on_lines(surf.bufnr, lines)
-  end
-
-  local help_rows = { { lhs = "j/k", desc = "Move" } }
-  for _, e in ipairs(entries) do
-    help_rows[#help_rows + 1] = { lhs = e.lhs, desc = e.desc }
-  end
-  help_rows[#help_rows + 1] = { lhs = "q, <Esc>", desc = "Close" }
-
-  local km = { noremap = true, silent = true, buffer = surf.bufnr }
-  local keymap = require("lib.nvim.bindings.keymap")
-
-  ---Install a fresh set of lines, keeping whatever `on_lines` decoration the
-  ---view applies to them — a refresh that dropped the highlights would leave
-  ---the heading row looking like an ordinary row from then on.
-  ---@param fresh string[]
-  local function set_lines(fresh)
-    surf:set_lines(fresh)
-    if opts.on_lines then
-      opts.on_lines(surf.bufnr, fresh)
-    end
-  end
-
-  if opts.on_refresh then
-    keymap("n", "r", function()
-      local fresh = opts.on_refresh()
-      if fresh then
-        set_lines(fresh)
-      end
-    end, km, "runtime-analysis.telemetry: refresh")
-  end
-  if opts.on_drilldown then
-    keymap("n", "<CR>", function()
-      local ns = (opts.namespace_at or header_namespace)(vim.api.nvim_get_current_line())
-      if not ns then
-        return
-      end
-      local new_lines, new_title = opts.on_drilldown(ns)
-      if new_lines then
-        set_lines(new_lines)
-        if new_title then
-          surf:set_title((" %s "):format(new_title))
-        end
-      end
-    end, km, "runtime-analysis.telemetry: drill into namespace")
-  end
-  if opts.on_open_html then
-    keymap("n", "gO", opts.on_open_html, km, "runtime-analysis.telemetry: open as HTML")
-  end
-
-  keymap("n", "?", function()
-    show_help(title, help_rows)
-  end, km, "runtime-analysis.telemetry: show keymap cheatsheet")
+  opts = vim.tbl_extend("force", {}, opts or {})
+  opts.row_key_at = opts.namespace_at or header_namespace
+  opts.namespace_at = nil
+  opts.desc_prefix = "runtime-analysis.telemetry"
+  require("runtime-analysis.ui.float").show(lines, title, opts)
 end
 
 ---@internal
