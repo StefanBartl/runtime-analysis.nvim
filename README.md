@@ -41,6 +41,10 @@ enough times for its numbers to survive being read.
 > where a suggestion about performance gets made; the benchmark that decides
 > whether it is worth making belongs here.
 >
+> **[ui.nvim](https://github.com/StefanBartl/ui.nvim)** — reduces this
+> plugin's telemetry to a single traffic light in the statusline: whether
+> anything instrumented errored or ran slow today.
+>
 > All of the above are soft: without them everything else works unchanged.
 > [lib.nvim](https://github.com/StefanBartl/lib.nvim) is the one real plugin
 > dependency — see [Requirements](docs/installation.md#requirements).
