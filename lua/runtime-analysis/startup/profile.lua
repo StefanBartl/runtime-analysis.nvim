@@ -55,7 +55,17 @@
 
 require("runtime-analysis.startup.@types")
 
+local columns = require("runtime-analysis.ui.columns")
+
 local M = {}
+
+--- True while a measurement is in flight. The runs inside one `M.run` are
+--- strictly sequential for a reason the module header states -- two Neovim
+--- instances starting at once inflate each other's numbers -- and that
+--- reason does not stop applying at the boundary of one call. Without this,
+--- a second `:RA startup profile` while the first is still going does
+--- exactly what the sequencing exists to prevent, to *both* reports.
+local running = false
 
 -- ── parsing ─────────────────────────────────────────────────────────────────
 
@@ -291,9 +301,25 @@ function M.run(opts, on_done)
   local nvim = opts.nvim or vim.v.progpath
   local on_progress = opts.on_progress
 
+  if running then
+    on_done(nil, "a startup profile is already running — let it finish")
+    return
+  end
+
   if vim.fn.executable(nvim) ~= 1 then
     on_done(nil, ("not executable: %s"):format(nvim))
     return
+  end
+
+  running = true
+
+  ---Every exit from here goes through this, so the guard above cannot be
+  ---left stuck on by a path that returns early.
+  ---@param report RA.Startup.Profile.Report|nil
+  ---@param err string|nil
+  local function finish(report, err)
+    running = false
+    on_done(report, err)
   end
 
   local runs, failed = {}, 0
@@ -302,14 +328,14 @@ function M.run(opts, on_done)
   local function step(i)
     if i > total_runs then
       if #runs == 0 then
-        on_done(nil, ("all %d run(s) failed"):format(total_runs))
+        finish(nil, ("all %d run(s) failed"):format(total_runs))
         return
       end
       local report = M.aggregate(runs, opts)
       report.failed = failed
       report.nvim = nvim
       report.argv = first_argv or {}
-      on_done(report, nil)
+      finish(report, nil)
       return
     end
 
@@ -331,12 +357,23 @@ function M.run(opts, on_done)
       -- pointed at, so a run that never exits must not take the report with
       -- it. The run is counted as failed and the rest still happen.
       timeout = 60000,
-    }, function()
+    }, function(obj)
       vim.schedule(function()
         local ok, lines = pcall(vim.fn.readfile, log)
         pcall(vim.fn.delete, log)
 
-        if ok and type(lines) == "table" and #lines > 0 then
+        -- A start that did not exit cleanly is not a startup that happened.
+        -- `--startuptime` writes as it goes, so a config that aborted -- or a
+        -- hang the timeout above had to kill -- still leaves a *partial* log
+        -- on disk. Parsing that into the median would put a startup nobody
+        -- ever had into the headline number while `failed` still read 0,
+        -- which is the one thing a profiler must not do quietly. Verified
+        -- against real exits before this was written: a healthy start,
+        -- including one whose config raised, exits 0; only a genuinely
+        -- aborted one does not.
+        local clean_exit = obj.code == 0 and (obj.signal == nil or obj.signal == 0)
+
+        if clean_exit and ok and type(lines) == "table" and #lines > 0 then
           local entries, run_total = M.parse(lines)
           if #entries > 0 then
             runs[#runs + 1] = { entries = entries, total_ms = run_total }
@@ -356,6 +393,14 @@ function M.run(opts, on_done)
   end
 
   step(1)
+end
+
+---Whether a measurement is in flight. Same name and shape as
+---`runtime-analysis.startup.is_running`, so the two startup modules answer
+---"is something running" the same way.
+---@return boolean
+function M.is_running()
+  return running
 end
 
 -- ── rendering ───────────────────────────────────────────────────────────────
@@ -378,24 +423,45 @@ local function display_name(name, kind)
   return table.concat({ parts[#parts - 1], parts[#parts] }, "/")
 end
 
+--- The name column, in display cells.
+local NAME_W = 44
+--- Each of the four number columns, likewise.
+local NUM_W = 8
+
+---@internal
+---One row, padded in display cells. Not a `%-44s` format string: `%s` pads
+---by *bytes*, so a single `ü` in a plugin path shifts that row's whole tail
+---one column left of every other row's — the exact failure
+---`runtime-analysis.ui.columns` exists to prevent, and the one this table
+---shipped with before it used that module.
+---@param name string
+---@param cells string[] The four right-aligned columns, already formatted.
+---@return string
+local function render_row(name, cells)
+  local out = { "  ", columns.ljust(columns.elide(name, NAME_W), NAME_W) }
+  for _, c in ipairs(cells) do
+    out[#out + 1] = " " .. columns.rjust(c, NUM_W)
+  end
+  return table.concat(out)
+end
+
 ---@param report RA.Startup.Profile.Report
 ---@return string[]
 function M.lines(report)
   local out = {
-    -- `SPREAD` rather than `±STDDEV`: `%8s` pads by bytes, and one
-    -- multi-byte character in a heading shifts the whole column off the rows
-    -- underneath it. The trailer spells out what the column is.
-    ("  %-44s %8s %8s %8s %8s"):format("WHAT", "MEDIAN", "MEAN", "SPREAD", "RUNS"),
+    -- `SPREAD` rather than `±STDDEV` purely for the reader: the trailer
+    -- spells out what the column is, and an abbreviation nobody has to
+    -- decode beats a symbol that looks like a unit.
+    render_row("WHAT", { "MEDIAN", "MEAN", "SPREAD", "RUNS" }),
   }
 
   for _, e in ipairs(report.entries) do
-    out[#out + 1] = ("  %-44s %8.2f %8.2f %8.2f %8s"):format(
-      display_name(e.name, e.kind):sub(1, 44),
-      e.median_ms,
-      e.mean_ms,
-      e.stddev_ms,
-      ("%d/%d"):format(e.runs, report.runs)
-    )
+    out[#out + 1] = render_row(display_name(e.name, e.kind), {
+      ("%.2f"):format(e.median_ms),
+      ("%.2f"):format(e.mean_ms),
+      ("%.2f"):format(e.stddev_ms),
+      ("%d/%d"):format(e.runs, report.runs),
+    })
   end
 
   out[#out + 1] = ""

@@ -283,59 +283,15 @@ end
 -- ---------------------------------------------------------------------------
 -- Column layout
 --
--- Every aligned table below (`M.status_lines`' fleet board, `M.lines`' own
--- per-function block) pads in *display cells* rather than bytes: a namespace
--- or an argument fingerprint can carry multi-byte characters, and `%-20s`
--- counts bytes, so one `·` in a cell used to shift that row's whole tail one
--- column left of every other row's.
+-- Padding in *display cells* rather than bytes lives in
+-- `runtime-analysis.ui.columns` since `startup/profile.lua` grew a table of
+-- its own -- aliased here so the thirteen call sites below read exactly as
+-- they always did, and so there is one definition of what a column break is.
 -- ---------------------------------------------------------------------------
 
---- Two spaces between every pair of columns — the same gutter reposcope.nvim's
---- own status table uses, so two overviews from the same ecosystem do not
---- disagree about what a column break looks like.
-local GAP = "  "
-
----@internal
----@param s string
----@param width integer
----@return string
-local function ljust(s, width)
-  local pad = width - vim.fn.strdisplaywidth(s)
-  return pad > 0 and (s .. (" "):rep(pad)) or s
-end
-
----@internal
----@param s string
----@param width integer
----@return string
-local function rjust(s, width)
-  local pad = width - vim.fn.strdisplaywidth(s)
-  return pad > 0 and ((" "):rep(pad) .. s) or s
-end
-
----Truncate to `width` display cells, marking the cut with an ellipsis. Cuts
----the tail: a namespace and a function key are both recognised by how they
----start.
----@internal
----@param s string
----@param width integer
----@return string
-local function elide(s, width)
-  if vim.fn.strdisplaywidth(s) <= width then
-    return s
-  end
-  return vim.fn.strcharpart(s, 0, width - 1) .. "…"
-end
-
----Join already-padded cells with the standard gutter, dropping trailing
----whitespace so a right-padded last column does not leave a ragged edge for
----`$`/visual selection to run into.
----@internal
----@param cells string[]
----@return string
-local function join_cells(cells)
-  return (table.concat(cells, GAP):gsub("%s+$", ""))
-end
+local columns = require("runtime-analysis.ui.columns")
+local ljust, rjust, elide, join_cells =
+  columns.ljust, columns.rjust, columns.elide, columns.join_cells
 
 ---The header block every per-namespace terminal view opens with —
 ---namespace/state, mode + counts, collecting-since, `info` — with no

@@ -1,12 +1,18 @@
 -- TESTS/startup_profile_spec.lua — runtime-analysis.startup.profile
 --
--- Everything here runs against a `--startuptime` log held as a literal, and
--- nothing here starts Neovim. That is the point of the module's split: the
--- part that owns the log format (`parse`) and the part that owns the
--- statistics (`aggregate`) are both pure, so the only untested part is the
--- process driver — and a spec that spawned five editors to check a median
+-- Almost everything here runs against a `--startuptime` log held as a
+-- literal. That is the point of the module's split: the part that owns the
+-- log format (`parse`) and the part that owns the statistics (`aggregate`)
+-- are both pure, and a spec that spawned five editors to check a median
 -- would be slow, flaky on a loaded CI runner, and still would not prove the
 -- median right.
+--
+-- The exception is the last two blocks, which start Neovim three times
+-- between them. They are there because the driver once folded a start that
+-- exited non-zero into the median as if it had succeeded, and let a second
+-- profile run against the first — neither of which any amount of testing
+-- pure functions would have caught. A bug in the process driver needs a
+-- test in the process driver.
 
 return function(H)
   local eq, ok = H.eq, H.ok
@@ -203,6 +209,27 @@ return function(H)
     os.remove(real)
   end
 
+  -- lines: a multi-byte name still lines up with the heading
+  do
+    -- `%-44s` pads by BYTES, so this row used to come out four cells short of
+    -- the heading and take every column after it along with it. The name is
+    -- also longer than the column, so this covers the truncation too.
+    local name = "/home/müller/ÄÖÜ-ein-sehr-langes-verzeichnis/plugin/ä.lua"
+    local report = profile.aggregate({
+      { entries = { { name = name, kind = "event", ms = 1 } }, total_ms = 1 },
+    })
+    local lines = profile.lines(report)
+    eq(
+      vim.fn.strdisplaywidth(lines[2]),
+      vim.fn.strdisplaywidth(lines[1]),
+      "lines: a multi-byte row is as wide as the heading, in display cells"
+    )
+    ok(
+      vim.fn.strchars(lines[2]) > 0 and not lines[2]:find("99189"),
+      "lines: and is cut on a character boundary, not mid-sequence"
+    )
+  end
+
   -- run: an unusable binary is reported, and reported without starting anything
   do
     local done, err_seen = false, nil
@@ -212,5 +239,50 @@ return function(H)
     end)
     ok(done, "run: the callback fires synchronously for this case")
     ok(err_seen and err_seen:match("not executable"), "run: and says why")
+    eq(profile.is_running(), false, "run: a refused run does not leave the guard set")
+  end
+
+  -- run: a start that exits non-zero is a failure, not a sample
+  do
+    -- `+cquit` runs before `+qall!` and exits non-zero AFTER --startuptime has
+    -- already written most of its log, which is exactly the shape that used to
+    -- sail through as a valid run and land in the median.
+    local done, rep, err_seen = false, nil, nil
+    profile.run({ runs = 1, clean = true, args = { "+cquit" } }, function(report, err)
+      rep, err_seen, done = report, err, true
+    end)
+    ok(
+      vim.wait(60000, function()
+        return done
+      end, 50),
+      "run: the aborted run reported back within the timeout"
+    )
+    eq(rep, nil, "run: the only run failed, so there is no report")
+    ok(err_seen and err_seen:match("failed"), "run: and the error says every run failed")
+    eq(profile.is_running(), false, "run: the guard is clear again afterwards")
+  end
+
+  -- run: a second run is refused while one is in flight
+  do
+    local first_done, second_err = false, nil
+    profile.run({ runs = 1, clean = true }, function()
+      first_done = true
+    end)
+    ok(profile.is_running(), "run: the guard is set while a run is in flight")
+    profile.run({ runs = 1, clean = true }, function(report, err)
+      second_err = err
+      eq(report, nil, "run: the refused second call gets no report")
+    end)
+    ok(
+      second_err and second_err:match("already running"),
+      "run: two profiles at once would compete for CPU, so the second is refused"
+    )
+    ok(
+      vim.wait(60000, function()
+        return first_done
+      end, 50),
+      "run: the first run still completes"
+    )
+    eq(profile.is_running(), false, "run: and clears the guard when it does")
   end
 end
