@@ -3,7 +3,7 @@
 > **Generated** by `documentation`. Do not edit by hand — run `:DocMap`
 > (or `nvim --headless -l scripts/gen_map.lua`) to regenerate.
 
-**4 modules** · 3 namespaces · 39 helper files
+**4 modules** · 3 namespaces · 40 helper files
 
 The [interactive map](index.html) has filtering, full descriptions and
 source links; this page is the version the code host renders directly.
@@ -94,7 +94,7 @@ flowchart LR
 
 ## Drift
 
-0 errors · 8 warnings · 5 info
+0 errors · 8 warnings · 6 info
 
 | Severity | Check | Message |
 |---|---|---|
@@ -108,7 +108,7 @@ flowchart LR
 | warn | `sibling-reference-missing` | lua/runtime-analysis/view.lua references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
 
 <details>
-<summary>5 informational findings</summary>
+<summary>6 informational findings</summary>
 
 
 | Check | Message |
@@ -118,5 +118,6 @@ flowchart LR
 | `missing-readme` | lua/runtime-analysis/startup has no README.md |
 | `unreferenced-module` | runtime-analysis.bench is required by no other file in the tree |
 | `unreferenced-module` | runtime-analysis.health is required by no other file in the tree |
+| `unreferenced-module` | runtime-analysis.statusline is required by no other file in the tree |
 
 </details>
