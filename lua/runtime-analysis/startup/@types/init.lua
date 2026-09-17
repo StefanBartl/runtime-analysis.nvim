@@ -24,4 +24,35 @@
 ---@field group integer|nil     Autocommand group id, cleared on stop.
 ---@field timer uv.uv_timer_t|nil
 
+---@alias RA.Startup.Profile.Kind "sourced"|"event"
+
+---One measured entry, averaged across every run it appeared in.
+---@class RA.Startup.Profile.Entry
+---@field name string           The sourced script's path, or the event's text.
+---@field kind RA.Startup.Profile.Kind
+---@field median_ms number      The headline number: startup timing is skewed by outliers, so the middle run is the honest one.
+---@field mean_ms number
+---@field min_ms number
+---@field max_ms number
+---@field stddev_ms number      Spread across runs. A large one next to a large median means "measure again", not "fix this".
+---@field runs integer          How many runs this entry appeared in; `< total_runs` means it did not load every time.
+---@field samples number[]      The per-run values, in run order.
+
+---@class RA.Startup.Profile.Report
+---@field entries RA.Startup.Profile.Entry[]  Sorted per `opts.sort`, truncated per `opts.top`.
+---@field total_ms number       Median of each run's own last clock value — the whole startup, not the sum of the rows.
+---@field runs integer          Runs that produced a parseable log.
+---@field failed integer        Runs that did not.
+---@field nvim string           The binary that was measured.
+---@field argv string[]         The arguments it was measured with.
+
+---@class RA.Startup.Profile.Opts
+---@field runs? integer         How many times to start Neovim (default 5).
+---@field nvim? string          Binary to measure (default `v:progpath`).
+---@field args? string[]        Extra arguments, e.g. a file to open (default none).
+---@field clean? boolean        Measure `--clean` instead of the real config — the baseline to compare against (default false).
+---@field sort? "median"|"total"|"name"  Default "median".
+---@field top? integer          Keep only the first N entries after sorting; 0/nil keeps all (default 25).
+---@field on_progress? fun(done: integer, total: integer): nil  Called after each run finishes, failed ones included.
+
 return {}
