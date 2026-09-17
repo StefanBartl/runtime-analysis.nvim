@@ -20,6 +20,59 @@ Newest first, by date; original document order within a date.
 
 ## 2026-09-17
 
+### Three bugs in the startup profiler, found by reviewing what had just shipped
+
+Same-day follow-up to the entry below, from going back over the four commits
+rather than over the design. Each one is recorded with the check that found
+it, because none of them would have shown up in the spec as it stood.
+
+**A start that exited non-zero was folded into the median as a valid
+sample.** `--startuptime` writes as it goes, so a config that aborted — or a
+hang the 60-second timeout had to kill — leaves a *partial* log behind, and
+the `vim.system` callback ignored the exit status entirely. Measured: a run
+forced to `+cquit` came back as `runs=2 failed=0`, with a startup nobody ever
+had sitting in the headline number while the report claimed a clean sweep.
+That is the one failure mode a profiler must not have. Checked before fixing
+that a healthy start really does exit 0 — including one whose config raises,
+which finishes starting and must still count — so the fix cannot mark honest
+runs as failures.
+
+**Two profiles could run at once, which is the thing the module forbids
+internally.** The runs inside one invocation are strictly sequential, and the
+module header explains at length that parallel starts inflate each other's
+numbers. Nothing enforced that across invocations: two `M.run` calls produced
+`A1 B1 A2 B2`, four editors competing in pairs, corrupting both reports. Now
+a module-level guard with `is_running()` next to it, refused with a message.
+Deliberately the *opposite* of `startup.start`, which restarts in place — and
+`api.md` now says why the two differ rather than leaving it to be discovered.
+
+**The table padded in bytes, against this repository's own written rule.**
+`telemetry/report.lua` has carried a header comment since it was written
+saying every aligned table pads in display cells because `%-20s` counts
+bytes; the new table used `%-44s` and `:sub(1, 44)` anyway. A path with an
+umlaut came out four cells narrow and took every column after it along.
+A rule written in one file's header is a rule the next file does not read, so
+`ljust`/`rjust`/`elide` moved to `runtime-analysis.ui.columns` — a module the
+next table has to call is one it cannot get wrong. `report.lua` aliases them,
+so its thirteen call sites are untouched.
+
+**One non-finding, measured rather than assumed.** `median()` copies its
+samples with `vim.deepcopy`, which a plain loop beats by 1.47x. Over 700
+entries that is 0.54ms against 0.37ms — 0.17ms on a report that took five
+editor starts to produce. Left alone. This repository's own `bench.lua`
+exists to stop exactly this kind of change being made on the strength of a
+ratio with no magnitude next to it.
+
+**And a docs bug from the same batch:** the profiler's API section had been
+inserted between `runtime-analysis.startup`'s code block and the paragraph
+describing its `start(opts)`, so that paragraph read as documentation for a
+`profile.start` that does not exist.
+
+The spec grew the three cases that would have caught these. Two of them start
+Neovim, against that file's own stated "nothing here starts Neovim" — the
+header now says why: a bug in the process driver needs a test in the process
+driver.
+
 ### `:RA startup profile` — the repeated-runs profiler, and the premise it corrected on the way in
 
 Adopted from `dstein64/vim-startuptime`, which this replaces outright. The

@@ -172,6 +172,21 @@ the profiler's rows are not only files. What stays out of reach is the
 waterfall is still a separate instrument rather than a nicer render of this
 one.
 
+### What counts as a run
+
+**Only a start that exited cleanly.** `--startuptime` writes as it goes, so a
+config that aborted — or a hang the profiler had to kill after 60 seconds —
+still leaves a partial log behind. Folding that in would put a startup nobody
+ever had into the median while the report still claimed a clean sweep, so a
+non-zero exit is counted in the `N failed` tally instead and never reaches the
+numbers. A config that merely *prints* an error still finishes starting, and
+still counts.
+
+**One measurement at a time.** The runs inside one invocation are sequential
+because parallel starts inflate each other; a second `:RA startup profile`
+while the first is still going would do exactly that to both reports, so it is
+refused with a message rather than allowed to quietly corrupt them.
+
 ### Two honest limits
 
 - **A measured start is not your start.** It is spawned with a pipe rather

@@ -881,6 +881,15 @@ local function do_startup_profile(runs_arg)
     runs = runs_arg
   end
 
+  -- Asked before a progress handle exists, rather than left to `run`'s own
+  -- refusal: a spinner that appears and is cancelled in the same frame reads
+  -- like a crash. `run` still refuses on its own -- this is the message, not
+  -- the guard.
+  if profile.is_running() then
+    notify.warn("a startup profile is already running — let it finish")
+    return
+  end
+
   -- Soft dependency, `pcall`-guarded like every other optional lib.nvim
   -- piece this plugin touches: the measurement runs either way, it just
   -- goes unannounced while it does.

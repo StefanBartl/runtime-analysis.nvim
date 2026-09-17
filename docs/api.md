@@ -57,6 +57,11 @@ startup.reset()                     -- drop everything collected
 startup.probe_command()             --> the --cmd line, path filled in
 ```
 
+`start(opts)` takes the table documented under
+[Options](FEATURES/STARTUP.md#options) and **restarts** a run already in
+progress rather than refusing — collected marks from the previous run are
+dropped with it. `stop()` leaves them readable for a later `report()`.
+
 ## `require("runtime-analysis.startup.profile")`
 
 Repeated `nvim --startuptime` runs, averaged. `run` is asynchronous because
@@ -66,6 +71,7 @@ the two halves worth calling on their own.
 ```lua
 local profile = require("runtime-analysis.startup.profile")
 
+profile.is_running()                                 -- one measurement at a time
 profile.run({ runs = 5, clean = false }, function(report, err)
   if report then
     print(table.concat(profile.lines(report), "\n"))
@@ -79,10 +85,10 @@ profile.markdown(report)                             -- the same, for mdview/HTM
 profile.path_at(report, row)                         -- the file a report row measured
 ```
 
-`start(opts)` takes the table documented under
-[Options](FEATURES/STARTUP.md#options) and **restarts** a run already in
-progress rather than refusing — collected marks from the previous run are
-dropped with it. `stop()` leaves them readable for a later `report()`.
+`run(opts, on_done)` **refuses** while a measurement is in flight, which is
+the opposite of `startup.start`'s restart-in-place — two Neovim instances
+starting at once inflate each other's numbers, so a second profile would
+corrupt both reports rather than replace one. `on_done(nil, err)` says so.
 
 ## `require("runtime-analysis.loaded")`
 
