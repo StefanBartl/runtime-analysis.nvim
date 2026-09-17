@@ -66,6 +66,7 @@ question each page answers.
 
 - [All options](docs/configuration.md) — all five `setup()` keys and their defaults.
 - [Command reference](docs/commands.md) — every command and argument, with the reasoning.
+- [Statusline](docs/statusline.md) — the one-glyph health light, for lualine, heirline, the native statusline or ui.nvim.
 - [Bindings cheatsheet](docs/BINDINGS.md) — commands and autocommands at a glance. There are no keymaps.
 
 **The Rest**
