@@ -855,6 +855,94 @@ local function do_usage(sub)
   end
 end
 
+---`:RA startup profile [runs]` — start Neovim `runs` times under
+---`--startuptime`, average the logs, and show the per-file cost in the same
+---float `:RATelemetry` uses.
+---
+---Everything here is the command's job rather than the module's: the
+---progress handle, the float, and the one key the module supplies the data
+---for (`gf` on a row opens the file that row measured).
+---
+---The composer's `INT` type already rejects a non-integer with its own
+---message; the upper bound is this command's own, because `:RA startup
+---profile 500` is a typo whose cost is a coffee break — and finding that out
+---by waiting is not how anyone should learn it.
+---@param runs_arg integer|nil
+---@internal
+local function do_startup_profile(runs_arg)
+  local profile = require("runtime-analysis.startup.profile")
+
+  local runs = 5
+  if runs_arg then
+    if runs_arg < 1 or runs_arg > 50 then
+      notify.warn(("runs must be between 1 and 50, got %d"):format(runs_arg))
+      return
+    end
+    runs = runs_arg
+  end
+
+  -- Soft dependency, `pcall`-guarded like every other optional lib.nvim
+  -- piece this plugin touches: the measurement runs either way, it just
+  -- goes unannounced while it does.
+  local ok_progress, progress = pcall(require, "lib.nvim.progress")
+  local handle = ok_progress and progress.create({ title = "[runtime-analysis]" }) or nil
+  if handle then
+    handle:update({ text = ("startup profile: 0/%d runs"):format(runs) })
+  end
+
+  local opts = {
+    runs = runs,
+    on_progress = function(done, total)
+      if handle then
+        handle:update({ text = ("startup profile: %d/%d runs"):format(done, total) })
+      end
+    end,
+  }
+
+  profile.run(opts, function(report, err)
+    if handle then
+      if report then
+        handle:finish(("startup profile: %d run(s)"):format(report.runs))
+      else
+        handle:cancel("startup profile failed")
+      end
+    end
+
+    if not report then
+      notify.error("startup profile: " .. (err or "no data"))
+      return
+    end
+
+    require("runtime-analysis.ui.float").show(
+      profile.lines(report),
+      ("runtime-analysis — startup profile · %d run(s)"):format(report.runs),
+      {
+        table_view = true,
+        keys = {
+          {
+            lhs = "gf",
+            desc = "Open the file this row measured",
+            legend = "Open file",
+            run = function()
+              local row = vim.api.nvim_win_get_cursor(0)[1]
+              local path = profile.path_at(report, row)
+              if not path then
+                notify.warn("no readable file on this row")
+                return
+              end
+              -- Out of the float and into a real window: the float closes
+              -- on focus loss, so editing the file in it would mean editing
+              -- a buffer in a window about to disappear.
+              vim.cmd("close")
+              vim.cmd.edit(vim.fn.fnameescape(path))
+            end,
+          },
+        },
+      }
+    )
+  end)
+end
+
 ---@param ra RA The plugin's own module table — read for `ra.opts` and called
 ---back into for `ra.open_request` so every command stays in sync with a
 ---`setup()` that has already run.
@@ -1007,6 +1095,14 @@ function M.setup(ra)
         desc = "Stop measuring and show the stall timeline",
         run = function()
           require("runtime-analysis.startup").report()
+        end,
+      },
+      {
+        path = { "startup", "profile" },
+        desc = "Start Neovim N times (default 5) and report the averaged per-file startup cost",
+        args = { { name = "runs", type = "INT", optional = true } },
+        run = function(ctx)
+          do_startup_profile(ctx.args.runs)
         end,
       },
       {
