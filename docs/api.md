@@ -57,6 +57,28 @@ startup.reset()                     -- drop everything collected
 startup.probe_command()             --> the --cmd line, path filled in
 ```
 
+## `require("runtime-analysis.startup.profile")`
+
+Repeated `nvim --startuptime` runs, averaged. `run` is asynchronous because
+each run is a whole editor start; `parse` and `aggregate` are pure and are
+the two halves worth calling on their own.
+
+```lua
+local profile = require("runtime-analysis.startup.profile")
+
+profile.run({ runs = 5, clean = false }, function(report, err)
+  if report then
+    print(table.concat(profile.lines(report), "\n"))
+  end
+end)
+
+local entries, total_ms = profile.parse(log_lines)   -- one --startuptime log
+local report = profile.aggregate(runs, { top = 25 }) -- fold N of those into one
+profile.lines(report)                                -- the aligned table
+profile.markdown(report)                             -- the same, for mdview/HTML
+profile.path_at(report, row)                         -- the file a report row measured
+```
+
 `start(opts)` takes the table documented under
 [Options](FEATURES/STARTUP.md#options) and **restarts** a run already in
 progress rather than refusing — collected marks from the previous run are

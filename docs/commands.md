@@ -525,7 +525,7 @@ since such a plugin has never heard of `lib.nvim`. The two wrappers this
 ecosystem does control turned out to be answerable without it. See that
 entry for what would reopen the question.
 
-## `:RA startup start|watch|report|probe`
+## `:RA startup start|watch|report|probe|profile`
 
 Finds what blocks Neovim's main loop during and after startup. Full
 narrative, options table and the sample timeline:
@@ -555,6 +555,29 @@ the lazy loading — and only the second is a bug.
 for itself, so the probe is a `--cmd` line: it sets `package.path` from its
 own location and needs neither the runtimepath nor a plugin manager. The
 command prints and yanks the finished line.
+
+**`:RA startup profile [runs]` is the one that runs `--startuptime` on
+purpose.** Everything above measures *this* session; this one starts Neovim
+`runs` times (default 5, sequentially — parallel starts inflate each other),
+parses every log and reports the per-file cost as a median with its spread
+next to it.
+
+```vim
+:RA startup profile      " five runs
+:RA startup profile 10   " ten, for a number you intend to act on
+```
+
+A median is the headline and the spread is the disclaimer: a row whose spread
+rivals its median is filesystem cache, not a plugin. `gf` on a row opens the
+file that row measured. `r` is deliberately not wired — a refresh behind a
+single key would quietly start five editors.
+
+This is the third startup measurement in the plugin and the three do not
+overlap: the profiler sees every sourced file from the first millisecond and
+stops at the first redraw, `:RA startup` sees the loop blocking whatever the
+cause, `:RATelemetry startup` sees inside one plugin and nothing that was
+loaded before it armed. [`FEATURES/STARTUP.md`](FEATURES/STARTUP.md) has the
+table.
 
 **How not to read the numbers.** Startup timing scatters — runs of an
 identical config vary by hundreds of milliseconds, mostly from filesystem

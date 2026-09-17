@@ -231,11 +231,19 @@ before your config is sourced and a lazily loaded plugin cannot arrange that
 for itself. `:RA startup probe` prints and yanks the `--cmd` line; it sets its
 own `package.path` and needs neither runtimepath nor plugin manager.
 
+**"Which file costs what" is a different question, and `:RA startup profile`
+is the one that answers it.** The timeline names a suspect; the profiler
+prices every file that was sourced, over five runs, with the spread next to
+the median so a noisy row cannot pass for a finding. It is the only
+measurement here that sees a file loaded before any plugin could have armed
+anything — which on a real config is most of them.
+
 **Two ways to misread the output.** Startup timing scatters by hundreds of
 milliseconds — filesystem cache, and on Windows the AV filter driver — so
-compare medians of three runs, never single numbers. And the plugin named above
-a stall is the leading suspect, not the verdict: a 40ms load under a 300ms
-block means something else contributed too.
+compare medians of three runs, never single numbers; `:RA startup profile`
+exists so that is one command rather than an exercise. And the plugin named
+above a stall is the leading suspect, not the verdict: a 40ms load under a
+300ms block means something else contributed too.
 
 ## `flush` when you want the numbers now, `stop` when you are done
 

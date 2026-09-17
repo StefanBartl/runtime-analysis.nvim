@@ -81,7 +81,9 @@ has. [`docs/commands.md`](../commands.md) remains the complete reference.
 - **[STARTUP.md](STARTUP.md)** — `runtime-analysis.startup`: a libuv timer
   measuring its own lateness, so a main-loop block shows up whatever caused
   it — including during startup, where `--startuptime` and `:profile` both
-  give up.
+  give up. Alongside it, `runtime-analysis.startup.profile`: repeated
+  `--startuptime` runs averaged into a per-file median, because that tool is
+  not wrong, only early, file-shaped and far too noisy to read once.
 - **[BENCH.md](BENCH.md)** — `runtime-analysis.bench`: timed comparisons
   between candidate functions, deliberately not built on telemetry's own
   wrap/count machinery.

@@ -33,6 +33,8 @@ The main pieces:
     |runtime-analysis-loaded|).
   - Main-loop stall detection (|:RA-startup|) — a libuv timer measuring its
     own lateness, so a freeze shows up whatever caused it.
+  - Startup profiling (|:RA-startup| `profile`) — repeated `--startuptime`
+    runs, averaged, so a per-file cost is a median rather than one sample.
 
 Plus |:RA-provenance|, |:RA-inspect|, |:RA-usage| and `runtime-analysis.bench`
 (|runtime-analysis-bench|) — see the sections below.
@@ -349,6 +351,19 @@ Response assertions ~
                                 runs — the timer has to tick before any
                                 plugin manager exists, which a lazily
                                 loaded plugin cannot arrange for itself.
+:RA startup profile [runs]      Start Neovim {runs} times (default 5,
+                                sequentially — parallel starts inflate each
+                                other) under `--startuptime`, parse every
+                                log, and report the per-file cost as a
+                                median with its spread beside it. The one
+                                measurement here that runs `--startuptime`
+                                rather than working around it: it sees
+                                every file sourced from the first
+                                millisecond, where the wrapper in
+                                |:RATelemetry| `startup` can only see what
+                                loads after it armed. A row whose spread
+                                rivals its median is scatter, not a
+                                finding. `gf` opens the file on the row.
 
                                                      *:RA-loaded-snapshot*
 :RA loaded snapshot {prefix} [name]

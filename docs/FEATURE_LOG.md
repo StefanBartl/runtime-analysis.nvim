@@ -18,6 +18,76 @@ Newest first, by date; original document order within a date.
 
 ---
 
+## 2026-09-17
+
+### `:RA startup profile` — the repeated-runs profiler, and the premise it corrected on the way in
+
+Adopted from `dstein64/vim-startuptime`, which this replaces outright. The
+cross-plugin note proposing it claimed the work was presentation only:
+*"that is a view on data the own plugin already collects."* Checked against
+the two modules it meant, and it is not:
+
+- `startup/init.lua` collects timer lateness and a timeline of marks. No
+  per-file cost, no second run, nothing to average.
+- `telemetry/startup.lua` collects per-module `require` cost — in-process,
+  one run, and blind by construction to everything already in
+  `package.loaded` when it arms. Its own doc-comment says so. On a real
+  config that is Neovim's whole runtime, lazy.nvim itself and every plugin
+  loaded earlier, and **none of those arrive through `require` at all**.
+  They are `source`d, which is exactly what `--startuptime` counts and the
+  wrapper never can.
+
+So the measurement half was new work, not a renderer: a subprocess driver, a
+`--startuptime` log parser, and the statistics. Only the presentation half
+was actually free.
+
+**What made it worth building anyway is that the gap was already documented
+in this repository.** `docs/FEATURES/STARTUP.md` has been telling readers to
+"compare medians of three runs, not single numbers" since before there was
+any way to do that here. An instruction with no command behind it is a bug
+in the docs either way; this closes it from the useful side.
+
+**The positioning had to be rewritten, not papered over.** The README, that
+same feature page and `commands.md` all define this plugin *against*
+`--startuptime`. Shipping a command that runs it while the prose calls it
+insufficient would have left the documentation arguing with itself. The
+resolution is in the module header and now on the feature page: three
+instruments, three blind spots, and the blind spots do not overlap. The
+profiler sees the earliest and knows the least (files, from millisecond
+zero, until the first redraw); the require waterfall sees the least and
+knows the most (modules, inside one plugin, from whenever it armed); stall
+detection sees the loop itself and cares about none of it.
+
+**Median, not mean, and the spread shown next to it.** Startup timing
+scatters by hundreds of milliseconds on filesystem cache alone, and on
+Windows on the AV filter driver. Three runs of 1ms, 2ms and 90ms have a mean
+of 31 and a median of 2, and only one of those is a fact about the config.
+Every row also carries `n/N` — how many runs it was sourced in at all — so a
+conditionally loaded file's median is over the runs it actually appeared in
+rather than diluted by zeroes it never measured.
+
+**The runs are strictly sequential, and not via `lib.nvim.system.job.chain`**
+even though that is otherwise exactly the right shape (async, sequential,
+callback-driven). `chain` aborts the whole sequence at the first non-zero
+exit; a profiler must survive one bad run and say "4 of 5" out loud rather
+than quietly measure fewer than it was asked for. The driver is that
+behaviour inverted and nothing else, so there was nothing to push down.
+
+**`r` is deliberately not wired on this float** although every other report
+in the plugin has it. A refresh key that silently starts five editors is a
+key whose cost nobody predicts from looking at it.
+
+**Housekeeping in the same change:** the result float — `ui.kit.viewer` plus
+the winbar legend, the `?` cheatsheet and the refresh/drilldown/HTML keys —
+moved out of `telemetry/command.lua`'s locals into
+`lua/runtime-analysis/ui/float.lua`, because the profiler needed the same
+one and two copies of a legend built from its own keymap list is precisely
+the duplication that legend exists to prevent. It does not belong in this
+plugin at all long-term — `ui.kit` should carry it — and that is written
+down as an open task rather than left to be rediscovered.
+
+---
+
 ## 2026-09-03
 
 ### The status board as a real table, and `<Tab>` that stops mixing the two vocabularies
