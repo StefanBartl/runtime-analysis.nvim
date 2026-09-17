@@ -3,7 +3,7 @@
 > **Generated** by `documentation`. Do not edit by hand — run `:DocMap`
 > (or `nvim --headless -l scripts/gen_map.lua`) to regenerate.
 
-**4 modules** · 2 namespaces · 36 helper files
+**4 modules** · 3 namespaces · 38 helper files
 
 The [interactive map](index.html) has filtering, full descriptions and
 source links; this page is the version the code host renders directly.
@@ -19,11 +19,13 @@ flowchart LR
   nlua_runtime_analysis_startup["startupbr/smallAnswers 'why did Neovim freeze for half a…/small"]
   nlua_runtime_analysis_telemetry["telemetrybr/smallOpt-in call counting and usage statistics…/small"]
   nlua_runtime_analysis_telemetry_renderers["renderers"]
+  nlua_runtime_analysis_ui["ui"]
   nlua_runtime_analysis --> nlua_runtime_analysis_bindings
   nlua_runtime_analysis --> nlua_runtime_analysis_config
   nlua_runtime_analysis --> nlua_runtime_analysis_startup
   nlua_runtime_analysis --> nlua_runtime_analysis_telemetry
   nlua_runtime_analysis_telemetry --> nlua_runtime_analysis_telemetry_renderers
+  nlua_runtime_analysis --> nlua_runtime_analysis_ui
 ```
 
 
@@ -35,7 +37,9 @@ in both directions, with load-time and lazy requires told apart.
 
 ```mermaid
 flowchart LR
+  nlua_runtime_analysis_bindings_usrcmds_lua["runtime-analysis.bindings.usrcmds"]
   nlua_runtime_analysis_config_validate_lua["runtime-analysis.config.validate"]
+  nlua_runtime_analysis_startup_profile_lua["runtime-analysis.startup.profile"]
   nlua_runtime_analysis_telemetry_command_lua["runtime-analysis.telemetry.command"]
   nlua_runtime_analysis_telemetry_config_lua["runtime-analysis.telemetry.config"]
   nlua_runtime_analysis_telemetry_cost_vs_use_lua["runtime-analysis.telemetry.cost_vs_use"]
@@ -49,6 +53,9 @@ flowchart LR
   nlua_runtime_analysis_telemetry_setup_all_lua["runtime-analysis.telemetry.setup_all"]
   nlua_runtime_analysis_telemetry_startup_lua["runtime-analysis.telemetry.startup"]
   nlua_runtime_analysis_telemetry_store_lua["runtime-analysis.telemetry.store"]
+  nlua_runtime_analysis_ui_float_lua["runtime-analysis.ui.float"]
+  nlua_runtime_analysis_bindings_usrcmds_lua --> nlua_runtime_analysis_startup_profile_lua
+  nlua_runtime_analysis_bindings_usrcmds_lua --> nlua_runtime_analysis_ui_float_lua
   nlua_runtime_analysis_telemetry_command_lua --> nlua_runtime_analysis_telemetry_config_lua
   nlua_runtime_analysis_telemetry_command_lua --> nlua_runtime_analysis_telemetry_cost_vs_use_lua
   nlua_runtime_analysis_telemetry_command_lua --> nlua_runtime_analysis_telemetry_lazy_lua
@@ -58,6 +65,7 @@ flowchart LR
   nlua_runtime_analysis_telemetry_command_lua --> nlua_runtime_analysis_telemetry_report_style_lua
   nlua_runtime_analysis_telemetry_command_lua --> nlua_runtime_analysis_telemetry_setup_all_lua
   nlua_runtime_analysis_telemetry_command_lua --> nlua_runtime_analysis_telemetry_startup_lua
+  nlua_runtime_analysis_telemetry_command_lua --> nlua_runtime_analysis_ui_float_lua
   nlua_runtime_analysis_telemetry_lazy_lua --> nlua_runtime_analysis_config_validate_lua
   nlua_runtime_analysis_telemetry_registry_lua --> nlua_runtime_analysis_telemetry_fingerprint_lua
   nlua_runtime_analysis_telemetry_renderers --> nlua_runtime_analysis_telemetry_report_file_lua
@@ -79,6 +87,7 @@ flowchart LR
 | `runtime-analysis.startup` | Answers "why did Neovim freeze for half a second just now", and does it in the one place where the usual tools cannot: `nvim --startuptime` stops at the first… | 13 | [src](../../lua/runtime-analysis/startup/init.lua) |
 | `runtime-analysis.telemetry` | Opt-in call counting and usage statistics for any Lua/Neovim plugin that points an instance at its own modules. | 32 | [README](../../lua/runtime-analysis/telemetry/README.md) · [src](../../lua/runtime-analysis/telemetry/init.lua) |
 | &nbsp;&nbsp;`renderers` |  |  |  |
+| `ui` |  |  |  |
 
 ## Drift
 
