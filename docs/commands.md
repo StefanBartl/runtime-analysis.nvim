@@ -559,8 +559,8 @@ command prints and yanks the finished line.
 **`:RA startup profile [runs]` is the one that runs `--startuptime` on
 purpose.** Everything above measures *this* session; this one starts Neovim
 `runs` times (default 5, sequentially — parallel starts inflate each other),
-parses every log and reports the per-file cost as a median with its spread
-next to it.
+parses every log and reports each row's cost as a median with its spread next
+to it — sourced files and, on Neovim 0.11, `require` calls alike.
 
 ```vim
 :RA startup profile      " five runs

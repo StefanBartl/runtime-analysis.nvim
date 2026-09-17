@@ -37,6 +37,14 @@ the two modules it meant, and it is not:
   They are `source`d, which is exactly what `--startuptime` counts and the
   wrapper never can.
 
+**One claim in the module header needed correcting after the first real
+run**, and it is recorded here rather than quietly fixed: "it counts files,
+not modules" is wrong on Neovim 0.11, whose `--startuptime` log names
+`require('...')` too. The real difference is not what gets named but that the
+log is *flat* — every line a peer of every other — so it can never say which
+load happened inside which, which is precisely what makes the telemetry
+waterfall a separate instrument rather than a nicer render of this one.
+
 So the measurement half was new work, not a renderer: a subprocess driver, a
 `--startuptime` log parser, and the statistics. Only the presentation half
 was actually free.
