@@ -18,6 +18,93 @@ Newest first, by date; original document order within a date.
 
 ---
 
+## 2026-09-18
+
+### Targeted test-coverage/bug audit — this repo's turn in the cross-plugin campaign
+
+Previously marked "already good" from a file-count ratio alone, never a real
+audit. This pass read every module against the campaign's recurring-bug
+checklist (health-check-then-crash, augroup re-clear leaks, byte/display-width
+confusion, Windows path bugs) rather than trusting the ratio.
+
+**`runtime-analysis.ui.columns.elide()` still had a version of the bug
+yesterday's entry describes fixing.** That entry moved `ljust`/`rjust`/`elide`
+into this module specifically so no other table could get padding wrong the
+way `telemetry/report.lua` once did — but `elide()` itself truncated with
+`strcharpart(s, 0, width - 1)`, which counts *characters*, not *display
+cells*. A run of double-width characters (CJK, many emoji) packs two cells
+into one `strcharpart` unit, so a short-in-characters, wide-in-cells string
+sailed straight through the budget the function exists to enforce. Measured:
+`elide("你好世界你好世界", 10)` (8 characters, 16 display cells) returned the
+*entire* string plus an ellipsis — 17 cells against a 10-cell request —
+because 8 is fewer than `width - 1` (9) even though it is far more than
+`width` cells. Fixed by building the truncated string one character at a
+time, stopping as soon as the next character would push the running
+`strdisplaywidth` past the budget, the same measure `ljust`/`rjust` already
+use. No prior coverage existed for this module at all; new
+`TESTS/columns_spec.lua` covers `ljust`/`rjust`/`elide`/`join_cells`,
+including this exact regression and the width-too-small-for-the-ellipsis and
+width-0 edge cases.
+
+**A flaky assertion in `TESTS/usrcmds_spec.lua`'s supersession case, found by
+running the suite twice per this campaign's own stability check.** The
+"race" case fires two `:RA send` calls back to back against a delayed local
+server and asserted `race_requests[1]` was `/a` and `race_requests[2]` was
+`/b` — positional order. Each send spawns a real, independent `curl`
+subprocess (`runner.run_async` → `lib.nvim.net.curl.fetch_raw` →
+`vim.system`), and which of two unrelated OS processes finishes connecting
+and writing to the test server first is a scheduling race this test cannot
+control, not something `:RA send` gets to decide — `:RA send` for `/a` always
+*fires* first, but nothing guarantees its subprocess *connects* first.
+Confirmed at roughly a 1-in-3 failure rate under a tight 15-20 iteration
+loop, and confirmed both requests genuinely do always arrive (`#race_requests
+== 2` every time) — only their arrival order flips. Fixed to assert
+membership (`/a` and `/b` both present, in either slot) instead of position;
+0/20 failures in the same tight loop afterward, and the full suite run
+repeatedly clean.
+
+**A second, unrelated flake in the same file, found only by running the
+fixed suite repeatedly afterward.** The very first three assertions
+(`:RA send` for block 1, block 2, and the `:RASend` alias) each budget
+`vim.wait(500, …)` for a request against an instant-reply local server with
+no artificial delay. Still a real `curl` subprocess spawn underneath, and a
+live timing pass (20 iterations) measured that single round trip at 98–317ms
+on this machine — comfortably under 500ms most of the time, but the full
+suite still hit the 500ms ceiling and failed `#requests == 1` outright in one
+of five repeated runs. Windows process creation is taxed by the AV filter
+driver on every spawn — the identical characteristic
+`startup/profile.lua`'s own header already names for repeated `nvim`
+starts — so a fixed 500ms budget for *any* single `curl.exe` spawn on this
+platform has no real margin. Widened to 2000ms, matching the budget the
+file's own later (deliberately delayed) cases already use; the request
+either fails fast for a real reason or was always going to land inside two
+seconds.
+
+**Checked and found already correct, not touched:**
+
+- `health.lua`'s dependency checks — every one is `pcall`-guarded before use;
+  none report "X is missing" and then call into X anyway.
+- Every `nvim_create_augroup`/`autocmd.group()` call in this repo either
+  passes `clear = true` directly or goes through
+  `lib.nvim.bindings.autocmd.group()`, whose own re-clear-on-recall bug was
+  found and fixed upstream in lib.nvim (commit `f3725e8`, now on
+  `lib.nvim`'s `ci-verified`) — this repo's own callers already use the
+  corrected function. Verified empirically too: three `setup()`/reload
+  cycles in one headless run left `runtime_analysis_usage`'s augroup at
+  exactly 1 live autocmd each time, no accumulation. The two
+  `telemetry/lazy.lua` augroups (lazy.nvim's own `LazyLoad`/pre-`VimEnter`
+  hooks) could not be exercised the same way without a real lazy.nvim
+  install driving them — left untested for that reason, same as this
+  campaign's other real-plugin-manager-introspection gaps.
+- Timing arithmetic in `startup/init.lua` (stall lateness, `hrtime` ns → ms →
+  s) and `telemetry/startup.lua` (per-module `require` self/total time) — the
+  unit conversions are consistent throughout; no ms/us/ns mixups found.
+- `multipart.lua`'s `< ./path` resolution correctly recognises a Windows
+  drive-letter absolute path (`^%a:[\\/]`) alongside a Unix one before
+  falling back to joining against `base_dir`.
+
+stylua and luacheck both clean; full suite run repeatedly, stable.
+
 ## 2026-09-17
 
 ### Three bugs in the startup profiler, found by reviewing what had just shipped

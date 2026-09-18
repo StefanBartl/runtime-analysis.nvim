@@ -102,9 +102,17 @@ return function(H)
   vim.api.nvim_win_set_buf(winid, bufnr)
 
   -- Cursor on block 1 (line 1): :RA send must hit /first, not /second.
+  --
+  -- 2000ms, not 500: even against an instant-reply local server, each send
+  -- is a real `curl` subprocess spawn (`runner.run_async` -> `vim.system`),
+  -- and 500ms was measured live to be too tight a budget on Windows, where
+  -- process creation is taxed by the AV filter driver on every spawn (the
+  -- same characteristic `startup/profile.lua`'s own doc-comment already
+  -- names for repeated `nvim` starts) -- a flake, not a product bug: the
+  -- request always completes, just not always inside 500ms.
   vim.api.nvim_win_set_cursor(winid, { 1, 0 })
   vim.cmd("RA send")
-  vim.wait(500, function()
+  vim.wait(2000, function()
     return #requests == 1
   end, 10)
   ok(#requests == 1, "usrcmds: :RA send made exactly one request for block 1")
@@ -113,7 +121,7 @@ return function(H)
   -- Cursor on block 2 (line 4): :RA send must hit /second this time.
   vim.api.nvim_win_set_cursor(winid, { 4, 0 })
   vim.cmd("RA send")
-  vim.wait(500, function()
+  vim.wait(2000, function()
     return #requests == 2
   end, 10)
   eq(#requests, 2, "usrcmds: a second :RA send made exactly one more request")
@@ -126,7 +134,7 @@ return function(H)
   -- not a second, divergent implementation.
   vim.api.nvim_win_set_cursor(winid, { 1, 0 })
   vim.cmd("RASend")
-  vim.wait(500, function()
+  vim.wait(2000, function()
     return #requests == 3
   end, 10)
   eq(#requests, 3, "usrcmds: :RASend (flat alias) also made exactly one request")
@@ -207,8 +215,22 @@ return function(H)
     vim.wait(1000, function()
       return #race_requests == 2
     end, 10)
-    ok(race_requests[1]:match("/a$") ~= nil, "usrcmds: the first request still actually went out")
-    ok(race_requests[2]:match("/b$") ~= nil, "usrcmds: ... and so did the second")
+    -- Membership, not position: `/a` and `/b` are two independent `curl`
+    -- subprocesses (see `runner.run_async`), and which of the two actually
+    -- finishes connecting and writing to this server first is an OS process
+    -- scheduling race this test cannot and should not depend on — verified
+    -- flaky under exactly this assertion (arrival order flips under real
+    -- load even though `:RA send` for `/a` always *fires* first). What
+    -- matters here is that both requests physically went out at all.
+    eq(#race_requests, 2, "usrcmds: both the first and second request actually went out")
+    ok(
+      race_requests[1]:match("/a$") ~= nil or race_requests[2]:match("/a$") ~= nil,
+      "usrcmds: the first request still actually went out"
+    )
+    ok(
+      race_requests[1]:match("/b$") ~= nil or race_requests[2]:match("/b$") ~= nil,
+      "usrcmds: ... and so did the second"
+    )
 
     local resp_bufnr = vim.fn.bufnr("runtime-analysis://response")
     vim.wait(1000, function()
