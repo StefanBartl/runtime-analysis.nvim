@@ -42,15 +42,44 @@ end
 ---start.
 ---
 ---`strcharpart`, not `sub`: cutting at a byte offset can land in the middle
----of a multi-byte sequence and put an invalid byte in the buffer.
+---of a multi-byte sequence and put an invalid byte in the buffer. But a
+---*character* count is not a *display-cell* count either — a run of
+---double-width characters (CJK, many emoji) packs two cells into one
+---`strcharpart` unit, so `strcharpart(s, 0, width - 1)` can hand back a
+---string that is still wider than `width` once the ellipsis is appended, or
+---even the whole input unchanged when it has fewer characters than
+---`width - 1` despite being far wider than `width` cells. Built up one
+---character at a time instead, stopping as soon as the next character would
+---push the running display width past the budget — the same reason
+---`ljust`/`rjust` above measure with `strdisplaywidth` rather than `#s`.
 ---@param s string
 ---@param width integer
 ---@return string
 function M.elide(s, width)
+  if width <= 0 then
+    return ""
+  end
   if vim.fn.strdisplaywidth(s) <= width then
     return s
   end
-  return vim.fn.strcharpart(s, 0, width - 1) .. "…"
+
+  local ellipsis = "…"
+  local ellipsis_w = vim.fn.strdisplaywidth(ellipsis)
+  if width <= ellipsis_w then
+    return vim.fn.strcharpart(ellipsis, 0, width)
+  end
+
+  local budget = width - ellipsis_w
+  local out = ""
+  local nchars = vim.fn.strcharlen(s)
+  for i = 0, nchars - 1 do
+    local candidate = out .. vim.fn.strcharpart(s, i, 1)
+    if vim.fn.strdisplaywidth(candidate) > budget then
+      break
+    end
+    out = candidate
+  end
+  return out .. ellipsis
 end
 
 ---Join already-padded cells with the standard gutter, dropping trailing
