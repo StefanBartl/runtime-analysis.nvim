@@ -369,6 +369,11 @@ that file exists on disk but its name is not found anywhere in the
 project's own `.gitignore` — a substring check, not a real gitignore
 pattern matcher, so it is a nudge worth heeding rather than a guarantee.
 
+A missing environment file and one that exists but fails to parse as JSON
+are different problems and are reported differently: both leave `:RA env`
+with nothing to offer, but only the second is a real error, surfaced by
+`:checkhealth runtime-analysis` naming the file that failed to decode.
+
 ### The trap this was built to avoid
 
 Stated up front in the roadmap entry this ships: an environment file is
