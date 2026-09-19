@@ -138,6 +138,40 @@ return function(H)
     ok(err and err:find("boundary", 1, true) ~= nil, "resolve: the error names what is missing")
   end
 
+  -- resolve: a file that opens but whose read fails (`read("*a")` returns
+  -- nil -- e.g. a POSIX `< ./path` pointing at a directory, which io.open
+  -- itself accepts) must be a real, named error too, not a silently
+  -- dropped part. Stubbed rather than a real directory: this needs to hold
+  -- on every platform CI runs on, not only the ones where opening a
+  -- directory for reading happens to succeed.
+  do
+    local body = body_with("hello", "./unreadable-reference.png")
+    local real_open = io.open
+    -- A scoped, immediately-restored stub over the stdlib global -- the
+    -- only way to force a read failure deterministically on every platform
+    -- CI runs on, not only the ones where opening a directory for reading
+    -- happens to succeed.
+    io.open = function(path, mode) -- luacheck: ignore 122
+      if path:find("unreadable%-reference%.png", 1, false) then
+        return {
+          read = function()
+            return nil
+          end,
+          close = function() end,
+        }
+      end
+      return real_open(path, mode)
+    end
+    local resolved, err = multipart.resolve(body, CONTENT_TYPE, vim.fn.getcwd())
+    io.open = real_open -- luacheck: ignore 122
+
+    eq(resolved, nil, "resolve: fails when a referenced file opens but cannot be read")
+    ok(
+      err and err:find("unreadable-reference.png", 1, true) ~= nil,
+      "resolve: the error names the file that failed to read"
+    )
+  end
+
   -- to_curl_flags: a literal field becomes "name=value"; a file
   -- reference becomes "name=@path;filename=...;type=..." -- paths kept
   -- exactly as written, never resolved against any directory, since an

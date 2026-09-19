@@ -167,6 +167,13 @@ function M.resolve(body, content_type, base_dir)
       end
       local content = f:read("*a")
       f:close()
+      -- `read("*a")` returns nil on a genuine read failure -- notably when
+      -- `path` is a directory, which `io.open` itself happily accepts on
+      -- POSIX -- and appending nil to `out` would silently drop this
+      -- part's content while the surrounding boundary lines stay (ERR-03).
+      if content == nil then
+        return nil, ("could not read %s: file opened but could not be read"):format(rel)
+      end
       out[#out + 1] = content
     else
       out[#out + 1] = line
