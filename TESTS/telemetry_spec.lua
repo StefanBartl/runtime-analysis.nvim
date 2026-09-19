@@ -1188,6 +1188,122 @@ return function(H)
   end
 
   -- -------------------------------------------------------------------------
+  -- ERR-22 regression: a wrong-TYPE numeric option (not merely wrong-range —
+  -- `numeric_field` deliberately still accepts a numeric STRING like "30",
+  -- coercing it via `tonumber`, so these use a value `tonumber` itself
+  -- rejects) must degrade to its documented default, with one warning at
+  -- construction time, rather than crash the first `<`/`<=` comparison
+  -- downstream -- `retention_days` (`store.prune`, reached from
+  -- `t.flush()`), `flush_interval_ms` (`start_timer`, reached from
+  -- `t.start()`), `max_arg_values` (`accumulate`, reached on the hot path
+  -- inside the very next profiled call) and `snapshot_retention`
+  -- (`store.evict_old_snapshots`, reached from `telemetry.snapshot()`).
+  -- See `numeric_field` in telemetry/init.lua.
+  -- -------------------------------------------------------------------------
+  do
+    local warned = {}
+    local orig_notify = vim.notify
+    ---@diagnostic disable-next-line: duplicate-set-field
+    vim.notify = function(msg, level)
+      warned[#warned + 1] = { msg = msg, level = level }
+    end
+
+    do
+      local t = telemetry.new({
+        namespace = ns("err22_retention"),
+        persist = true,
+        dir = tmpdir,
+        retention_days = "many",
+      })
+      H.ok(
+        pcall(t.flush),
+        "ERR-22: retention_days as a non-numeric string degrades instead of crashing flush()"
+      )
+      t.reset()
+    end
+
+    do
+      local t = telemetry.new({
+        namespace = ns("err22_interval"),
+        persist = true,
+        dir = tmpdir,
+        flush_interval_ms = "often",
+      })
+      H.ok(
+        pcall(t.start),
+        "ERR-22: flush_interval_ms as a non-numeric string degrades instead of crashing start()"
+      )
+      t.stop()
+    end
+
+    do
+      local mod = {
+        f = function(x)
+          return x
+        end,
+      }
+      local t =
+        telemetry.new({ namespace = ns("err22_maxargs"), persist = false, max_arg_values = "lots" })
+      t.wrap(mod, "m", { profile_args = true })
+      t.start()
+      H.ok(
+        pcall(mod.f, 1),
+        "ERR-22: max_arg_values as a non-numeric string degrades instead of crashing a profiled call"
+      )
+      t.stop()
+      t.unwrap()
+    end
+
+    do
+      local namespace = ns("err22_snapshot")
+      local t = telemetry.new({
+        namespace = namespace,
+        persist = true,
+        dir = tmpdir,
+        snapshot_retention = "some",
+      })
+      H.ok(
+        pcall(telemetry.snapshot, namespace, "s1"),
+        "ERR-22: snapshot_retention as a non-numeric string degrades instead of crashing snapshot()"
+      )
+      t.stop()
+    end
+
+    H.eq(#warned, 4, "ERR-22: each bad-typed numeric option warns exactly once, at construction")
+
+    vim.notify = orig_notify
+  end
+
+  -- A numeric STRING (not merely the wrong type, but one `tonumber` can
+  -- still read) is accepted outright, with no warning -- `numeric_field`'s
+  -- own leniency, carried over unchanged from this module's lib.nvim
+  -- precursor.
+  do
+    local warned = {}
+    local orig_notify = vim.notify
+    ---@diagnostic disable-next-line: duplicate-set-field
+    vim.notify = function(msg, level)
+      warned[#warned + 1] = { msg = msg, level = level }
+    end
+
+    local t = telemetry.new({
+      namespace = ns("err22_numeric_string"),
+      persist = true,
+      dir = tmpdir,
+      retention_days = "30",
+    })
+    H.ok(pcall(t.flush), "numeric_field: a numeric string still works")
+    H.eq(
+      #warned,
+      0,
+      "numeric_field: a numeric string does not warn -- tonumber() coerces it silently"
+    )
+    t.reset()
+
+    vim.notify = orig_notify
+  end
+
+  -- -------------------------------------------------------------------------
   -- comparison across time windows: "this week vs
   -- last week" — pure logic first (store.previous_window, report.compare),
   -- then one end-to-end pass through a real instance.
@@ -1317,6 +1433,46 @@ return function(H)
     local second = reminder.check("demo", data, { days = 7, calls = 50000 })
     H.ok(second ~= nil, "escalates once past 4x the duration")
     H.eq(reminder.check("demo", data, { days = 7, calls = 50000 }), nil, "then stops for good")
+  end
+
+  -- -------------------------------------------------------------------------
+  -- ERR-22 regression: `remind_after.days`/`.calls` given the wrong TYPE (a
+  -- non-numeric string typo'd where a number belongs -- `numeric_field`
+  -- still accepts a numeric string like "7", so this uses one `tonumber`
+  -- itself rejects) must not crash the `have_days >= days` comparison
+  -- inside `reminder.check` -- neither directly (this file's own
+  -- `require`, silent fallback, see reminder.lua's own `valid_number`) nor
+  -- through a live instance (where `telemetry.new()` sanitizes
+  -- `remind_after` once, with one warning, at construction -- see
+  -- `numeric_field`'s own use in telemetry/init.lua).
+  -- -------------------------------------------------------------------------
+  do
+    local data = store.empty()
+    data.functions.f = { calls = 10 }
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    H.ok(
+      pcall(reminder.check, "demo2", data, { days = "soon", calls = "many" }),
+      "ERR-22: reminder.check with non-numeric days/calls degrades instead of crashing"
+    )
+
+    local warned = {}
+    local orig_notify = vim.notify
+    ---@diagnostic disable-next-line: duplicate-set-field
+    vim.notify = function(msg, level)
+      warned[#warned + 1] = { msg = msg, level = level }
+    end
+    local t = telemetry.new({
+      namespace = ns("err22_remind"),
+      persist = false,
+      ---@diagnostic disable-next-line: assign-type-mismatch
+      remind_after = { days = "soon", calls = "many" },
+    })
+    H.ok(
+      pcall(t.flush),
+      'ERR-22: telemetry.new({ remind_after = { days = "soon" } }) degrades instead of crashing flush()'
+    )
+    H.eq(#warned, 2, "ERR-22: remind_after's two bad-typed fields warn once each, at construction")
+    vim.notify = orig_notify
   end
 
   -- -------------------------------------------------------------------------

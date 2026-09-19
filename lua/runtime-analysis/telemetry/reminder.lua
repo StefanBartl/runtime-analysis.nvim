@@ -25,6 +25,33 @@ M.DEFAULTS = { days = 7, calls = 50000 }
 --- Multiple of the configured duration at which the single follow-up fires.
 local ESCALATE_FACTOR = 4
 
+---ERR-22: `M.check`'s own `config.days`/`config.calls` used to be read as
+---`(config and config.days) or M.DEFAULTS.days` -- correct for `nil`
+---(the normal "not overridden" case, `or` falls through to the default),
+---but a wrong TYPE (a string, e.g. `remind_after = { days = "7" }`) is
+---truthy, survives the `or`, and then reaches `have_days >= days` below,
+---comparing a number against a string and erroring on every flush.
+---
+---Silent on purpose, unlike the sibling `numeric_field` guard
+---`runtime-analysis.telemetry`'s own `M.new()` applies to `remind_after`
+---(and to its other numeric options): that one runs once, at instance
+---construction, and can afford a `notify.warn`. This one is the fallback
+---`M.check` itself falls back on for any OTHER caller (it is called
+---directly, e.g. by this module's own tests) -- and `M.check` runs on every
+---flush, so a warning here would nag exactly as often as the flush timer
+---fires, which is the one thing this module's reminder feature is designed
+---never to do (see the module doc-comment above).
+---@internal
+---@param n any
+---@param default integer
+---@return integer
+local function valid_number(n, default)
+  if type(n) == "number" then
+    return n
+  end
+  return default
+end
+
 ---@internal
 ---@param data RA.Telemetry.Data
 ---@return integer
@@ -67,8 +94,8 @@ function M.check(namespace, data, config)
     return nil
   end
 
-  local days = (config and config.days) or M.DEFAULTS.days
-  local calls = (config and config.calls) or M.DEFAULTS.calls
+  local days = valid_number(config and config.days, M.DEFAULTS.days)
+  local calls = valid_number(config and config.calls, M.DEFAULTS.calls)
 
   local have_days = days_collected(data)
   local have_calls = total_calls(data)

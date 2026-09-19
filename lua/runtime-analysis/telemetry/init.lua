@@ -172,6 +172,42 @@ local function join_key(prefix, name)
   return prefix .. "." .. name
 end
 
+---@internal
+---Coerce a numeric option field (`retention_days`, `flush_interval_ms`,
+---`max_arg_values`, `snapshot_retention`), falling back to `default` when
+---the value isn't one at all -- a typo like `flush_interval_ms = "60000"`.
+---Zero/negative pass through unchanged: `retention_days` (`store.prune`),
+---`flush_interval_ms` (`start_timer`, 0 = disabled) and `snapshot_retention`
+---(`store.evict_old_snapshots`) all treat those as meaningful, not invalid.
+---Without this, the first `<`/`<=` comparison downstream throws "attempt to
+---compare number with string" -- inside the very next profiled call for
+---`max_arg_values`, and inside the flush timer / snapshot eviction for the
+---others -- instead of the field quietly falling back to its default. Same
+---idiom this module used before its move from lib.nvim (see that repo's own
+---`telemetry/init.lua` `numeric_field`, same fix, same bug). (ERR-22)
+---
+---`default` (and so the return) may be `nil` for a field whose "not
+---overridden" state is itself meaningful -- `snapshot_retention`, where
+---`nil` means "no per-instance override; keep reading `M.SNAPSHOT_RETENTION`
+---live at `M.snapshot()` time" (see that field's own call site).
+---@param value any
+---@param default number?
+---@param field string
+---@return number?
+local function numeric_field(value, default, field)
+  if value == nil then
+    return default
+  end
+  local n = tonumber(value)
+  if not n then
+    notify.warn(
+      ("invalid %s %s — falling back to %s"):format(field, vim.inspect(value), tostring(default))
+    )
+    return default
+  end
+  return n
+end
+
 ---Decide whether a field is in scope. `only`/`except` are exact names by
 ---design — `filter` is the one escape hatch, rather than two overlapping ones
 ---(exact names plus patterns) that each need their own edge cases explained.
@@ -363,9 +399,13 @@ function M.new(opts)
   end
 
   local cfg = vim.tbl_extend("force", DEFAULTS, {
-    retention_days = opts.retention_days,
-    flush_interval_ms = opts.flush_interval_ms,
-    max_arg_values = opts.max_arg_values,
+    retention_days = numeric_field(opts.retention_days, DEFAULTS.retention_days, "retention_days"),
+    flush_interval_ms = numeric_field(
+      opts.flush_interval_ms,
+      DEFAULTS.flush_interval_ms,
+      "flush_interval_ms"
+    ),
+    max_arg_values = numeric_field(opts.max_arg_values, DEFAULTS.max_arg_values, "max_arg_values"),
     persist = opts.persist,
     dir = opts.dir,
     report_file = opts.report_file or false,
@@ -375,6 +415,18 @@ function M.new(opts)
   local remind_after = opts.remind_after
   if remind_after == nil then
     remind_after = reminder.DEFAULTS
+  elseif remind_after ~= false then
+    -- ERR-22: sanitized once, here, rather than inside `reminder.check`
+    -- itself -- that runs on every flush (as often as `flush_interval_ms`)
+    -- plus every `VimEnter`, and `numeric_field`'s own `notify.warn` on
+    -- that cadence would be exactly the nag this module's own reminder
+    -- feature is designed never to be (see reminder.lua's module
+    -- doc-comment). `reminder.check` still guards the type on its own,
+    -- silently, as a second line of defense for any other caller.
+    remind_after = {
+      days = numeric_field(remind_after.days, reminder.DEFAULTS.days, "remind_after.days"),
+      calls = numeric_field(remind_after.calls, reminder.DEFAULTS.calls, "remind_after.calls"),
+    }
   end
 
   -- `nil` here, not `M.SNAPSHOT_RETENTION` — that default is read at
@@ -385,7 +437,13 @@ function M.new(opts)
   local inst = {
     namespace = namespace,
     _cache_opts = cache_opts,
-    _snapshot_retention = opts.snapshot_retention,
+    -- ERR-22: same `numeric_field` guard as `cfg`'s own numeric fields
+    -- above — a wrong-type `opts.snapshot_retention` must not reach
+    -- `store.evict_old_snapshots`'s `keep <= 0` comparison as anything but
+    -- a number or `nil`. `default = nil` keeps this field's own "no
+    -- override" meaning (see the comment just above) — only the TYPE is
+    -- guarded, not the "unset" case.
+    _snapshot_retention = numeric_field(opts.snapshot_retention, nil, "snapshot_retention"),
   }
 
   --- Targets registered via wrap()/wrap_fn(), whether or not currently attached.
