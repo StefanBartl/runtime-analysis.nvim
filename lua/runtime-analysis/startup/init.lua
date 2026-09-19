@@ -89,6 +89,40 @@ local DEFAULTS = {
   notify = true,
 }
 
+-- The exact fields `RA.Startup.Opts` accepts -- see the `config_validate.check`
+-- call at the top of `M.start` below. `log_file` and `notify` need no value
+-- guard alongside it: `log_file` only ever reaches `vim.fn.writefile` inside a
+-- `pcall` (see `M.report` below), and `notify` is only ever read as a truthy
+-- check, so neither can crash on a wrong-type value.
+local KNOWN_START_OPTS = { "interval_ms", "stall_ms", "duration_ms", "log_file", "notify" }
+
+---@internal
+---Coerce a numeric opt field, falling back to `default` when the value isn't
+---one at all -- a typo like `stall_ms = "80"`. Same `numeric_field` idiom
+---`telemetry/init.lua` uses for its own numeric options (ERR-22): without
+---this, `interval_ms`/`duration_ms` (both compared/passed straight from
+---`M.start()` itself) and `stall_ms` (compared on every tick of the timer
+---callback started below) each throw on the first `<`/`>`/`>=` comparison or
+---`timer:start()` call a wrong-type value reaches, instead of quietly
+---falling back to its default.
+---@param value any
+---@param default number
+---@param field string
+---@return number
+local function numeric_field(value, default, field)
+  if value == nil then
+    return default
+  end
+  local n = tonumber(value)
+  if not n then
+    notify_api().warn(
+      ("invalid %s %s — falling back to %s"):format(field, vim.inspect(value), tostring(default))
+    )
+    return default
+  end
+  return n
+end
+
 ---@type RA.Startup.State|nil
 local state = nil
 
@@ -221,7 +255,23 @@ end
 ---@param opts RA.Startup.Opts|nil
 ---@return boolean started
 function M.start(opts)
+  -- `pcall`'d, not a top-level `require` (matching this file's own lazy
+  -- `notify_api()` above): `config_validate` transitively requires lib.nvim
+  -- (`lib.lua.strings.distance`), which is not yet on `package.path` when
+  -- the bootstrap probe loads this module via `--cmd`, before any plugin
+  -- manager has run -- unlike every other call site of this check, `M.start`
+  -- has to keep working there too.
+  local ok_cv, config_validate = pcall(require, "runtime-analysis.config.validate")
+  if ok_cv then
+    config_validate.check(opts, KNOWN_START_OPTS, "runtime-analysis.startup.start()", notify_api())
+  end
+
   opts = vim.tbl_extend("force", DEFAULTS, opts or {})
+  -- ERR-22: see `numeric_field`'s own doc-comment above for exactly which
+  -- crash each of these three prevents.
+  opts.interval_ms = numeric_field(opts.interval_ms, DEFAULTS.interval_ms, "interval_ms")
+  opts.stall_ms = numeric_field(opts.stall_ms, DEFAULTS.stall_ms, "stall_ms")
+  opts.duration_ms = numeric_field(opts.duration_ms, DEFAULTS.duration_ms, "duration_ms")
 
   if M.is_running() then
     M.stop()
