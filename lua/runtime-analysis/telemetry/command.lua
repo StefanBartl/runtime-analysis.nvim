@@ -109,6 +109,7 @@
 ---                                enrichment: more expensive, on request only
 
 local usercmd = require("lib.nvim.bindings.usercmd")
+local expand_path = require("lib.nvim.cross.fs.expand_path")
 local notify = require("lib.nvim.notify").create("[runtime-analysis.telemetry]")
 local report_file = require("runtime-analysis.telemetry.report_file")
 local resolve_report_style = require("runtime-analysis.telemetry.report_style")
@@ -1081,7 +1082,9 @@ function M.setup()
         return
       end
 
-      local path = (rest and rest ~= "") and vim.fn.fnamemodify(vim.fn.expand(rest), ":p")
+      -- expand_path, not vim.fn.expand (SEC-34): `rest` is the raw command
+      -- argument the user typed.
+      local path = (rest and rest ~= "") and vim.fn.fnamemodify(expand_path(rest), ":p")
         or report_file.flamegraph_path()
       local ok_write, err = report_file.write(path, { flamegraph.svg(report) })
       if not ok_write then
