@@ -42,6 +42,17 @@ this exists for, not tidiness.
 implementation; the threshold below which a guess is withheld rather than
 misleading is stated there.
 
+## An invalid `split` value falls back, it does not break every send
+
+Only the *keys* of `opts` are checked above — `split`'s own *value* is an
+arbitrary Ex command (`vsplit`, `split`, `botright vsplit`, ...), so it
+cannot be checked against a fixed list. Instead, `runtime-analysis.view`
+guards the command itself: if it is not a real Ex command (a typo like
+`vsplt`), the response pane falls back to `"vsplit"` for that send rather
+than breaking the response pane for the rest of the session, and
+`:checkhealth runtime-analysis` reports the invalid value once it has
+happened.
+
 ## `telemetry` — the auto-instrumentation table
 
 The one key with structure of its own. Three sub-keys, all optional:
