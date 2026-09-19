@@ -274,13 +274,18 @@ local function check_assertion(expect, expect_line, source_bufnr, actual)
     return
   end
   local actual_str = actual and tostring(actual) or "no response"
-  list.qf({
-    {
-      bufnr = source_bufnr,
-      lnum = expect_line or 1,
-      text = ("expected status %d, got %s"):format(expect.status, actual_str),
-    },
-  }, "runtime-analysis: response assertions", { open = false })
+  -- ERR-33: this runs from inside `runner.run_async`'s scheduled callback,
+  -- an HTTP round trip after `source_bufnr` was captured -- the request
+  -- buffer may have been wiped in between. `setqflist` raises E92 on a
+  -- stale bufnr, so re-check at execution time rather than only at capture.
+  local item = {
+    lnum = expect_line or 1,
+    text = ("expected status %d, got %s"):format(expect.status, actual_str),
+  }
+  if vim.api.nvim_buf_is_valid(source_bufnr) then
+    item.bufnr = source_bufnr
+  end
+  list.qf({ item }, "runtime-analysis: response assertions", { open = false })
   notify.error(("✗ expect status %d, got %s — see :copen"):format(expect.status, actual_str))
 end
 

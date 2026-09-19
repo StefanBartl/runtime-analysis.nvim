@@ -541,6 +541,50 @@ return function(H)
     fail_server:close()
   end
 
+  -- ERR-33: `check_assertion` runs from inside `runner.run_async`'s
+  -- scheduled callback, after the HTTP round trip -- the request buffer it
+  -- captured at send time can be wiped before the response lands.
+  -- `bufhidden=wipe` + switching the window away reproduces that (a plain
+  -- `:bd!` does not, since the buffer stays loaded while a window shows
+  -- it); the fix must still produce a quickfix entry, not an E92.
+  local wipe_buf
+  do
+    local wipe_port, wipe_server = start_delayed_server(50)
+    wipe_buf = vim.api.nvim_create_buf(false, true)
+    vim.bo[wipe_buf].bufhidden = "wipe"
+    vim.api.nvim_buf_set_lines(wipe_buf, 0, -1, false, {
+      "# @expect status 404",
+      ("GET http://127.0.0.1:%d/expect-wiped"):format(wipe_port),
+      "",
+    })
+    vim.api.nvim_win_set_buf(winid, wipe_buf)
+    vim.api.nvim_win_set_cursor(winid, { 1, 0 })
+
+    vim.fn.setqflist({}, "r")
+    vim.cmd("RA send")
+    -- Switch away while the response is still in flight: with
+    -- bufhidden=wipe this wipes wipe_buf immediately, before the delayed
+    -- server's 200 OK (a mismatch against the @expect 404 above) arrives.
+    vim.api.nvim_win_set_buf(winid, assert_pass_buf)
+    ok(
+      not vim.api.nvim_buf_is_valid(wipe_buf),
+      "usrcmds: the request buffer is really gone before the response lands"
+    )
+
+    vim.wait(1000, function()
+      return #vim.fn.getqflist() > 0
+    end, 10)
+
+    local qf = vim.fn.getqflist()
+    eq(#qf, 1, "usrcmds: a wiped request buffer still gets a quickfix entry, not a crash")
+    ok(
+      qf[1].text:find("404", 1, true) ~= nil and qf[1].text:find("200", 1, true) ~= nil,
+      "usrcmds: the quickfix text still names the assertion mismatch"
+    )
+
+    wipe_server:close()
+  end
+
   vim.api.nvim_win_set_buf(winid, prev_buf)
   vim.api.nvim_buf_delete(bufnr, { force = true })
   vim.api.nvim_buf_delete(slow_buf, { force = true })
