@@ -64,7 +64,7 @@ end
 ---or the actual send already reports the more useful "no body" error for
 ---the latter).
 ---@param request { method: string, url: string, headers: table<string, string>, body: string? }
----@return { method: string, url: string, headers: table<string, string>, body: string? } request
+---@return { method: string, url: string, headers: table<string, string>, body: string? }? request nil on error (see `err`)
 ---@return string? err set only when a GraphQL request's variables text exists but is not valid JSON
 function M.resolve(request)
   if not M.is_graphql(request.headers) or not request.body then
@@ -76,7 +76,7 @@ function M.resolve(request)
   if variables_text then
     local ok, decoded = pcall(vim.json.decode, variables_text)
     if not ok or type(decoded) ~= "table" then
-      return request, "GraphQL variables block is not valid JSON"
+      return nil, "GraphQL variables block is not valid JSON"
     end
     variables = decoded
   end
