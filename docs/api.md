@@ -41,6 +41,11 @@ running `:RA send` themselves.
 `:RA history` reuses the same call with the same shape, for the same reason: a
 history entry *is*, by design, exactly that much information and no more.
 
+Being the one surface another plugin calls into, `lines` is validated, not
+trusted: a non-table, an empty table, or a table holding a non-string entry
+all fall back to the default template rather than raising from inside this
+plugin over a caller's malformed argument.
+
 ## `require("runtime-analysis.startup")`
 
 Stall detection. Narrative and options: [`FEATURES/STARTUP.md`](FEATURES/STARTUP.md).

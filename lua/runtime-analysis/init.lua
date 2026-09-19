@@ -44,19 +44,45 @@ local KNOWN_OPTS = { "split", "request_filetype", "deps_popup", "history_max_ent
 ---@type { split: string, request_filetype: string, deps_popup: boolean, history_max_entries: integer }
 M.opts = vim.deepcopy(DEFAULTS)
 
+---@internal
+---Whether `lines` is usable as request-buffer content: a non-empty table of
+---strings. `nil` (no argument) is handled separately, by the caller, since
+---that is the documented "use the default template" case, not a bad one.
+---@param lines any
+---@return boolean
+local function valid_lines(lines)
+  if type(lines) ~= "table" or #lines == 0 then
+    return false
+  end
+  for _, line in ipairs(lines) do
+    if type(line) ~= "string" then
+      return false
+    end
+  end
+  return true
+end
+
 ---Open a new request buffer. With no `lines`, pre-filled with a template —
 ---the shape a reader needs to see to know what to fill in, the same reason
 ---a fresh `.http`/`.rest` file in either sibling tool starts non-empty. With
 ---`lines`, that content is used instead — what `documentation.nvim`'s
 ---Endpoints mode hands over (`METHOD path`, blank line), leaving the base
 ---URL and any path params for the reader to fill in before `:RASend`.
+---
+---This is this plugin's one public integration surface for another plugin
+---to build on (see the module doc-comment), so `lines` is validated rather
+---than trusted: an empty table, a non-table, or a table with a non-string
+---entry all fall back to the default template instead of raising from
+---inside this plugin on a caller's malformed argument.
 ---@param lines string[]?
 function M.open_request(lines)
   vim.cmd("enew")
   local bufnr = vim.api.nvim_get_current_buf()
   vim.bo[bufnr].buftype = "acwrite"
   vim.bo[bufnr].filetype = M.opts.request_filetype
-  lines = lines or { "GET https://", "" }
+  if not valid_lines(lines) then
+    lines = { "GET https://", "" }
+  end
   vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
   -- End of the first line, not a hardcoded column: `lines` may not be the
   -- default template, and a cursor position tuned for "GET https://"
