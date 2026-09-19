@@ -100,6 +100,20 @@ function M.show(lines, opts)
     -- its key is), so a typo reaches here as a raw Ex command. Guard the
     -- call itself rather than let an invalid value break every future send
     -- the same way, forever.
+    --
+    -- `split_cmd` can be a `|`-separated compound command (e.g. "vsplit |
+    -- vertical resize 100"). `pcall` only reports whether the *whole*
+    -- command errored, not whether an earlier part already ran — a
+    -- "vsplit | badcmd" value opens the real window from `vsplit` before
+    -- `badcmd` fails, so `ok_split == false` does not mean no window was
+    -- opened. `windows_before` lets the failure branch find and close
+    -- whatever that partial run left behind before falling back, instead
+    -- of stacking the fallback's own `vsplit` on top of it and leaking a
+    -- stray, untracked window on every send that hits this path.
+    local windows_before = {}
+    for _, w in ipairs(vim.api.nvim_list_wins()) do
+      windows_before[w] = true
+    end
     local ok_split = pcall(vim.cmd, split_cmd)
     if not ok_split then
       bad_split_value = split_cmd
@@ -108,6 +122,16 @@ function M.show(lines, opts)
           split_cmd
         )
       )
+      for _, w in ipairs(vim.api.nvim_list_wins()) do
+        if not windows_before[w] and vim.api.nvim_win_is_valid(w) then
+          pcall(vim.api.nvim_win_close, w, true)
+        end
+      end
+      -- `pcall`, not a bare call: an adversarial compound command could in
+      -- principle have closed `origin` itself (e.g. "only | badcmd") before
+      -- failing — falling back from the current window is still correct in
+      -- that case, just not this one.
+      pcall(vim.api.nvim_set_current_win, origin)
       vim.cmd("vsplit")
     end
     winid = vim.api.nvim_get_current_win()

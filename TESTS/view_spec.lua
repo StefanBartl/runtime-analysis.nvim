@@ -188,4 +188,59 @@ return function(H)
       vim.api.nvim_win_close(fallback_winid, true)
     end
   end
+
+  -- ERR-22 regression: a `|`-separated compound `opts.split` whose first
+  -- part succeeds before a later part errors (e.g. "vsplit | badcmd") must
+  -- not leak the window that first part already opened. `pcall` only
+  -- reports whether the whole compound command errored, not whether a
+  -- window was already created before it did, so the fallback has to clean
+  -- that partial window up itself rather than just stacking its own
+  -- `vsplit` on top of it.
+  do
+    local wins_before = #vim.api.nvim_list_wins()
+
+    local warned
+    local orig_notify = vim.notify
+    ---@diagnostic disable-next-line: duplicate-set-field
+    vim.notify = function(msg, level)
+      warned = { msg = msg, level = level }
+    end
+    view.show(
+      { "after a partially-successful compound split" },
+      { split = "vsplit | thisIsNotARealCommand12345" }
+    )
+    vim.notify = orig_notify
+
+    ok(warned ~= nil, "view.show: a partially-successful compound split still warns")
+    eq(
+      view.bad_split_value(),
+      "vsplit | thisIsNotARealCommand12345",
+      "bad_split_value: records the compound value too"
+    )
+
+    local wins_after = #vim.api.nvim_list_wins()
+    eq(
+      wins_after,
+      wins_before + 1,
+      "view.show: only the fallback's own vsplit remains -- no stray leaked window"
+    )
+
+    local fallback_bufnr = vim.fn.bufnr("runtime-analysis://response")
+    local fallback_winid
+    for _, w in ipairs(vim.api.nvim_list_wins()) do
+      if vim.api.nvim_win_get_buf(w) == fallback_bufnr then
+        fallback_winid = w
+      end
+    end
+    ok(fallback_winid ~= nil, "view.show: the response is still shown in a real window")
+    eq(
+      table.concat(vim.api.nvim_buf_get_lines(fallback_bufnr, 0, -1, false), "|"),
+      "after a partially-successful compound split",
+      "view.show: ... with the right content"
+    )
+
+    if fallback_winid and vim.api.nvim_win_is_valid(fallback_winid) then
+      vim.api.nvim_win_close(fallback_winid, true)
+    end
+  end
 end
