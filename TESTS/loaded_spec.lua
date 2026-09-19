@@ -156,4 +156,85 @@ return function(H)
     eq(loaded.load_snapshot("", "x"), nil, "load_snapshot: empty prefix -> nil")
     eq(loaded.load_snapshot(PREFIX, ""), nil, "load_snapshot: empty name -> nil")
   end
+
+  -- SEC-33: a persisted snapshot is untrusted input -- hand-edited, written
+  -- by an older/newer schema, or from a future format change. Written
+  -- directly via lib.nvim.cache.disk, bypassing `M.snapshot`, since the
+  -- whole point is data `M.snapshot` itself would never produce.
+  do
+    local disk = require("lib.nvim.cache.disk")
+    local SPREFIX = "__loaded_spec_untrusted"
+    local function key(name)
+      return "loaded/" .. SPREFIX .. "/snapshots/" .. name
+    end
+
+    -- A version this code does not know how to read at all: rejected
+    -- wholesale rather than handed back typed as the current shape.
+    assert(disk.save(key("bad-version"), { version = 99, prefix = SPREFIX, modules = {} }))
+    eq(
+      loaded.load_snapshot(SPREFIX, "bad-version"),
+      nil,
+      "load_snapshot: an unknown schema version is rejected, not trusted as current"
+    )
+
+    -- `raw.prefix` disagreeing with the prefix actually asked for: rejected
+    -- rather than silently answered under the wrong identity.
+    assert(
+      disk.save(
+        key("wrong-prefix"),
+        { version = loaded.VERSION, prefix = "someone.else", modules = {} }
+      )
+    )
+    eq(
+      loaded.load_snapshot(SPREFIX, "wrong-prefix"),
+      nil,
+      "load_snapshot: a snapshot recorded under a different prefix is rejected"
+    )
+
+    -- `modules` with the wrong shape at every level: a string instead of a
+    -- table, a module entry that isn't a table, a function-key value that
+    -- isn't literal `true`. None of this may reach a caller doing
+    -- `pairs(snap.modules)` or trusting `snap.modules[id][fn] == true`.
+    assert(disk.save(key("bad-modules"), {
+      version = loaded.VERSION,
+      prefix = SPREFIX,
+      modules = "not a table at all",
+    }))
+    local snap1 = loaded.load_snapshot(SPREFIX, "bad-modules")
+    ok(snap1 ~= nil, "load_snapshot: version/prefix still valid -> snapshot comes back")
+    eq(type(snap1.modules), "table", "load_snapshot: a non-table modules field degrades to {}")
+    local count1 = 0
+    for _ in pairs(snap1.modules) do
+      count1 = count1 + 1
+    end
+    eq(count1, 0, "load_snapshot: ...empty, not the raw string")
+
+    assert(disk.save(key("bad-entries"), {
+      version = loaded.VERSION,
+      prefix = SPREFIX,
+      modules = {
+        ["a.module"] = "not a table either",
+        ["b.module"] = { real_fn = true, fake_fn = 5 },
+      },
+    }))
+    local snap2 = assert(loaded.load_snapshot(SPREFIX, "bad-entries"))
+    eq(snap2.modules["a.module"], nil, "load_snapshot: a non-table module entry is dropped")
+    ok(snap2.modules["b.module"] ~= nil, "load_snapshot: a well-shaped sibling entry survives")
+    eq(snap2.modules["b.module"].real_fn, true, "load_snapshot: a real true-valued key survives")
+    eq(
+      snap2.modules["b.module"].fake_fn,
+      nil,
+      "load_snapshot: a non-boolean-true value is dropped, not trusted as a function marker"
+    )
+    local count2 = 0
+    for _ in pairs(snap2.modules["b.module"]) do
+      count2 = count2 + 1
+    end
+    eq(count2, 1, "load_snapshot: exactly the one real true-valued key survived")
+
+    assert(disk.clear(key("bad-version")))
+    assert(disk.clear(key("wrong-prefix")))
+    assert(disk.clear(key("bad-modules")))
+    assert(disk.clear(key("bad-entries")))
+  end
 end
