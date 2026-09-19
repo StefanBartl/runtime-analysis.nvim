@@ -7,6 +7,7 @@
     "globals": ["vim"]
   },
   "workspace": {
-    "checkThirdParty": false
+    "checkThirdParty": false,
+    "ignoreDir": [".claude", ".deps"]
   }
 }
