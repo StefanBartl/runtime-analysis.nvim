@@ -396,7 +396,26 @@ function M.new(opts)
   local timer = nil
 
   --- Everything on disk as of the last flush.
-  local base = cfg.persist and store.load(namespace, cache_opts) or store.empty()
+  local base = store.empty()
+  if cfg.persist then
+    local load_err
+    base, load_err = store.load(namespace, cache_opts)
+    if load_err then
+      -- ERR-11: `store.load` already backed the original bytes up to
+      -- `<path>.corrupt`, so nothing is destroyed by reading it -- but the
+      -- very first flush from this instance overwrites the live file with
+      -- `base` (here, a fresh empty aggregate) merged with whatever this
+      -- session collects, so every count from before the corruption is
+      -- about to disappear from it. Said once, not raised, matching this
+      -- constructor's own "never blocks setup()" posture everywhere else.
+      notify.warn(
+        ("telemetry data for %q could not be read and is being rebuilt; the original file was kept as a backup (%s)"):format(
+          namespace,
+          load_err
+        )
+      )
+    end
+  end
   --- Everything collected since. `report()` is `base + pending`, always.
   local pending = empty_delta()
   pending.sessions = 1
@@ -865,7 +884,20 @@ function M.new(opts)
       return true
     end
 
-    local disk_data = store.load(namespace, cache_opts)
+    local disk_data, load_err = store.load(namespace, cache_opts)
+    if load_err then
+      -- ERR-11: same reasoning as the constructor's own `base` load above
+      -- -- the corrupt file is already backed up, but this flush is about
+      -- to overwrite it with just `pending` (this session's counts since
+      -- the last flush) merged into an empty aggregate, silently resetting
+      -- every earlier count with nothing said about it otherwise.
+      notify.warn(
+        ("telemetry data for %q could not be read; this flush starts from an empty aggregate, and the original file was kept as a backup (%s)"):format(
+          namespace,
+          load_err
+        )
+      )
+    end
     store.merge(disk_data, pending, cfg.max_arg_values)
     store.prune(disk_data, cfg.retention_days)
 

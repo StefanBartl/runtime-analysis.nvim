@@ -28,6 +28,7 @@
 --- callers never pass it.
 
 local disk = require("lib.nvim.cache.disk")
+local notify = require("lib.nvim.notify").create("[runtime-analysis.telemetry]")
 
 local M = {}
 
@@ -40,6 +41,34 @@ local DEFAULT_DIR = vim.fn.stdpath("cache") .. "/runtime-analysis.nvim/cache"
 ---@type table<string, boolean>|nil
 local disabled = nil
 
+-- Warned at most once per session: `load()` runs on every `is_disabled()`
+-- call while the module-level cache is cold, and a decode failure does not
+-- change between those calls, so repeating the warning would just be noise.
+local warned_corrupt = false
+
+---@internal
+---@param err string
+local function warn_corrupt_once(err)
+  if warned_corrupt then
+    return
+  end
+  warned_corrupt = true
+  notify.warn(
+    ("the telemetry enable/disable state could not be read and is being rebuilt; the original file was kept as a backup (%s)"):format(
+      err
+    )
+  )
+end
+
+---ERR-11: `M.disable`/`M.enable` are a load-modify-save cycle over this
+---exact table -- they call this, flip one namespace's flag, and hand the
+---WHOLE table to `persist()`, which rewrites the WHOLE control file. A
+---decode failure collapsing straight to `{}` here means the very next
+---`:RATelemetry disable <ns>` (for any namespace) silently drops every
+---*other* namespace's disabled flag, with nothing said about it. The
+---original bytes are already safe -- `disk.load` backs them up to
+---`<path>.corrupt` once before ever returning an error -- so this only
+---makes the distinction visible instead of silent.
 ---@internal
 ---@param opts? Lib.Cache.Opts
 ---@return table<string, boolean>
@@ -48,18 +77,27 @@ local function load(opts)
   -- otherwise the first test to run would pin `disabled` to its own tmp dir's
   -- contents for every test after it in the same process.
   if opts and opts.dir then
-    local ok, data = pcall(disk.load, CACHE_KEY, opts)
-    return (ok and type(data) == "table" and type(data.disabled) == "table") and data.disabled or {}
+    local ok, data, err = pcall(disk.load, CACHE_KEY, opts)
+    if ok and type(data) == "table" and type(data.disabled) == "table" then
+      return data.disabled
+    end
+    if ok and err then
+      warn_corrupt_once(err)
+    end
+    return {}
   end
 
   if disabled then
     return disabled
   end
-  local ok, data = pcall(disk.load, CACHE_KEY, { dir = DEFAULT_DIR })
+  local ok, data, err = pcall(disk.load, CACHE_KEY, { dir = DEFAULT_DIR })
   if ok and type(data) == "table" and type(data.disabled) == "table" then
     disabled = data.disabled
   else
     disabled = {}
+    if ok and err then
+      warn_corrupt_once(err)
+    end
   end
   return disabled
 end
@@ -106,6 +144,16 @@ function M.disabled_list(opts)
   end
   table.sort(out)
   return out
+end
+
+---Test-only: drop the module-level cache and the once-per-session corrupt
+---warning back to their startup state, the same reason
+---`runtime-analysis.env._reset_for_test()` exists — so a spec exercising
+---`load()`'s corrupt-file path does not leave `warned_corrupt` pinned
+---`true` for whatever spec happens to run after it in the same process.
+function M._reset_for_test()
+  disabled = nil
+  warned_corrupt = false
 end
 
 return M

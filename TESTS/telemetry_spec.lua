@@ -2789,5 +2789,157 @@ return function(H)
     end
   end
 
+  -- -------------------------------------------------------------------------
+  -- ERR-11: a corrupt on-disk aggregate must not read back exactly like "no
+  -- data was ever persisted for this namespace" -- `store.load`/
+  -- `store.load_readonly` return a distinct `err` alongside their (still
+  -- well-formed / nil) data, and the two places in `telemetry/init.lua`
+  -- that build a load-modify-save cycle out of `store.load` (an instance's
+  -- own construction, and every `inst.flush()`) warn once via `vim.notify`
+  -- instead of silently resetting a namespace's whole history with nothing
+  -- said about it. `lib.nvim.cache.disk` itself already backs the original
+  -- bytes up to `<path>.corrupt` before ever returning that error, so
+  -- nothing here is about preventing data loss -- only about making it
+  -- stop being silent.
+  -- -------------------------------------------------------------------------
+
+  -- store.load / store.load_readonly: the distinction itself.
+  do
+    local namespace = ns("err11_store_corrupt")
+    local cache_opts = { dir = tmpdir }
+    local path = store.data_path(namespace, cache_opts)
+    vim.fn.mkdir(vim.fn.fnamemodify(path, ":h"), "p")
+    local fh = assert(io.open(path, "w"))
+    fh:write("{ not valid json")
+    fh:close()
+
+    local data, err = store.load(namespace, cache_opts)
+    H.eq(data.sessions, 0, "store.load: a corrupt file still yields a well-formed empty aggregate")
+    H.ok(err ~= nil, "store.load: ... but a distinct err is returned alongside it")
+
+    local ro, ro_err = store.load_readonly(namespace, cache_opts)
+    H.eq(ro, nil, "store.load_readonly: a corrupt file still yields nil, same as never persisted")
+    H.ok(ro_err ~= nil, "store.load_readonly: ... but a distinct err marks it corrupt, not absent")
+
+    local missing_ns = ns("err11_store_missing")
+    local ro2, ro2_err = store.load_readonly(missing_ns, cache_opts)
+    H.eq(ro2, nil, "store.load_readonly: genuinely never persisted is also nil")
+    H.eq(
+      ro2_err,
+      nil,
+      "store.load_readonly: ... with no err, so the two cases stay distinguishable"
+    )
+  end
+
+  -- Instance construction over an already-corrupt file: warns once, starts
+  -- from a fresh empty aggregate rather than raising or silently pretending
+  -- nothing was ever recorded.
+  do
+    local namespace = ns("err11_construct_corrupt")
+    local cache_opts = { dir = tmpdir }
+    local path = store.data_path(namespace, cache_opts)
+    vim.fn.mkdir(vim.fn.fnamemodify(path, ":h"), "p")
+    local fh = assert(io.open(path, "w"))
+    fh:write("{ not valid json")
+    fh:close()
+
+    local orig_vim_notify = vim.notify
+    local calls = {}
+    ---@diagnostic disable-next-line: duplicate-set-field
+    vim.notify = function(msg, level)
+      calls[#calls + 1] = { msg = msg, level = level }
+    end
+
+    local t = telemetry.new({ namespace = namespace, persist = true, dir = tmpdir })
+
+    vim.notify = orig_vim_notify
+
+    H.ok(#calls > 0, "telemetry.new(): a corrupt persisted file warns once at construction")
+    H.eq(
+      t.report().total_calls,
+      0,
+      "telemetry.new(): starts from a genuinely empty aggregate, not an error"
+    )
+  end
+
+  -- inst.flush(): the destructive case this rule is actually about -- a
+  -- namespace with real accumulated history whose file gets corrupted
+  -- between flushes must not silently reset to just this session's own
+  -- counts with no trace anything happened.
+  do
+    local namespace = ns("err11_flush_corrupt")
+    local cache_opts = { dir = tmpdir }
+    local path = store.data_path(namespace, cache_opts)
+
+    local seed = store.empty()
+    seed.functions.old = { calls = 500 }
+    store.save(namespace, seed, cache_opts)
+
+    local mod = { f = function() end }
+    local t = telemetry.new({ namespace = namespace, persist = true, dir = tmpdir })
+    t.wrap(mod)
+    t.start()
+    mod.f()
+
+    -- Corrupt the file between construction and flush -- exercising
+    -- `inst.flush()`'s own re-read, not the constructor's.
+    local fh = assert(io.open(path, "w"))
+    fh:write("{ not valid json")
+    fh:close()
+
+    local orig_vim_notify = vim.notify
+    local calls = {}
+    ---@diagnostic disable-next-line: duplicate-set-field
+    vim.notify = function(msg, level)
+      calls[#calls + 1] = { msg = msg, level = level }
+    end
+
+    local ok = t.flush()
+
+    vim.notify = orig_vim_notify
+
+    H.eq(ok, true, "inst.flush(): still succeeds over a corrupt on-disk file")
+    H.ok(#calls > 0, "inst.flush(): warns via vim.notify instead of staying silent")
+    H.ok(
+      vim.fn.filereadable(path .. ".corrupt") == 1,
+      "inst.flush(): the corrupt bytes were backed up before the overwrite"
+    )
+
+    local data, load_err = store.load(namespace, cache_opts)
+    H.eq(load_err, nil, "inst.flush(): the file it just wrote decodes cleanly again")
+    H.ok(data.functions.f ~= nil, "inst.flush(): this session's own pending call made it onto disk")
+  end
+
+  -- toggle.lua: the same load-modify-save shape over the shared
+  -- enable/disable control file -- a corrupt `_control.json` must not
+  -- silently drop every other namespace's disabled flag on the next toggle.
+  do
+    toggle._reset_for_test()
+    local topts = { dir = tmpdir }
+    local path = tmpdir .. "/telemetry/_control.json"
+    vim.fn.mkdir(vim.fn.fnamemodify(path, ":h"), "p")
+    local fh = assert(io.open(path, "w"))
+    fh:write("{ not valid json")
+    fh:close()
+
+    local orig_vim_notify = vim.notify
+    local calls = {}
+    ---@diagnostic disable-next-line: duplicate-set-field
+    vim.notify = function(msg, level)
+      calls[#calls + 1] = { msg = msg, level = level }
+    end
+
+    H.eq(
+      toggle.is_disabled(ns("err11_toggle"), topts),
+      false,
+      "toggle: a corrupt control file reads as nothing disabled, not an error"
+    )
+    H.ok(#calls > 0, "toggle: ... but warns once via vim.notify")
+
+    vim.notify = orig_vim_notify
+    toggle._reset_for_test()
+    vim.fn.delete(path)
+  end
+
   vim.fn.delete(tmpdir, "rf")
 end
