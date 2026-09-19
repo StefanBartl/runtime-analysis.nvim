@@ -23,6 +23,7 @@
 
 local disk = require("lib.nvim.cache.disk")
 local project_key = require("lib.nvim.fs.project_key")
+local notify = require("lib.nvim.notify").create("[runtime-analysis]")
 
 local M = {}
 
@@ -79,11 +80,36 @@ local function cache_key(root)
   return "history/" .. sanitize(project_key(root))
 end
 
+---Load this project's stored entries, distinguishing "no file yet" from
+---"file exists but failed to decode" (ERR-11) — the same shape
+---`runtime-analysis.env`'s own `read_env_file` already returns for the
+---identical reason. Both `M.record` and `M.list` are a load-*-save cycle
+---or a plain read on top of the same file, and `disk.load` itself already
+---backs up the original bytes to `<path>.corrupt` once on a decode
+---failure -- this only carries that distinction one level up instead of
+---collapsing it back into a silently-empty list.
+---@internal
+---@param key string
+---@param opts? Lib.Cache.Opts
+---@return RA.History.Entry[] entries empty when missing *or* corrupt
+---@return string? err set only when the file exists but could not be decoded
+local function read_entries(key, opts)
+  local entries, err = disk.load(key, opts)
+  return entries or {}, err
+end
+
 ---Record one send attempt for the current project. Best-effort — a disk
 ---write failing here must never be the reason a request appears to fail;
 ---`disk.save`'s own `ok` return is deliberately not checked, the same
 ---"a report file is a convenience artifact, not data" posture
 ---`telemetry.report_file.write` already documents for an analogous case.
+---
+---That posture covers the *write* only. The *read* that starts this
+---load-modify-save cycle is different: a corrupt history file must not
+---silently reset to a single-entry list with nothing said about it (ERR-11)
+----- the original bytes are safe (`disk.load` already backed them up), but
+---the live file this project's `:RA history` reads from is about to be
+---overwritten all the same, so this warns once rather than staying silent.
 ---@param method string
 ---@param url string
 ---@param status integer?
@@ -95,7 +121,14 @@ end
 ---reason `runtime-analysis.telemetry`'s own `new({ dir = ... })` exists.
 function M.record(method, url, status, note, opts)
   local key = cache_key()
-  local entries = disk.load(key, opts) or {}
+  local entries, load_err = read_entries(key, opts)
+  if load_err then
+    notify.warn(
+      ("this project's request history was unreadable and is being rebuilt; the original file was kept as a backup (%s)"):format(
+        load_err
+      )
+    )
+  end
   -- Not `status and nil or note`: that's the classic Lua `a and b or c`
   -- trap — when `b` (here `nil`) is itself falsy, the `or c` branch always
   -- wins regardless of `a`, so `note` would never actually be dropped.
@@ -132,15 +165,20 @@ end
 ---@param opts? Lib.Cache.Opts|{ root?: string } `root` overrides the
 ---project key (default cwd, via `project_key()`); the rest is `M.record`'s
 ---own cache-dir override, unchanged.
----@return RA.History.Entry[]
+---@return RA.History.Entry[] entries empty both when nothing was ever
+---recorded and when the file exists but failed to decode — check `err` to
+---tell the two apart (ERR-11).
+---@return string? err set only when the history file exists but could not
+---be decoded; `nil` (including when `entries` is empty) means genuinely no
+---history yet.
 function M.list(opts)
   opts = opts or {}
-  local entries = disk.load(cache_key(opts.root), opts) or {}
+  local entries, err = read_entries(cache_key(opts.root), opts)
   local out = {}
   for i = #entries, 1, -1 do
     out[#out + 1] = entries[i]
   end
-  return out
+  return out, err
 end
 
 ---@param opts? Lib.Cache.Opts|{ root?: string } See `M.list`'s own note on `root`.
@@ -148,6 +186,20 @@ end
 function M.clear(opts)
   opts = opts or {}
   return disk.clear(cache_key(opts.root), opts)
+end
+
+---Where this project's history actually lives on disk. Mirrors
+---`telemetry.store.data_path`'s own reasoning and the same disclaimer:
+---nothing in this module reads it, it exists so a caller (or a test
+---exercising the ERR-11 corrupt-file path) can find the file `M.record`/
+---`M.list` resolve to without duplicating `cache_key`'s own sanitizing and
+---project-keying logic.
+---@param opts? Lib.Cache.Opts|{ root?: string } See `M.list`'s own note on `root`.
+---@return string
+function M.data_path(opts)
+  opts = opts or {}
+  local dir = opts.dir or (vim.fn.stdpath("cache") .. "/lib.nvim/cache")
+  return dir .. "/" .. cache_key(opts.root) .. ".json"
 end
 
 --- The effective cap, for tests and for anything that wants to say what it

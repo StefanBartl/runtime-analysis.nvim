@@ -117,4 +117,60 @@ return function(H)
     history.clear({ dir = dir })
     eq(#history.list({ dir = dir }), 0, "history.clear: empty afterward")
   end
+
+  -- -------------------------------------------------------------------------
+  -- ERR-11: a corrupt history file must not read back exactly like "nothing
+  -- recorded yet" — `M.list` returns a distinct `err` alongside the (still
+  -- empty) list, and `M.record`'s own load-modify-save cycle warns once
+  -- via `vim.notify` instead of silently resetting the file with no trace
+  -- anything went wrong (the original bytes are backed up to `.corrupt` by
+  -- `lib.nvim.cache.disk` itself before either of these ever sees them).
+  -- -------------------------------------------------------------------------
+  do
+    local dir = vim.fn.tempname()
+    local path = history.data_path({ dir = dir })
+    vim.fn.mkdir(vim.fn.fnamemodify(path, ":h"), "p")
+    local f = assert(io.open(path, "w"))
+    f:write("{ not valid json")
+    f:close()
+
+    local entries, list_err = history.list({ dir = dir })
+    eq(#entries, 0, "history.list: a corrupt file still yields an empty list")
+    ok(list_err ~= nil, "history.list: ... but a distinct err is returned alongside it")
+
+    ok(
+      vim.fn.filereadable(path .. ".corrupt") == 1,
+      "history.list: the original corrupt bytes were backed up, not lost"
+    )
+  end
+
+  do
+    local dir = vim.fn.tempname()
+    local path = history.data_path({ dir = dir })
+    vim.fn.mkdir(vim.fn.fnamemodify(path, ":h"), "p")
+    local f = assert(io.open(path, "w"))
+    f:write("{ not valid json")
+    f:close()
+
+    local orig_vim_notify = vim.notify
+    local calls = {}
+    ---@diagnostic disable-next-line: duplicate-set-field
+    vim.notify = function(msg, level)
+      calls[#calls + 1] = { msg = msg, level = level }
+    end
+
+    history.record("GET", "https://api.example.com/after-corruption", 200, nil, { dir = dir })
+
+    vim.notify = orig_vim_notify
+
+    ok(#calls > 0, "history.record: a corrupt load warns via vim.notify")
+
+    local entries = history.list({ dir = dir })
+    eq(#entries, 1, "history.record: the new request is still recorded despite the corruption")
+    eq(
+      entries[1].url,
+      "https://api.example.com/after-corruption",
+      "history.record: ... with the right content"
+    )
+  end
 end
