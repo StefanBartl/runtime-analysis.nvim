@@ -192,6 +192,27 @@ function M.check()
     h_warn("runtime-analysis.env failed to load", { tostring(env) })
   end
 
+  h_start("runtime-analysis.nvim: config")
+
+  -- ERR-22: `opts.split`'s key is checked (config.validate above), but its
+  -- value never is -- an invalid Ex command only surfaces the first time
+  -- `:RA send` actually needs to open the response split. Report it here so
+  -- a bad value is visible without having to send a request first.
+  local ok_view, view = pcall(require, "runtime-analysis.view")
+  if ok_view then
+    local bad_split = view.bad_split_value()
+    if bad_split then
+      h_warn(("opts.split %q is not a valid Ex command"):format(bad_split), {
+        'The response split fell back to the default "vsplit" for this session.',
+        "Fix opts.split in your setup({ split = ... }) call.",
+      })
+    else
+      h_ok("opts.split has not failed to open this session")
+    end
+  else
+    h_warn("runtime-analysis.view failed to load", { tostring(view) })
+  end
+
   h_start("runtime-analysis.nvim: keymap/command usage")
 
   local ok_usage, usage = pcall(require, "runtime-analysis.usage")

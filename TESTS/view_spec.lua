@@ -142,9 +142,50 @@ return function(H)
     -- this spec), and the cleanup below closes it once.
   end
 
-  -- Clean up the split this spec opened, so a later spec's window layout
-  -- assumptions are not disturbed by it.
-  if winid_after_second and vim.api.nvim_win_is_valid(winid_after_second) then
-    vim.api.nvim_win_close(winid_after_second, true)
+  -- ERR-22: an invalid opts.split value must degrade to the default split
+  -- rather than break the response pane -- and the fallback must be visible
+  -- via `view.bad_split_value()` for :checkhealth to report.
+  do
+    eq(view.bad_split_value(), nil, "bad_split_value: nil before any split has ever failed")
+
+    -- Close the existing response window so `M.show` takes the "open a new
+    -- split" branch below rather than reusing an already-visible one.
+    if winid_after_second and vim.api.nvim_win_is_valid(winid_after_second) then
+      vim.api.nvim_win_close(winid_after_second, true)
+    end
+
+    local warned
+    local orig_notify = vim.notify
+    ---@diagnostic disable-next-line: duplicate-set-field
+    vim.notify = function(msg, level)
+      warned = { msg = msg, level = level }
+    end
+    view.show({ "after a bad split value" }, { split = "totally-not-a-real-ex-command" })
+    vim.notify = orig_notify
+
+    ok(warned ~= nil, "view.show: an invalid split value still warns, doesn't raise")
+    eq(
+      view.bad_split_value(),
+      "totally-not-a-real-ex-command",
+      "bad_split_value: records the invalid value for :checkhealth"
+    )
+
+    local fallback_bufnr = vim.fn.bufnr("runtime-analysis://response")
+    local fallback_winid
+    for _, w in ipairs(vim.api.nvim_list_wins()) do
+      if vim.api.nvim_win_get_buf(w) == fallback_bufnr then
+        fallback_winid = w
+      end
+    end
+    ok(fallback_winid ~= nil, "view.show: falls back to opening a real split (vsplit)")
+    eq(
+      table.concat(vim.api.nvim_buf_get_lines(fallback_bufnr, 0, -1, false), "|"),
+      "after a bad split value",
+      "view.show: the response is still shown despite the bad split value"
+    )
+
+    if fallback_winid and vim.api.nvim_win_is_valid(fallback_winid) then
+      vim.api.nvim_win_close(fallback_winid, true)
+    end
   end
 end

@@ -15,6 +15,20 @@ local M = {}
 
 local BUFNAME = "runtime-analysis://response"
 
+--- Set once `M.show` has to fall back from an invalid `opts.split` value —
+--- read by `:checkhealth` (ERR-22: an invalid single config value degrades
+--- to its default instead of silently breaking the response pane on every
+--- future send, and that degradation is surfaced, not just swallowed).
+---@type string?
+local bad_split_value = nil
+
+---The invalid `opts.split` value `M.show` last had to fall back from, or
+---`nil` if that has never happened this session. `:checkhealth` reads this.
+---@return string?
+function M.bad_split_value()
+  return bad_split_value
+end
+
 ---The response buffer, creating it if it does not exist yet. Named and
 ---looked up by name rather than kept in a module-level variable, so a
 ---`:bwipeout` or a fresh `:source` of this file during development does not
@@ -81,7 +95,21 @@ function M.show(lines, opts)
   local origin = vim.api.nvim_get_current_win()
   local winid = find_window(bufnr)
   if not winid then
-    vim.cmd(opts.split or "vsplit")
+    local split_cmd = opts.split or "vsplit"
+    -- ERR-22: `opts.split` is never value-validated at config time (only
+    -- its key is), so a typo reaches here as a raw Ex command. Guard the
+    -- call itself rather than let an invalid value break every future send
+    -- the same way, forever.
+    local ok_split = pcall(vim.cmd, split_cmd)
+    if not ok_split then
+      bad_split_value = split_cmd
+      notify.warn(
+        ('invalid split command %q — falling back to "vsplit" (see :checkhealth)'):format(
+          split_cmd
+        )
+      )
+      vim.cmd("vsplit")
+    end
     winid = vim.api.nvim_get_current_win()
     vim.api.nvim_win_set_buf(winid, bufnr)
   end
