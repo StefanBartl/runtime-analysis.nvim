@@ -73,12 +73,18 @@ shows the numbers themselves.
 
 ## Caching
 
-A namespace with a live telemetry instance is read from memory on every
-call — `report()` does not flush, so that is cheap.
+The whole computed light — including which namespaces even exist — is
+cached for 1 second, keyed by `slow_mean_ms`. A statusline redraws on
+nearly every event, and even the "everything is live" path is not cheap:
+finding out which namespaces exist scans the telemetry cache directory, and
+folding a live instance's numbers into a colour does a full copy + re-merge
++ re-sort of everything it has collected. `M.invalidate()` drops this
+cache, plus the disk-read cache below.
 
-A namespace with no live instance is read off disk, cached for 5 seconds.
-Without that, a statusline redrawing on every cursor move would read the
-file each time. `M.invalidate()` drops the cache.
+A namespace with no live instance is additionally read off disk, cached for
+5 seconds on its own — a separate, longer-lived cache, since a namespace
+with nothing live to report from still has to hit disk once the 1-second
+cache above expires.
 
 ## Why this lives here
 

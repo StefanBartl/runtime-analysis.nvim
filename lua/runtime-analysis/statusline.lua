@@ -45,6 +45,14 @@ local DEFAULT_SLOW_MEAN_MS = 50
 --- enough to absorb a redraw burst.
 local DISK_TTL_SECONDS = 5
 
+--- PERF-93: a statusline redraws on nearly every cursor move and every
+--- keystroke in insert mode. Even the "everything is live" path is not
+--- cheap: `known_namespaces()` scans the telemetry cache directory, and
+--- each live instance's `report()` does a full `vim.deepcopy` + re-merge +
+--- re-sort of its entire accumulated dataset. The whole computed status is
+--- cached for this long, same granularity as `DISK_TTL_SECONDS` above.
+local STATUS_TTL_SECONDS = 1
+
 ---@class RA.Statusline.Entry
 ---@field errors integer
 ---@field mean_ms number|nil
@@ -52,10 +60,15 @@ local DISK_TTL_SECONDS = 5
 ---@type table<string, { entries: RA.Statusline.Entry[], expires_at: integer }>
 local disk_cache = {}
 
----Drop the on-disk read cache. Useful from a test, or after a flush.
+---@type table<number, { value: string, expires_at: integer }>
+local status_cache = {}
+
+---Drop the on-disk read cache and the whole-status cache. Useful from a
+---test, or after a flush.
 ---@return nil
 function M.invalidate()
   disk_cache = {}
+  status_cache = {}
 end
 
 ---@internal
@@ -131,15 +144,11 @@ local function entries_for(telemetry, namespace, today)
   return entries_from_disk(telemetry, namespace, today)
 end
 
----The traffic light, or `""` when there is nothing to watch.
----
----Empty when nothing has ever wrapped or started a telemetry instance: a
----light with no plugin behind it is not a signal, just clutter.
----@param opts? { slow_mean_ms?: number }
+---@internal
+---The actual computation `M.status` caches — see `STATUS_TTL_SECONDS`.
+---@param slow_ms number
 ---@return string
-function M.status(opts)
-  local slow_ms = (opts and opts.slow_mean_ms) or DEFAULT_SLOW_MEAN_MS
-
+local function compute_status(slow_ms)
   local ok_mod, telemetry = pcall(require, "runtime-analysis.telemetry")
   if not ok_mod or type(telemetry) ~= "table" then
     return ""
@@ -162,6 +171,29 @@ function M.status(opts)
     return SLOW_GLYPH
   end
   return OK_GLYPH
+end
+
+---The traffic light, or `""` when there is nothing to watch.
+---
+---Empty when nothing has ever wrapped or started a telemetry instance: a
+---light with no plugin behind it is not a signal, just clutter.
+---@param opts? { slow_mean_ms?: number }
+---@return string
+function M.status(opts)
+  local slow_ms = (opts and opts.slow_mean_ms) or DEFAULT_SLOW_MEAN_MS
+
+  -- PERF-93: this is a hot path (called on nearly every statusline
+  -- redraw), so even the namespace scan and the "nothing to watch" early
+  -- exit are cached, not just the expensive live-instance report below.
+  local now = os.time()
+  local cached = status_cache[slow_ms]
+  if cached and cached.expires_at > now then
+    return cached.value
+  end
+
+  local value = compute_status(slow_ms)
+  status_cache[slow_ms] = { value = value, expires_at = now + STATUS_TTL_SECONDS }
+  return value
 end
 
 ---`status` under the name a lualine spec reads naturally.
