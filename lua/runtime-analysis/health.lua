@@ -155,9 +155,16 @@ function M.check()
 
   local ok_history, history = pcall(require, "runtime-analysis.history")
   if ok_history then
-    local ok_list, entries = pcall(history.list)
+    local ok_list, entries, list_err = pcall(history.list)
     if ok_list then
       h_ok(("%d entr%s for this project"):format(#entries, #entries == 1 and "y" or "ies"))
+      -- ERR-11: a history file that exists but fails to decode is reported
+      -- here explicitly, distinct from "no history yet" — both collapse to
+      -- an empty `entries` list otherwise (see `runtime-analysis.env`'s
+      -- identical check just below for the same reasoning).
+      if list_err then
+        h_warn("this project's history file could not be read as JSON", { list_err })
+      end
     else
       h_warn("failed to read this project's history", { tostring(entries) })
     end

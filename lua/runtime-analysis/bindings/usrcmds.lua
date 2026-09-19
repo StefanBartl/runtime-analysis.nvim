@@ -518,7 +518,15 @@ end
 ---@internal
 local function browse_history(ra)
   local history = require("runtime-analysis.history")
-  local entries = history.list()
+  local entries, list_err = history.list()
+  -- ERR-11: a history file that exists but fails to decode is reported
+  -- here explicitly, distinct from "nothing recorded yet" — both collapse
+  -- to an empty `entries` list otherwise, and the corrupt one would
+  -- otherwise look exactly like a project that has simply never sent a
+  -- request.
+  if list_err then
+    notify.warn(("this project's request history could not be read: %s"):format(list_err))
+  end
   if #entries == 0 then
     notify.info("no request history for this project yet")
     return
