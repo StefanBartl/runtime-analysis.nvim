@@ -79,7 +79,26 @@ function M.open_request(lines)
   vim.cmd("enew")
   local bufnr = vim.api.nvim_get_current_buf()
   vim.bo[bufnr].buftype = "acwrite"
-  vim.bo[bufnr].filetype = M.opts.request_filetype
+
+  -- ERR-22: `opts.request_filetype`'s KEY is checked (config.validate
+  -- above), but its VALUE never was -- a non-string (a typo'd
+  -- `request_filetype = 42` instead of `"http"`) reached
+  -- `vim.bo[bufnr].filetype = ...` unfiltered and raised "Invalid value for
+  -- option 'filetype': expected string, got number", aborting `:RARequest`
+  -- entirely instead of degrading. Same fallback shape `view.lua`'s own
+  -- `opts.split` guard already uses for the identical class of bug.
+  local ft = M.opts.request_filetype
+  if type(ft) ~= "string" or ft == "" then
+    notify.warn(
+      ("opts.request_filetype (%s) is not a valid filetype string — falling back to %q"):format(
+        vim.inspect(ft),
+        DEFAULTS.request_filetype
+      )
+    )
+    ft = DEFAULTS.request_filetype
+  end
+  vim.bo[bufnr].filetype = ft
+
   if not valid_lines(lines) then
     lines = { "GET https://", "" }
   end

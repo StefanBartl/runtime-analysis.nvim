@@ -59,4 +59,31 @@ return function(H)
       )
     end
   end
+
+  -- ERR-22: `opts.request_filetype`'s KEY is checked at setup() (config.
+  -- validate), but its VALUE never was -- a non-string value used to reach
+  -- `vim.bo[bufnr].filetype = ...` unfiltered and raise "Invalid value for
+  -- option 'filetype'", aborting `:RARequest` entirely instead of
+  -- degrading to the documented default ("http").
+  do
+    local warned
+    local orig_notify = vim.notify
+    ---@diagnostic disable-next-line: duplicate-set-field
+    vim.notify = function(msg, level)
+      warned = { msg = msg, level = level }
+    end
+
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    ra.setup({ request_filetype = 42 })
+    H.ok(
+      pcall(ra.open_request),
+      "ERR-22: a non-string request_filetype degrades instead of crashing"
+    )
+    local bufnr = vim.api.nvim_get_current_buf()
+    eq(vim.bo[bufnr].filetype, "http", "open_request: falls back to the default filetype")
+    H.ok(warned ~= nil, "open_request: a non-string request_filetype still warns")
+
+    vim.notify = orig_notify
+    ra.setup({})
+  end
 end
