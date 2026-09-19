@@ -56,13 +56,17 @@ end
 
 ---@internal
 ---@param path string
----@return table<string, table<string, any>>
+---@return table<string, table<string, any>> decoded empty table when the file is absent *or* fails to decode
+---@return string? err set only when the file exists but is not valid JSON (ERR-11: distinct from "absent")
 local function read_env_file(path)
   if not is_readable_file(path) then
-    return {}
+    return {}, nil
   end
-  local decoded = json.read(path)
-  return decoded or {}
+  local decoded, err = json.read(path)
+  if not decoded then
+    return {}, ("%s: %s"):format(path, err or "invalid JSON")
+  end
+  return decoded, nil
 end
 
 -- Warn at most once per session — a nudge, not a repeated nag every time a
@@ -105,11 +109,14 @@ end
 ---module at an isolated directory instead of a real project, the same
 ---reason `history.lua`'s own `opts.dir` exists.
 ---@return table<string, table<string, any>>
+---@return string? err set only when a present env file failed to decode as JSON (ERR-11) — the
+---merged table is still returned, same as "no environments defined", so a decode failure never
+---blocks the plugin; check this return (or `:checkhealth`) to tell the two cases apart
 function M.load_all(opts)
   local root = resolve_root(opts)
   warn_if_not_gitignored(root)
-  local shared = read_env_file(root .. "/" .. SHARED_FILE)
-  local private = read_env_file(root .. "/" .. PRIVATE_FILE)
+  local shared, shared_err = read_env_file(root .. "/" .. SHARED_FILE)
+  local private, private_err = read_env_file(root .. "/" .. PRIVATE_FILE)
 
   local names = {}
   for name in pairs(shared) do
@@ -123,18 +130,27 @@ function M.load_all(opts)
   for name in pairs(names) do
     out[name] = vim.tbl_deep_extend("force", shared[name] or {}, private[name] or {})
   end
-  return out
+
+  local err
+  if shared_err and private_err then
+    err = shared_err .. "; " .. private_err
+  else
+    err = shared_err or private_err
+  end
+  return out, err
 end
 
 ---@param opts? { root: string? } See `M.load_all`.
 ---@return string[] sorted
+---@return string? err see `M.load_all`
 function M.list_names(opts)
+  local all, err = M.load_all(opts)
   local names = {}
-  for name in pairs(M.load_all(opts)) do
+  for name in pairs(all) do
     names[#names + 1] = name
   end
   table.sort(names)
-  return names
+  return names, err
 end
 
 ---@type string?

@@ -39,6 +39,25 @@ return function(H)
     eq(names[1], "dev", "list_names: ... named 'dev'")
   end
 
+  -- A corrupt env file (ERR-11): the merged result stays an empty table,
+  -- same shape as "no env files at all", but a distinct error is returned
+  -- alongside it so the two cases don't collapse into the same silence.
+  do
+    env._reset_for_test()
+    local dir = vim.fn.tempname()
+    vim.fn.mkdir(dir, "p")
+    local f = assert(io.open(dir .. "/" .. env.SHARED_FILE, "w"))
+    f:write("{ not valid json")
+    f:close()
+
+    local names, load_err = env.list_names({ root = dir })
+    eq(#names, 0, "list_names: a corrupt env file still yields an empty list")
+    ok(
+      load_err and load_err:find(env.SHARED_FILE, 1, true) ~= nil,
+      "list_names: the error names the file that failed to decode"
+    )
+  end
+
   -- Private file keys win over shared on overlap; keys unique to either
   -- side survive the merge.
   do

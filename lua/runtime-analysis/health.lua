@@ -169,8 +169,14 @@ function M.check()
 
   local ok_env, env = pcall(require, "runtime-analysis.env")
   if ok_env then
-    local ok_names, names = pcall(env.list_names)
+    local ok_names, names, load_err = pcall(env.list_names)
     if ok_names then
+      -- ERR-11: an env file that exists but fails to decode is reported
+      -- here explicitly, distinct from "no environments defined" — both
+      -- collapse to an empty `names` list otherwise.
+      if load_err then
+        h_warn("an environment file could not be read as JSON", { load_err })
+      end
       if #names == 0 then
         h_info(
           ("no environments defined — create %s at the project root"):format(env.SHARED_FILE)
