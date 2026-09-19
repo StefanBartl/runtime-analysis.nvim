@@ -179,4 +179,39 @@ return function(H)
     )
     eq(rows[1].calls, 1, "render: the real data survived despite the adversarial name")
   end
+
+  -- render: the same guard, but case-varied (SEC-23) -- HTML's script-data
+  -- end-tag matching is ASCII case-insensitive, so `</SCRIPT>`/`</Script>`
+  -- close the tag exactly as `</script>` does, and a case-sensitive-only
+  -- guard would let these two through unescaped.
+  do
+    local adversarial_ns = ns('title"with</SCRIPT>tag')
+    local mod = { f = function() end }
+    local t = telemetry.new({ namespace = adversarial_ns, persist = false })
+    t.wrap(mod, "m")
+    t.start()
+    mod.f()
+    local report = t.report()
+    t.stop()
+
+    local out = html.render({ report })
+    ok(
+      out:find("</SCRIPT>tag", 1, true) == nil,
+      "render: an uppercase </SCRIPT> sequence is escaped too, not just lowercase"
+    )
+    ok(
+      out:find("<\\/SCRIPT>tag", 1, true) ~= nil,
+      "render: present in its escaped form, original casing preserved"
+    )
+    local blob = out:match("window%.__RA_TELEMETRY_ROWS__ = (%[.-%]);")
+    assert(
+      blob,
+      "render: the JSON blob is still extractable with a case-varied adversarial namespace"
+    )
+    eq(
+      vim.json.decode(blob)[1].namespace,
+      adversarial_ns,
+      "render: the real, unescaped namespace round-trips through JSON intact, case preserved"
+    )
+  end
 end

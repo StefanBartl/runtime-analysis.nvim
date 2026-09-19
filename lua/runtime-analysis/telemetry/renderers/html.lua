@@ -295,10 +295,13 @@ function M.render(reports)
   -- A namespace or function key containing a literal `</script>` (however
   -- unlikely) would otherwise close the tag this JSON sits inside early —
   -- the HTML parser does not know this text is a JSON string, only that
-  -- it saw the closing-tag bytes. `<\/script` is valid JSON (an escaped,
-  -- meaningless-but-legal `\/`) and decodes back to the identical string,
-  -- so this is invisible to `vim.json.decode` on the client side.
-  rows_json = rows_json:gsub("</script", "<\\/script")
+  -- it saw the closing-tag bytes, and HTML's script-data end-tag matching
+  -- is ASCII case-insensitive (`</SCRIPT`, `</Script`, ... all close it),
+  -- so the guard has to be too (SEC-23). `<\/script` is valid JSON (an
+  -- escaped, meaningless-but-legal `\/`) and decodes back to the identical
+  -- string, so this is invisible to `vim.json.decode` on the client side —
+  -- the original casing of "script" is preserved, only the slash changes.
+  rows_json = rows_json:gsub("</([sS][cC][rR][iI][pP][tT])", "<\\/%1")
 
   local title = #reports == 1 and reports[1].namespace or "all namespaces"
 
