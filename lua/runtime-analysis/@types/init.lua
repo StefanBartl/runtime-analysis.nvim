@@ -1,4 +1,5 @@
 ---@meta
+---@module 'runtime-analysis.@types'
 --- Top-level LuaCATS annotations for `runtime-analysis.nvim` itself. Kept
 --- separate from `telemetry/@types/init.lua`, the same one-`@types`-folder-
 --- per-level convention every sibling plugin uses — telemetry's types
