@@ -91,6 +91,39 @@ return function(H)
   with_live({ { errors = 0, mean_ms = nil } })
   H.eq(statusline.status(), GREEN, "an entry with no timing data is not slow")
 
+  -- Caching (PERF-93) ---------------------------------------------------------
+  -- A statusline redraws on nearly every event; the whole computed status,
+  -- including the namespace scan, must be cached, not recomputed every call.
+  do
+    with_live({ { errors = 0, mean_ms = 1 } })
+    local scans = 0
+    local underlying_known_namespaces = telemetry.known_namespaces
+    telemetry.known_namespaces = function(...)
+      scans = scans + 1
+      return underlying_known_namespaces(...)
+    end
+    H.eq(statusline.status(), GREEN, "cache: first call computes fresh")
+    H.eq(scans, 1, "cache: first call actually scanned for namespaces")
+
+    -- Same stub, same slow_ms: a second call within the TTL must be served
+    -- from the cache, not scan again -- even though the underlying data
+    -- changed (an error appeared), the cached answer still wins.
+    telemetry.get = function()
+      return {
+        report = function()
+          return { entries = { { errors = 1, mean_ms = 1 } } }
+        end,
+      }
+    end
+    H.eq(statusline.status(), GREEN, "cache: a second call within the TTL reuses the cached value")
+    H.eq(scans, 1, "cache: ...and never re-scanned for namespaces")
+
+    -- invalidate() drops the cache: the same call now reflects the change.
+    statusline.invalidate()
+    H.eq(statusline.status(), RED, "cache: invalidate() forces a fresh computation")
+    H.eq(scans, 2, "cache: ...which scans for namespaces again")
+  end
+
   -- Degradation --------------------------------------------------------------
   statusline.invalidate()
   telemetry.known_namespaces = function()
