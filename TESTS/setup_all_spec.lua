@@ -105,6 +105,20 @@ return function(H)
     "configured(): returns the opts the most recent setup() call received"
   )
 
+  -- ERR-54: a copy, not the live spec sub-table -- a consumer mutating what
+  -- it got back (sorting it, adding a key, ...) must not reach back into
+  -- the caller's own plugin spec for the rest of the session.
+  do
+    local first = lazy_adapter.configured()
+    first.plugins["mutated-in-place"] = { namespace = "should-not-leak" }
+    local second = lazy_adapter.configured()
+    eq(
+      second.plugins["mutated-in-place"],
+      nil,
+      "configured(): mutating one call's result does not affect the next call's"
+    )
+  end
+
   -- --------------------------------------- setup_all.run(): had_data=false
   -- Nothing persisted for ns_loaded yet (the catch-up-scan instance has
   -- never flushed) -- a plain run must not prompt for or write a backup.

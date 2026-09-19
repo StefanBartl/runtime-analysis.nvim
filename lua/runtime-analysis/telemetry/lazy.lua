@@ -354,9 +354,14 @@ end
 
 ---The `opts` the most recent `M.setup()` call received, unchanged --
 ---`nil` before `M.setup()` has run this session.
+---
+---A copy, not the live table (ERR-54): `configured` is the caller's own
+---`opts.telemetry` sub-table from their plugin spec, not internal state,
+---so a consumer that sorts or otherwise mutates the returned table in
+---place must not be able to reach back into the caller's live spec.
 ---@return RA.Telemetry.LazyOpts?
 function M.configured()
-  return configured
+  return configured and vim.deepcopy(configured)
 end
 
 ---Every configured target -- plugin (`M.setup()`'s own `opts.plugins`, keyed
