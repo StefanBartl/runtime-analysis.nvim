@@ -1051,8 +1051,11 @@ return function(H)
     H.eq(on_disk.functions.f.calls, 2, "counts reached the disk")
 
     -- A second process (same namespace, fresh instance) must add to that.
-    -- The "already has a live instance" warning this prints is the point of
-    -- question 5 in the concept doc, and is expected here.
+    -- This models question 5 in the concept doc; t1 is already stopped by
+    -- now (PERF-42: the registry evicts a stopped instance rather than
+    -- warning about it), so this specific call warns nothing -- the real
+    -- "already has a live instance" warning, with a genuinely still-running
+    -- instance, has its own coverage under "module-level registry" below.
     local t2 = telemetry.new({ namespace = namespace, persist = true, dir = tmpdir })
     H.eq(t2.report().total_calls, 2, "previous run's counts loaded back")
     t2.wrap(mod)
@@ -1502,6 +1505,58 @@ return function(H)
     local t = telemetry.new({ namespace = namespace, persist = false })
     H.eq(telemetry.get(namespace), t, "instance discoverable by namespace")
     H.ok(#telemetry.instances() > 0, "instances() enumerates")
+  end
+
+  -- PERF-42: a stop()+new() restart cycle for the same namespace -- what
+  -- usage.lua's own M.start()/M.stop() actually do -- must not leave the
+  -- dead instance shadowing the live one in the registry forever.
+  do
+    local namespace = ns("registry_restart")
+    local before = #telemetry.instances()
+
+    local t1 = telemetry.new({ namespace = namespace, persist = false })
+    t1.start()
+    t1.stop()
+
+    local t2 = telemetry.new({ namespace = namespace, persist = false })
+    H.eq(
+      telemetry.get(namespace),
+      t2,
+      "get(): the restart cycle's new instance, not the stopped one, answers for the namespace"
+    )
+    H.eq(
+      #telemetry.instances(),
+      before + 1,
+      "instances(): the stopped instance's own entry was evicted, not left as a duplicate"
+    )
+  end
+
+  -- PERF-42's other half: a namespace with a genuinely still-*running*
+  -- instance must still warn on a second new() -- only a *stopped* prior
+  -- instance is evicted silently, never one still actually live.
+  do
+    local namespace = ns("registry_collision")
+    local t1 = telemetry.new({ namespace = namespace, persist = false })
+    t1.start()
+
+    local warned
+    local orig_vim_notify = vim.notify
+    ---@diagnostic disable-next-line: duplicate-set-field
+    vim.notify = function(msg, level)
+      warned = { msg = msg, level = level }
+    end
+    local t2 = telemetry.new({ namespace = namespace, persist = false })
+    vim.notify = orig_vim_notify
+
+    H.ok(warned ~= nil, "new(): still warns when the existing instance is genuinely running")
+    H.ok(
+      warned.msg:find("already has a live instance", 1, true) ~= nil,
+      "new(): ...with the same message as before"
+    )
+    H.eq(telemetry.get(namespace), t1, "get(): the first, still-running instance is untouched")
+
+    t1.stop()
+    t2.stop()
   end
 
   -- report rendering must not throw on an empty instance

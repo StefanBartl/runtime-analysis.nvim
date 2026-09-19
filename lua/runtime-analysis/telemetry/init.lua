@@ -339,15 +339,26 @@ function M.new(opts)
   local namespace = type(opts.namespace) == "string" and opts.namespace or "unnamed"
 
   -- Two plugins picking the same namespace silently share a cache file and
-  -- produce merged, wrong numbers. Cheap to warn about; invisible otherwise.
-  for _, other in ipairs(instances) do
+  -- produce merged, wrong numbers -- warn about that. A *stopped* prior
+  -- instance for the same namespace is a different case (PERF-42): it is
+  -- invalid as an answer to "which instance owns this namespace" now that
+  -- this call is registering its replacement (the usual way one arises is
+  -- a stop()+new() restart cycle, e.g. usage.lua's M.start()/M.stop(),
+  -- which always creates a fresh instance rather than resuming the old
+  -- object) -- evicted here rather than left to shadow the new instance in
+  -- `M.get`/`M.instances` forever.
+  for i = #instances, 1, -1 do
+    local other = instances[i]
     if other.namespace == namespace then
-      notify.warn(
-        ("namespace %q already has a live instance; both will write the same cache file"):format(
-          namespace
+      if other.is_running() then
+        notify.warn(
+          ("namespace %q already has a live instance; both will write the same cache file"):format(
+            namespace
+          )
         )
-      )
-      break
+      else
+        table.remove(instances, i)
+      end
     end
   end
 

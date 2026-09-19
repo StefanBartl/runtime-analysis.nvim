@@ -128,9 +128,14 @@ persisted counts.
 | `report_file` | `false` | keep this namespace's Markdown report on disk, rewritten at every flush — see "Browser report" |
 | `info` | `{}` | free-form metadata bundled with the report (branch, version, …) — see "Report metadata" below |
 
-A second `new()` with a namespace that already has a live instance **warns** —
-two plugins sharing a namespace would silently merge into one cache file and
-produce wrong numbers, and that failure is otherwise invisible.
+A second `new()` with a namespace that already has a *running* instance
+**warns** — two plugins sharing a namespace would silently merge into one
+cache file and produce wrong numbers, and that failure is otherwise
+invisible. A namespace whose existing instance has already been `stop()`'d
+is a different case — the usual way one arises is a restart cycle (stop the
+old instance, `new()` a fresh one for the same namespace) — and is handled
+silently: the dead instance is dropped from the registry rather than left
+to shadow the new one in `M.get()`/`M.instances()` forever.
 
 ### Scope — whole table, some functions, or one function
 
