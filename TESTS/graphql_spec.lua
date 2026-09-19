@@ -117,7 +117,10 @@ return function(H)
   end
 
   -- resolve: an invalid JSON variables block is a real, named error, not
-  -- a silently empty variables object or a Lua error propagating up.
+  -- a silently empty variables object or a Lua error propagating up. `nil`
+  -- on the first return, matching every other resolver in this pipeline
+  -- (env.resolve, multipart.resolve) -- callers test `if not resolved`, so
+  -- a truthy first return here would make the error unreachable.
   do
     local request = {
       method = "POST",
@@ -126,7 +129,7 @@ return function(H)
       body = "query { viewer { name } }\n\nnot json at all",
     }
     local resolved, err = graphql.resolve(request)
-    eq(resolved, request, "resolve: the original request is returned alongside the error")
+    eq(resolved, nil, "resolve: nil request on error, so `if not resolved` catches it")
     ok(
       err and err:find("not valid JSON", 1, true) ~= nil,
       "resolve: a real error naming what is wrong"
