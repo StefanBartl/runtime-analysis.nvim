@@ -148,6 +148,51 @@ end
 ---on its own.
 M.SNAPSHOT_RETENTION = 20
 
+--- The snapshot format's own version — bumped only if its shape changes.
+M.VERSION = 1
+
+---Re-validate a decoded snapshot's shape before trusting it (SEC-33): a
+---file on disk is untrusted input, whether hand-edited, written by an
+---older/newer schema version, or produced by a future format change —
+---the same posture `telemetry/store.lua`'s own `normalize` already takes
+---for its sibling persisted data. Every field is re-typed rather than
+---handed back as-is; a `modules` entry that is not itself the documented
+---shape is dropped rather than passed through.
+---@internal
+---@param raw any
+---@param prefix string the prefix this snapshot was requested for — `raw.prefix` must match it
+---@return { version: integer, prefix: string, captured_at: integer, modules: table<string, table<string, true>> }|nil
+local function normalize_snapshot(raw, prefix)
+  if type(raw) ~= "table" or raw.version ~= M.VERSION then
+    return nil
+  end
+  if type(raw.prefix) ~= "string" or raw.prefix ~= prefix then
+    return nil
+  end
+
+  local modules = {}
+  if type(raw.modules) == "table" then
+    for module_id, fns in pairs(raw.modules) do
+      if type(module_id) == "string" and type(fns) == "table" then
+        local clean = {}
+        for fn_name, v in pairs(fns) do
+          if type(fn_name) == "string" and v == true then
+            clean[fn_name] = true
+          end
+        end
+        modules[module_id] = clean
+      end
+    end
+  end
+
+  return {
+    version = raw.version,
+    prefix = raw.prefix,
+    captured_at = tonumber(raw.captured_at) or 0,
+    modules = modules,
+  }
+end
+
 ---Capture every currently-loaded module under `prefix` (itself, or
 ---anything beginning `prefix .. "."` — the identical scoping
 ---`runtime-analysis.telemetry`'s own `wrap_loaded(prefix)` already uses,
@@ -184,7 +229,7 @@ function M.snapshot(prefix, name)
   end
 
   local snapshot_name = sanitize(name or tostring(os.date("%Y-%m-%dT%H-%M-%S")))
-  local data = { version = 1, prefix = prefix, captured_at = os.time(), modules = modules }
+  local data = { version = M.VERSION, prefix = prefix, captured_at = os.time(), modules = modules }
   local ok = disk.save(snapshot_cache_key(prefix, snapshot_name), data)
   if not ok then
     return nil
@@ -243,7 +288,7 @@ function M.load_snapshot(prefix, name)
   if not ok or raw == nil then
     return nil
   end
-  return raw
+  return normalize_snapshot(raw, prefix)
 end
 
 ---@internal

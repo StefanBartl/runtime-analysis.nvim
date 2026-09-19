@@ -45,6 +45,17 @@ answering a browser tab has no live `package.loaded` of its own to read,
 so it only ever reads named snapshots — never a "latest" fallback the way
 its Telemetry panel counterpart has one.
 
+**A snapshot on disk is read back as untrusted input.** "Read later, or
+from a different process entirely" cuts both ways: `M.load_snapshot` never
+hands back the raw decoded JSON as-is — every field is re-typed against the
+documented shape, the way `telemetry/store.lua`'s own `normalize` already
+does for its sibling persisted data. A hand-edited file, one written by an
+older or newer schema version, or a `modules` entry with the wrong shape
+degrades to an empty/dropped value instead of reaching a consumer typed as
+if it were well-formed; a version this code does not recognize at all is
+rejected outright (`nil`), the same "never saved" answer as a name that was
+never captured.
+
 - **Module:** `loaded.lua` (`M.snapshot`, `M.list_snapshots`,
   `M.load_snapshot`)
 - **Usercmds:** `:RA loaded snapshot <prefix> [name]`, `:RA loaded
