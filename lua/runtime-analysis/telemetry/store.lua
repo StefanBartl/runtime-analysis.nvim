@@ -85,10 +85,24 @@ end
 
 ---@param namespace string
 ---@param opts? Lib.Cache.Opts
----@return RA.Telemetry.Data
+---@return RA.Telemetry.Data data a well-formed aggregate either way — empty
+---when nothing was ever persisted, *or* when a persisted file exists but
+---failed to decode (ERR-11); check `err` to tell those two apart.
+---@return string? err set only when a persisted file exists but could not
+---be decoded. `disk.load` already backs up the original bytes to
+---`<path>.corrupt` once in that case, so nothing is destroyed by this
+---function itself — but every caller of `M.load` (`inst.flush`, an
+---instance's own startup `base`) is a load-modify-save cycle that then
+---calls `M.save` and overwrites the WHOLE file, so silently treating a
+---decode failure as "nothing was ever recorded" would still reset every
+---count that had accumulated before the corruption, with nothing said
+---about it. A caller that must not do that checks this before merging in.
 function M.load(namespace, opts)
-  local ok, raw = pcall(disk.load, M.cache_key(namespace), opts)
-  return normalize(ok and raw or nil)
+  local ok, raw, err = pcall(disk.load, M.cache_key(namespace), opts)
+  if not ok then
+    return M.empty(), nil
+  end
+  return normalize(raw), err
 end
 
 ---Like `load`, but distinguishes "nothing was ever persisted" from "persisted
@@ -103,13 +117,21 @@ end
 ---graveyard instead of "no data". See `telemetry.load()`.
 ---@param namespace string
 ---@param opts? Lib.Cache.Opts
----@return RA.Telemetry.Data|nil
+---@return RA.Telemetry.Data|nil data
+---@return string? err set only when a persisted file exists but could not
+---be decoded (ERR-11) -- `nil` covers both "never persisted" and "decoded
+---fine", so a caller that only wants the data can still ignore this, but
+---one distinguishing "no data for this namespace" from "data exists and is
+---unreadable" (`:RATelemetry status`, `:checkhealth`) now can.
 function M.load_readonly(namespace, opts)
-  local ok, raw = pcall(disk.load, M.cache_key(namespace), opts)
-  if not ok or raw == nil then
-    return nil
+  local ok, raw, err = pcall(disk.load, M.cache_key(namespace), opts)
+  if not ok then
+    return nil, nil
   end
-  return normalize(raw)
+  if raw == nil then
+    return nil, err
+  end
+  return normalize(raw), nil
 end
 
 ---Where this namespace's counters actually live.
