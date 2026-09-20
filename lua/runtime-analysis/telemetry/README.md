@@ -1008,8 +1008,8 @@ What is stored is a **fingerprint**, never the arguments:
 
 | Value | Stored as |
 | --- | --- |
-| `nil` / boolean / number / short string | the value itself |
-| long string | truncated with an ellipsis marker |
+| `nil` / boolean / number | the value itself |
+| string, any length | `<string:12:050c5d1f>` — byte length plus an 8-hex FNV-1a digest of its first 64 bytes, never the text (a token that fits a size cap is still a token) |
 | table | `<table:#3>` / `<table:map>` — shape, not contents |
 | function / userdata / thread | `<function>` / `<userdata>` / `<thread>` |
 
@@ -1028,8 +1028,8 @@ The output names the pattern rather than leaving you to spot it:
 
 ```
 fs.find_root                12 480 calls
-    └  91 %  ("/repo/lib.nvim")
-    └   6 %  ("/repo/mdview.nvim")
+    └  91 %  <string:14:050c5d1f>
+    └   6 %  <string:17:9a2e41bc>
     └   3 %  <other: 47 distinct>
     ⓘ 91 % of calls share one argument — candidate for memoization (lib.lua.memo.memo / .lru)
 ```
@@ -1210,14 +1210,14 @@ readable fact instead of a count with no shape:
 ```
 net.fetch                    4 200 calls
       3 error(s)
-      ✗  67 %  "connection timed out"
-      ✗  33 %  "DNS resolution failed"
+      ✗  67 %  <string:20:9f3a1e02>
+      ✗  33 %  <string:22:4b7c6d15>
 ```
 
-Fingerprinted the same way an argument is (see the table above — short
-values verbatim, long strings truncated, tables by shape only), so a real
-token or path accidentally embedded in an error message is bounded and
-truncated the identical way a real one would be as an argument. Shares are
+Fingerprinted the same way an argument is (see the table above — every
+string is length plus digest, never the text; tables by shape only), so a
+real token or path accidentally embedded in an error message is never
+stored any more than a real one would be as an argument. Shares are
 computed against the function's own `errors` count, not its total calls —
 "67 % of *errors* were this one" is the readable claim; against total calls
 it would usually round to a number too small to read anything into.

@@ -295,7 +295,7 @@ return function(H)
     H.eq(by_key["bindings.actions.go"].calls, 2, "predicate-selected function counted")
     H.eq(
       by_key["bindings.actions.go"].args[1].fingerprint,
-      '("/repo/x")',
+      fingerprint.of(1, "/repo/x"),
       "and its arguments were fingerprinted"
     )
     H.eq(by_key["core.a"].args, nil, "a key the predicate rejected has no argument profile")
@@ -349,7 +349,21 @@ return function(H)
   H.eq(fingerprint.value({ 1, 2, 3 }), "<table:#3>", "table by shape, not contents")
   H.eq(fingerprint.value({}), "<table:empty>", "empty table")
   H.eq(fingerprint.value(print), "<function>", "function by type")
-  H.ok(#fingerprint.value(("x"):rep(500)) < 60, "long strings truncated rather than stored whole")
+  H.ok(#fingerprint.value(("x"):rep(500)) < 60, "long strings digested rather than stored whole")
+
+  -- SEC-13: a string is never stored as its text, whatever its length -- a
+  -- token that fits a size cap is still a token. A classic GitHub PAT is
+  -- exactly 40 bytes, which is why "short enough to keep verbatim" is not
+  -- a safe rule at any threshold.
+  do
+    local secret = "ghp_0123456789abcdef0123456789abcdef0123"
+    local fp = fingerprint.value(secret)
+    H.eq(fp:find(secret, 1, true), nil, "fingerprint.value: a short string is not stored verbatim")
+    H.eq(fp:find("ghp_", 1, true), nil, "fingerprint.value: not even its prefix")
+    H.eq(fp, fingerprint.value(secret), "fingerprint.value: equal inputs fingerprint equally")
+    H.ok(fp ~= fingerprint.value(secret .. "x"), "fingerprint.value: unequal inputs differ")
+    H.ok(fp:match("^<string:%d+:%x+>$") ~= nil, "fingerprint.value: length plus digest: " .. fp)
+  end
 
   do
     local mod = {
@@ -368,7 +382,11 @@ return function(H)
 
     local entry = t.report().entries[1]
     H.eq(entry.calls, 20, "all calls counted")
-    H.eq(entry.args[1].fingerprint, '("/repo/lib.nvim")', "dominant fingerprint first")
+    H.eq(
+      entry.args[1].fingerprint,
+      fingerprint.of(1, "/repo/lib.nvim"),
+      "dominant fingerprint first"
+    )
     H.eq(entry.args[1].count, 19, "dominant count")
     H.ok(entry.hint ~= nil, "dominant argument produces the memoization hint")
     H.ok(entry.hint:find("memo", 1, true) ~= nil, "hint points at lib.lua.memo")
@@ -643,12 +661,16 @@ return function(H)
     local entry = t.report().entries[1]
     H.eq(entry.errors, 4, "every raised error still counted, same as before this existed")
     H.ok(entry.error_fp ~= nil, "distinct error messages are fingerprinted")
-    H.eq(entry.error_fp[1].fingerprint, '"connection timed out"', "dominant error message first")
+    H.eq(
+      entry.error_fp[1].fingerprint,
+      fingerprint.value("connection timed out"),
+      "dominant error message first"
+    )
     H.eq(entry.error_fp[1].count, 3, "dominant error's own count")
     H.eq(entry.error_fp[1].share, 3 / 4, "share computed against errors, not total calls")
     H.eq(
       entry.error_fp[2].fingerprint,
-      '"not found"',
+      fingerprint.value("not found"),
       "the other distinct error also fingerprinted"
     )
     H.eq(entry.error_fp[2].count, 1, "... with its own real count")
@@ -738,7 +760,7 @@ return function(H)
 
     local on_disk = store.load(namespace, { dir = tmpdir })
     H.eq(
-      on_disk.functions.f.error_fp.values['"disk full"'],
+      on_disk.functions.f.error_fp.values[fingerprint.value("disk full")],
       1,
       "error fingerprint reached the disk"
     )
@@ -751,7 +773,9 @@ return function(H)
     t2.unwrap()
 
     H.eq(
-      store.load(namespace, { dir = tmpdir }).functions.f.error_fp.values['"disk full"'],
+      store.load(namespace, { dir = tmpdir }).functions.f.error_fp.values[fingerprint.value(
+        "disk full"
+      )],
       2,
       "error fingerprint counts merged across sessions, not overwritten"
     )

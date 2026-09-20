@@ -3,55 +3,49 @@
 ---
 --- Deliberately NOT a serializer. Argument profiling exists to answer "do most
 --- calls pass the same thing?", and that question is answerable from a shape
---- plus a truncated scalar. Storing the real values would mean writing file
---- paths, buffer contents and possibly tokens into `stdpath("cache")` — a
---- profiler that does that is a security bug wearing a feature's name.
+--- plus a digest. Storing the real values would mean writing file paths,
+--- buffer contents and possibly tokens into `stdpath("cache")` — a profiler
+--- that does that is a security bug wearing a feature's name.
 ---
 --- Rules (see lua/runtime-analysis/telemetry/README.md, "Argument profiling, done honestly"):
----   nil/boolean/number/short string -> the value itself
----   long string                     -> truncated with an ellipsis marker
+---   nil/boolean/number              -> the value itself
+---   string                          -> "<string:len:digest>" (never the text)
 ---   table                           -> "<table:n=3>" (shape, not contents)
 ---   function/userdata/thread        -> "<function>" / "<userdata>" / "<thread>"
 
+local bit = require("bit")
+
 local M = {}
 
---- Longer than this and a string is truncated. 40 keeps a typical project path
---- recognizable ("/home/u/repos/lib.nvi…") while bounding the stored size.
-local MAX_STRING = 40
+--- Only this many leading bytes go into a string's digest; a buffer's worth
+--- of text would otherwise be hashed on every profiled call. Kept small and
+--- close to the old (pre-SEC-13) 40-byte cap on purpose: this module is on
+--- the hot path whenever telemetry is running (see
+--- runtime-analysis.telemetry.registry, which fingerprints every argument of
+--- every wrapped call when a subscriber sets args=true), and "never store
+--- the text" -- the property SEC-13 actually requires -- does not depend on
+--- how many leading bytes get folded into the digest.
+local DIGEST_BYTES = 64
 
 --- Beyond this many arguments the tail is summarized rather than described;
 --- variadic call sites otherwise produce one distinct fingerprint per arity.
 local MAX_ARGS = 4
 
----Byte length `<= max_len` that still lands on a UTF-8 character boundary.
----
----`v:sub(1, MAX_STRING)` alone cuts by byte count, and a call argument is not
----guaranteed to have an ASCII byte sitting exactly at that offset — a project
----path with a non-ASCII directory name, a docstring, anything outside 7-bit
----ASCII. Cutting mid-character writes an invalid UTF-8 continuation byte into
----the stored fingerprint, which then sits in `stdpath("cache")` as a string
----no JSON/Markdown reader downstream can round-trip correctly. Found exactly
----this way: a real telemetry file for documentation.nvim, argument text
----containing "→" (U+2192, 3 bytes), split after its first byte.
----
----A byte is a UTF-8 continuation byte iff its top two bits are `10`
----(`0x80`-`0xBF`). Walking backward from `max_len` until the byte *after* the
----cut is not a continuation byte finds the nearest boundary at or before it —
----so this only ever shortens the truncation, never lengthens it past
----`max_len`.
+---@internal
+---32-bit FNV-1a over the first `DIGEST_BYTES` of `s`, as 8 hex digits. Not a
+---security hash: it only has to keep equal inputs equal and unequal inputs
+---mostly apart, without keeping the input.
 ---@param s string
----@param max_len integer
----@return integer
-local function utf8_boundary(s, max_len)
-  local k = max_len
-  while k > 0 do
-    local b = s:byte(k + 1)
-    if not b or b < 0x80 or b >= 0xC0 then
-      break
-    end
-    k = k - 1
+---@return string
+local function digest(s)
+  local h = 2166136261
+  for i = 1, math.min(#s, DIGEST_BYTES) do
+    h = bit.bxor(h, s:byte(i))
+    -- The FNV prime 16777619 is 2^24 + 403, split so no intermediate value
+    -- leaves the range LuaJIT's bit operations accept.
+    h = bit.tobit(bit.lshift(h, 24) + h * 403)
   end
-  return k
+  return bit.tohex(h, 8)
 end
 
 ---@param v any
@@ -64,10 +58,11 @@ function M.value(v)
   elseif t == "boolean" or t == "number" then
     return tostring(v)
   elseif t == "string" then
-    if #v <= MAX_STRING then
-      return ("%q"):format(v)
-    end
-    return ("%q…"):format(v:sub(1, utf8_boundary(v, MAX_STRING)))
+    -- Never the text, at any length: a path, a buffer line or a token that
+    -- happens to fit a size cap would otherwise be stored verbatim and end
+    -- up in `stdpath("cache")`. Length plus a short digest still answers
+    -- "do most calls pass the same thing?" without keeping the thing.
+    return ("<string:%d:%s>"):format(#v, digest(v))
   elseif t == "table" then
     -- Shape only. `#v` is cheap; a full pair count on a large table is not,
     -- and this runs on every profiled call.
@@ -102,7 +97,7 @@ function M.of(n, ...)
   return "(" .. table.concat(parts, ", ") .. ")"
 end
 
-M.MAX_STRING = MAX_STRING
+M.DIGEST_BYTES = DIGEST_BYTES
 M.MAX_ARGS = MAX_ARGS
 
 return M
