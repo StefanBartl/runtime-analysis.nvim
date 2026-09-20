@@ -56,20 +56,20 @@ enough times for its numbers to survive being read.
 Start at [docs/README.md](docs/README.md), which says what is where and which
 question each page answers.
 
-**The Basics**
+### The Basics
 
 - [Requirements](docs/installation.md#requirements) — Neovim version, required plugins and CLI tools.
 - [Installation](docs/installation.md) — five package managers, what lib.nvim is used for.
 - [Quickstart](docs/quickstart.md) — the first thing to run after installing.
 
-**Configuration**
+### Configuration
 
 - [All options](docs/configuration.md) — all five `setup()` keys and their defaults.
 - [Command reference](docs/commands.md) — every command and argument, with the reasoning.
 - [Statusline](docs/statusline.md) — the one-glyph health light, for lualine, heirline, the native statusline or ui.nvim.
 - [Bindings cheatsheet](docs/BINDINGS.md) — commands and autocommands at a glance. There are no keymaps.
 
-**The Rest**
+### The Rest
 
 - [Features](docs/FEATURES/README.md) — one page per area: [requests](docs/FEATURES/REQUESTS.md), [telemetry](docs/FEATURES/TELEMETRY.md), [the loaded-module view](docs/FEATURES/LOADED.md), [stall detection](docs/FEATURES/STARTUP.md), [benchmarking](docs/FEATURES/BENCH.md), and [the static × runtime join](docs/FEATURES/README.md#the-static--runtime-join) with documentation.nvim and docmap-desktop.
 - [Lua API](docs/api.md) — what another plugin may call, and what is deliberately not API.
