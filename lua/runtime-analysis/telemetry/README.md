@@ -35,7 +35,7 @@ When it *is* on:
 | --- | --- | ---: |
 | Counting | one table index + one integer add | **~0.01 µs** |
 | + timing | two `vim.uv.hrtime()` reads | ~0.2–0.4 µs |
-| + argument profiling | one fingerprint computation | ~0.6–0.7 µs |
+| + argument profiling | one fingerprint computation | ~0.8–0.9 µs |
 | + `call_tree` | one `debug.getinfo(2, "Sl")` call | ~0.3–0.5 µs (counting + this) |
 | `errors` / `outermost_only` | one `pcall` (the call must return through us even when it raises) | ~0.3 µs (the unconditional `pcall` tax alone, not counting a raise) |
 | `errors`, on an actual raise | + one fingerprint of the error value | — (only paid on the already-rare, already-`pcall`'d failure path; the success path above is unaffected) |
