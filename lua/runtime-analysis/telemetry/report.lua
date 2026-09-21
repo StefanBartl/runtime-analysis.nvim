@@ -704,7 +704,7 @@ local MAX_NS_W = 30
 ---one has not collected anything since August. Answers to a comparative
 ---question have to line up in columns; four lines of prose per namespace is
 ---the same data in the one shape that cannot be scanned. The shape is
----deliberately reposcope.nvim's `:Reposcope status` — same two-space gutter,
+---deliberately reposcope.nvim's `:Reposcope dashboard` — same two-space gutter,
 ---same heading row, same `<CR>`-the-row-under-the-cursor — because a reader
 ---moving between two overviews from the same ecosystem should not have to
 ---learn two tables.

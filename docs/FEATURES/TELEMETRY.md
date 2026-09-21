@@ -42,7 +42,7 @@ namespace (state, mode, wrapped/call/session counts, size on disk, start
 date) closed by a fleet summary, not the bare `report` view's full
 per-function breakdown for every live instance at once. The question is
 comparative, so the answer is columns; the shape is deliberately
-reposcope.nvim's `:Reposcope status`, down to the gutter and the winbar key
+reposcope.nvim's `:Reposcope dashboard`, down to the gutter and the winbar key
 legend, so two overviews from one ecosystem need learning only once. It
 covers a namespace that recorded last week and has simply not loaded yet
 this session too, not only this process's live instances:
