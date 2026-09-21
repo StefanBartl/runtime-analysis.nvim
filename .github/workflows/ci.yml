@@ -8,6 +8,7 @@ on:
 jobs:
   stylua:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
       - uses: JohnnyMorganz/stylua-action@v4
@@ -18,6 +19,7 @@ jobs:
 
   luacheck:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
       - uses: leafo/gh-actions-lua@v10
@@ -30,6 +32,7 @@ jobs:
   tests:
     name: tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     strategy:
       # One platform failing must not cancel the others: which of the three
       # broke is the whole information content of this job.
@@ -55,7 +58,15 @@ jobs:
         with:
           neovim: true
           version: stable
-      - run: nvim --headless -u NONE -l TESTS/run.lua
+      - run: |
+          exec > >(tee -a "$RUNNER_TEMP/test-output.log") 2>&1
+          nvim -n -i NONE --headless -u NONE -l TESTS/run.lua
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-output-tests-${{ matrix.os }}
+          path: ${{ runner.temp }}/test-output.log
+          if-no-files-found: ignore
 
   # Housekeeping: scripts/gen_map.lua + documentation.nvim as a dev dependency,
   # adopted per that project's own docs/REUSE.md.
@@ -67,6 +78,7 @@ jobs:
   # The pre-commit hook in scripts/hooks/ still catches it locally (opt-in).
   map:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: write
     steps:
@@ -99,15 +111,18 @@ jobs:
           neovim: true
           version: stable
       - name: Regenerate the module map
-        run: nvim --headless -l scripts/gen_map.lua
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/test-output.log") 2>&1
+          nvim -n -i NONE --headless -l scripts/gen_map.lua
       - name: Verify (PR) or commit the regenerated map (push to main)
         run: |
+          exec > >(tee -a "$RUNNER_TEMP/test-output.log") 2>&1
           if git diff --quiet; then
             echo "module map is up to date"
             exit 0
           fi
           if [ "${{ github.event_name }}" != "push" ] || [ "${{ github.ref_name }}" != "main" ]; then
-            echo "::error::module map is stale — run 'nvim --headless -l scripts/gen_map.lua' and commit the result"
+            echo "::error::module map is stale — run 'nvim -n -i NONE --headless -l scripts/gen_map.lua' and commit the result"
             git --no-pager diff --stat
             exit 1
           fi
@@ -115,6 +130,12 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -am "docs(map): regenerate module map [skip ci]"
           git push
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-output-map
+          path: ${{ runner.temp }}/test-output.log
+          if-no-files-found: ignore
 
   # See lib.nvim's templates/README.md ("Pinning lib.nvim in CI") for why:
   # ci-verified only moves once stylua+luacheck+tests are green here, so
@@ -127,6 +148,7 @@ jobs:
     needs: [stylua, luacheck, tests]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: write
     steps:
