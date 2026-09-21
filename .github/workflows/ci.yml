@@ -96,6 +96,7 @@ jobs:
         with:
           repository: StefanBartl/documentation.nvim
           path: .deps/documentation.nvim
+          ref: ci-verified
       # gen_map.lua's `siblings` table resolves external-link *shape*
       # (`…/autocmd/init.lua` vs the flat `…/autocmd.lua`) against a real
       # checkout at `../<repo>`. Without these, every cross-repo link in the
