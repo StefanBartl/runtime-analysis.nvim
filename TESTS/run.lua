@@ -1,7 +1,7 @@
 -- TESTS/run.lua — headless test runner for runtime-analysis.nvim.
 --
 -- Run from the repo root:
---   nvim --headless -u NONE -l TESTS/run.lua
+--   nvim -n -i NONE --headless -u NONE -l TESTS/run.lua
 --
 -- Loads every *_spec.lua listed below, runs it against the shared harness,
 -- prints a per-spec result, and exits non-zero on the first failing spec.
