@@ -245,18 +245,23 @@ local function in_scope(name, fn, opts)
   return true
 end
 
----`true` (everything) / a name list / a predicate / nil.
+---`true` (everything) / a name list / a predicate / nil / false.
 ---
 ---The predicate form exists because `wrap_loaded()` produces long, structured
 ---keys (`bindings.actions.next_heading`), and "profile everything under
 ---`core.`" is then a one-liner instead of a list that goes stale the moment a
 ---module gains a function.
+---
+---`false` and `nil` are the same "off" here -- a caller being explicit about
+---not wanting a mode (`inst.start({ profile_args = false })`, mirroring how
+---`true` asks for it) must not behave any differently than one who simply
+---omitted the field.
 ---@internal
----@param spec string[]|true|fun(key: string): boolean|nil
+---@param spec string[]|true|false|fun(key: string): boolean|nil
 ---@param key string
 ---@return boolean
 local function selected(spec, key)
-  if spec == nil then
+  if spec == nil or spec == false then
     return false
   end
   if spec == true then

@@ -636,6 +636,34 @@ return function(H)
   end
 
   -- -------------------------------------------------------------------------
+  -- start({ profile_args = false, ... }) — explicit `false` must mean the
+  -- same "off" that omitting the field does, not crash. A caller being
+  -- explicit about not wanting a mode (the natural counterpart to passing
+  -- `true`) is a completely ordinary thing to write.
+  -- -------------------------------------------------------------------------
+  do
+    local mod = { f = function() end }
+    local t = telemetry.new({ namespace = ns("start_explicit_false"), persist = false })
+    t.wrap(mod)
+
+    local ok = pcall(function()
+      t.start({ profile_args = false, time = false, errors = false, call_tree = false })
+    end)
+    H.eq(ok, true, "start() with explicit false modes does not error")
+
+    mod.f()
+    local rep = t.report()
+    H.eq(rep.modes.args, false, "profile_args=false left argument profiling off")
+    H.eq(rep.modes.timing, false, "time=false left timing off")
+    H.eq(rep.modes.errors, false, "errors=false left error counting off")
+    H.eq(rep.modes.call_tree, false, "call_tree=false left caller recording off")
+    H.eq(rep.total_calls, 1, "counting itself is unaffected — off only scopes the extra modes")
+
+    t.stop()
+    t.unwrap()
+  end
+
+  -- -------------------------------------------------------------------------
   -- error fingerprinting: the same bounded-cardinality
   -- machinery `profile_args` already uses, pointed at the raised error's own
   -- value instead of the call's arguments.
@@ -1892,6 +1920,45 @@ return function(H)
 
     ta.unwrap()
     tb.unwrap()
+  end
+
+  -- -------------------------------------------------------------------------
+  -- :RATelemetry full lib.nvim — lib.nvim's own aggregate never enters
+  -- `telemetry.lazy.candidates()` (it is wired through
+  -- `lib.strategies.telemetry_wrap`, a separate mechanism entirely — see
+  -- `telemetry.lazy`'s own module doc-comment), so `do_setup_all` handles it
+  -- as a dedicated branch rather than falling through the ordinary
+  -- plugins/extra candidates loop. This exercises that branch directly
+  -- against a live "lib.nvim" instance, without going through the real
+  -- lib.nvim bridge — `do_setup_all` only ever looks the namespace up via
+  -- `telemetry.get("lib.nvim")` and calls `.start()` on it.
+  -- -------------------------------------------------------------------------
+  do
+    require("runtime-analysis.telemetry.command").setup()
+
+    local mod_lib = { f = function() end }
+    local lib_inst = telemetry.new({ namespace = "lib.nvim", persist = false })
+    lib_inst.wrap(mod_lib)
+    lib_inst.start() -- plain: neither arguments nor timing, matching lib.nvim's own default policy
+    mod_lib.f()
+
+    H.eq(lib_inst.report().modes.args, false, "lib.nvim starts without argument profiling here")
+    H.eq(lib_inst.report().modes.timing, false, "lib.nvim starts without timing here")
+
+    vim.cmd("RATelemetry full lib.nvim")
+
+    H.eq(lib_inst.report().modes.args, true, ":RATelemetry full lib.nvim forces arguments on")
+    H.eq(lib_inst.report().modes.timing, true, ":RATelemetry full lib.nvim forces timing on")
+
+    -- `:RATelemetry setup lib.nvim` (non-full) has no meaning for lib.nvim —
+    -- its own configured policy already applies from the moment it is
+    -- wrapped — so it warns rather than silently doing nothing.
+    local ok_setup = pcall(function()
+      vim.cmd("RATelemetry setup lib.nvim")
+    end)
+    H.eq(ok_setup, true, "`setup lib.nvim` (non-full) warns rather than erroring")
+
+    lib_inst.unwrap()
   end
 
   -- -------------------------------------------------------------------------

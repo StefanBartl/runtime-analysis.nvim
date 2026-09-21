@@ -51,11 +51,14 @@
 --- Each field takes a key list, `true` for everything, or a predicate over the
 --- key — the predicate form matters once `wrap_loaded()` produces structured
 --- keys, where "everything under `core.`" is a one-liner but a list is not.
+--- `false` is accepted and means the same "off" omitting the field does —
+--- being explicit about not wanting a mode must not behave any differently
+--- than leaving it out.
 ---@class RA.Telemetry.StartOpts
----@field profile_args? string[]|true|fun(key: string): boolean  # argument fingerprinting
----@field time? string[]|true|fun(key: string): boolean          # duration measurement
----@field errors? string[]|true|fun(key: string): boolean        # count raised errors
----@field call_tree? string[]|true|fun(key: string): boolean     # immediate-caller recording
+---@field profile_args? string[]|true|false|fun(key: string): boolean  # argument fingerprinting
+---@field time? string[]|true|false|fun(key: string): boolean          # duration measurement
+---@field errors? string[]|true|false|fun(key: string): boolean        # count raised errors
+---@field call_tree? string[]|true|false|fun(key: string): boolean     # immediate-caller recording
 
 ---@class RA.Telemetry.ReportOpts
 ---@field sort? "calls"|"name"|"time"  # default "calls"

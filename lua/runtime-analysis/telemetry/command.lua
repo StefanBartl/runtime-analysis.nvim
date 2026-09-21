@@ -62,7 +62,11 @@
 ---                                configured target, or just one. Same
 ---                                operation as :RATelemetrySetupAll, with a
 ---                                namespace to narrow it
----   :RATelemetry full [ns]       same, forcing arguments + timing on
+---   :RATelemetry full [ns]       same, forcing arguments + timing on --
+---                                `ns = "lib.nvim"` (or bare, fleet-wide) also
+---                                reaches lib.nvim's own aggregate, which sits
+---                                outside every other target's candidate list
+---                                (see `do_setup_all`'s own doc-comment)
 ---
 --- `setup`/`full` are the forms that reach a target no plugin manager can
 --- resolve -- above all the reader's OWN Neovim config, declared as
@@ -106,7 +110,22 @@
 ---                                for every plugin regardless of its own
 ---                                configured policy — the `setup_all`
 ---                                equivalent of `:DocMap full`'s LuaLS
----                                enrichment: more expensive, on request only
+---                                enrichment: more expensive, on request only.
+---                                Also upgrades lib.nvim's own aggregate, if
+---                                a live instance already exists — see
+---                                `do_setup_all`'s own doc-comment for why
+---                                that needs separate handling from every
+---                                other target here. Only reaches what is
+---                                already loaded/running AT THIS MOMENT — a
+---                                plugin that lazy-loads afterward gets
+---                                wrapped by the ordinary `User LazyLoad`
+---                                path instead, under ITS OWN configured
+---                                policy, not forced full. Configure
+---                                `timing = true` (and `lib_profile_args`/
+---                                the lib.nvim `timing` field) as the actual
+---                                DEFAULT policy instead of relying on this
+---                                command if every plugin should always come
+---                                up in full mode, regardless of load order.
 
 local usercmd = require("lib.nvim.bindings.usercmd")
 local expand_path = require("lib.nvim.cross.fs.expand_path")
@@ -256,17 +275,24 @@ end
 ---set from "has a live instance" (an `extra` target declared but not yet
 ---wrapped is a candidate with no instance). `pcall`ed: without lazy.nvim
 ---there are no candidates, which is a shorter completion list, not an error.
+---
+---`lib.nvim` is appended separately when configured — it never appears in
+---`candidates()` itself (see `do_setup_all`'s own `namespace == "lib.nvim"`
+---branch for why), but `:RATelemetry full lib.nvim` is a real, supported
+---target and deserves to complete like every other one.
 ---@return string[]
 local function candidate_namespaces()
-  local ok, candidates = pcall(function()
-    return require("runtime-analysis.telemetry.lazy").candidates()
-  end)
+  local ok, lazy_mod = pcall(require, "runtime-analysis.telemetry.lazy")
   if not ok then
     return {}
   end
   local out = {}
-  for _, candidate in ipairs(candidates) do
+  for _, candidate in ipairs(lazy_mod.candidates()) do
     out[#out + 1] = candidate.namespace
+  end
+  local configured = lazy_mod.configured()
+  if configured and configured.lib_nvim then
+    out[#out + 1] = "lib.nvim"
   end
   table.sort(out)
   return out
@@ -675,6 +701,37 @@ end
 ---otherwise identical, so both forms share this one function rather than
 ---growing a second near-copy of it.
 local function do_setup_all(full, namespace)
+  local mod = telemetry()
+
+  -- lib.nvim's aggregate is wired through its own `wrap_lib_nvim` path
+  -- (`telemetry.lazy`'s own module doc-comment) and therefore never appears
+  -- in `telemetry.lazy.candidates()` below -- the candidates loop can only
+  -- ever see `opts.telemetry.plugins`/`.extra` targets. `:RATelemetry full
+  -- lib.nvim` is handled directly here instead of falling through to that
+  -- loop, which would otherwise reject it as "not a configured,
+  -- currently-loaded target" even though it plainly is one.
+  if namespace == "lib.nvim" then
+    if not full then
+      notify.warn(
+        "lib.nvim has no `setup` form -- its own configured policy "
+          .. "(opts.telemetry.lib_nvim) already applies from the moment it is wrapped; "
+          .. "only `:RATelemetry full lib.nvim` (forcing arguments + timing on) is supported"
+      )
+      return
+    end
+    local inst = mod.get("lib.nvim")
+    if not inst then
+      notify.warn("lib.nvim has no live telemetry instance yet -- nothing to force full on")
+      return
+    end
+    -- `inst.start` is a sticky OR (see `init.lua`'s own doc-comment on
+    -- `inst.start`) -- this only ever turns profile_args/timing ON, never
+    -- off, regardless of what was already running.
+    inst.start({ profile_args = true, time = true })
+    notify.info("forced lib.nvim to full: arguments + timing")
+    return
+  end
+
   local lazy_adapter = require("runtime-analysis.telemetry.lazy")
   local candidates = lazy_adapter.candidates()
   if namespace and namespace ~= "" then
@@ -689,7 +746,15 @@ local function do_setup_all(full, namespace)
       return
     end
   end
-  if #candidates == 0 then
+
+  -- Fleet-wide (`namespace == nil`) `full` runs reach lib.nvim too, the same
+  -- way the explicit `namespace == "lib.nvim"` branch above does -- computed
+  -- here rather than folded into the `#candidates == 0` check right below,
+  -- which must stay about `plugins`/`extra` targets only (a namespace-scoped
+  -- run for anything other than "lib.nvim" has no business with it).
+  local lib_inst = (full and not namespace) and mod.get("lib.nvim") or nil
+
+  if #candidates == 0 and not lib_inst then
     notify.warn(
       "no configured plugin or extra target is loaded yet -- nothing to set up "
         .. "(see opts.telemetry.plugins / opts.telemetry.extra passed to runtime-analysis.setup())"
@@ -697,7 +762,6 @@ local function do_setup_all(full, namespace)
     return
   end
 
-  local mod = telemetry()
   local any_existing = false
   for _, c in ipairs(candidates) do
     -- `c.settings.dir`, not `load`'s own default: a target with a custom
@@ -726,6 +790,12 @@ local function do_setup_all(full, namespace)
       namespace = namespace,
     })
 
+    -- Same sticky-OR reasoning as the `namespace == "lib.nvim"` branch above
+    -- -- only ever raises what is already running.
+    if lib_inst then
+      lib_inst.start({ profile_args = true, time = true })
+    end
+
     local backed_up = 0
     for _, r in ipairs(results) do
       if r.backed_up then
@@ -737,8 +807,9 @@ local function do_setup_all(full, namespace)
     -- reader's own config, which is not a plugin and reads as a mistake if
     -- called one.
     notify.info(
-      ("set up %d target(s) (%s)%s"):format(
+      ("set up %d target(s)%s (%s)%s"):format(
         #results,
+        lib_inst and " + lib.nvim" or "",
         full and "full: deep + arguments + timing" or "each target's own configured policy",
         backed_up > 0 and (", backed up %d with existing data to %s"):format(backed_up, backup_dir)
           or ""
