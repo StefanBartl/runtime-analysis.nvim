@@ -48,8 +48,8 @@ The architecture behind all of it —
 — **is not in this repository.** One document describes all four pieces
 (`lib.nvim`, documentation.nvim, this plugin, `mdview.nvim`), so the other
 three link to it rather than keeping a copy. The same is true of the queue:
-what gets built next lives in one plan for all three repositories,
-[docmap-desktop/docs/PLAN.md](https://github.com/StefanBartl/docmap-desktop/blob/main/docs/PLAN.md).
+what gets built next lives in one plan for all three repositories, kept in
+the author's working notes outside the repositories.
 
 ## The catalog
 
