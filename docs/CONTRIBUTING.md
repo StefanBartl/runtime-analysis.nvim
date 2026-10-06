@@ -100,8 +100,19 @@ lazy-loaded dev copy will look broken for exactly that reason.
 `TESTS/` is a headless spec suite.
 
 ```
-nvim --headless -u NONE -l TESTS/run.lua
+bash scripts/test.sh                  # every spec
+bash scripts/test.sh --file config    # only spec files whose name contains "config"
+bash scripts/test.sh --json ir.json   # also write the machine-readable result
 ```
+
+The specs run on [testing.nvim](https://github.com/StefanBartl/testing.nvim)
+(configured in `.testing.lua`), using `TESTS/harness.lua` as their helper API.
+The script finds testing.nvim and lib.nvim via `$TESTING_NVIM_DIR` /
+`$LIB_NVIM_DIR`, `.deps/<name>`, a sibling checkout or the plugin manager's
+install, and exits 1 when one is missing. A lib.nvim checkout must be recent
+enough to contain `lib.nvim.fs.write.atomic`. `TESTS/run.lua` is kept as the
+manifest of the spec order and as a runner-free fallback
+(`nvim --headless -u NONE -l TESTS/run.lua`).
 
 Exit 0 is a pass. [GitHub Actions](../.github/workflows/ci.yml) runs it plus
 luacheck, regenerates the module map, and force-pushes `ci-verified` to the
