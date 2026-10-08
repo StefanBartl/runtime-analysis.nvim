@@ -60,6 +60,7 @@ local list = require("lib.nvim.ui.list")
 -- always reflects whatever `runtime-analysis.env`'s files say *right now*,
 -- not a list frozen when `setup()` first ran.
 composer.register_type("RA_ENV_NAME", {
+  desc = "Environment to select (omit to pick from a list)",
   validate = function(raw)
     return true, raw, nil
   end,
@@ -76,6 +77,7 @@ composer.register_type("RA_ENV_NAME", {
 -- for the identical reason `RA_ENV_NAME` above reads `list_names()` live
 -- rather than a list frozen when `setup()` ran.
 composer.register_type("RA_LOADED_MODULE", {
+  desc = "Module id from package.loaded, e.g. lib.nvim.notify",
   validate = function(raw)
     return true, raw, nil
   end,
@@ -110,6 +112,7 @@ composer.register_type("RA_LOADED_MODULE", {
 -- tables are the way down to one, so completing `lib.nvim` then `.` then Tab
 -- walks the tree a level at a time.
 composer.register_type("RA_PROVENANCE_PATH", {
+  desc = "Dotted path to a function, e.g. vim.notify",
   -- Soft on purpose. `provenance.inspect` already distinguishes "no dot in the
   -- path", "container does not resolve", "no such field" and "that field is a
   -- table, not a function" — four specific, actionable messages. Validating
@@ -1079,8 +1082,13 @@ function M.setup(ra)
         path = { "loaded", "snapshot" },
         desc = "Persist a loaded-vs-declared snapshot for <prefix>",
         args = {
-          { name = "prefix", type = "STRING" },
-          { name = "name", type = "STRING", optional = true },
+          { name = "prefix", type = "STRING", desc = "Module prefix to snapshot, e.g. lib.nvim" },
+          {
+            name = "name",
+            type = "STRING",
+            optional = true,
+            desc = "Snapshot name (default: a timestamp)",
+          },
         },
         run = function(ctx)
           do_loaded_snapshot(ctx.args.prefix, ctx.args.name)
@@ -1089,7 +1097,13 @@ function M.setup(ra)
       {
         path = { "loaded", "snapshots" },
         desc = "List saved loaded snapshots for <prefix>",
-        args = { { name = "prefix", type = "STRING" } },
+        args = {
+          {
+            name = "prefix",
+            type = "STRING",
+            desc = "Module prefix whose saved snapshots are listed",
+          },
+        },
         run = function(ctx)
           do_loaded_snapshots(ctx.args.prefix)
         end,

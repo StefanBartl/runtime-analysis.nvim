@@ -53,6 +53,7 @@ local specs = {
   "view_spec.lua",
   "init_spec.lua",
   "usrcmds_spec.lua",
+  "usrcmds_help_spec.lua",
   "history_spec.lua",
   "env_spec.lua",
   "curl_spec.lua",
