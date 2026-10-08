@@ -144,12 +144,18 @@ function M.show(lines, opts)
   -- to apply across the whole buffer even though the preamble is not JSON —
   -- it folds purely on leading whitespace, and the unindented status/header
   -- lines simply never fold (fold level 0), so nothing there is affected.
+  --
+  -- `[0]` is :setlocal on purpose: a plain `vim.wo[winid].<opt>` has :set
+  -- semantics (these options are not global-local) and would also rewrite the
+  -- window's default value, which every buffer first shown in this split later
+  -- inherits -- a file :edit-ed into the response window would start with the
+  -- response's folding.
   if opts.is_json then
-    vim.wo[winid].foldmethod = "indent"
-    vim.wo[winid].foldenable = true
+    vim.wo[winid][0].foldmethod = "indent"
+    vim.wo[winid][0].foldenable = true
   else
-    vim.wo[winid].foldmethod = "manual"
-    vim.wo[winid].foldenable = false
+    vim.wo[winid][0].foldmethod = "manual"
+    vim.wo[winid][0].foldenable = false
   end
 
   vim.api.nvim_set_current_win(origin)
