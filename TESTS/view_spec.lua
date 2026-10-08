@@ -243,4 +243,65 @@ return function(H)
       vim.api.nvim_win_close(fallback_winid, true)
     end
   end
+
+  -- The fold options set for the response window must stay window-LOCAL.
+  -- `vim.wo[winid].x = v` has `:set` semantics and also rewrites the window's
+  -- default ("allbuf") value, which every buffer first shown in that window
+  -- inherits -- a later `:edit` in the response split would pick up the
+  -- response's folding. `vim.go.*` read inside the window is that default.
+  do
+    local function default_folds(win)
+      return vim.api.nvim_win_call(win, function()
+        return vim.go.foldmethod .. "/" .. tostring(vim.go.foldenable)
+      end)
+    end
+
+    -- The harness runs with the shipped defaults; make the window default
+    -- something no response folding equals, so a leak cannot hide behind it.
+    local saved_fm, saved_fe = vim.go.foldmethod, vim.go.foldenable
+    vim.go.foldmethod, vim.go.foldenable = "expr", true
+    local before = default_folds(origin)
+
+    local done, err = pcall(function()
+      for _, is_json in ipairs({ true, false }) do
+        view.show({ "200 OK", "", "body" }, { split = "vsplit", body_start = 3, is_json = is_json })
+        local resp = vim.fn.bufnr("runtime-analysis://response")
+        local win
+        for _, w in ipairs(vim.api.nvim_list_wins()) do
+          if vim.api.nvim_win_get_buf(w) == resp then
+            win = w
+          end
+        end
+        ok(
+          win ~= nil,
+          "view.show: a window shows the response (is_json=" .. tostring(is_json) .. ")"
+        )
+        eq(
+          default_folds(win),
+          before,
+          "view.show: fold options are window-local (is_json=" .. tostring(is_json) .. ")"
+        )
+
+        -- a buffer first shown in the response window must not inherit the response's folding
+        vim.api.nvim_set_current_win(win)
+        vim.cmd("enew")
+        eq(
+          vim.wo.foldmethod .. "/" .. tostring(vim.wo.foldenable),
+          before,
+          "view.show: a buffer later opened in the response window starts with the default folding"
+        )
+        vim.cmd("bwipeout!")
+        vim.api.nvim_set_current_win(origin)
+        if vim.api.nvim_win_is_valid(win) then
+          vim.api.nvim_win_close(win, true)
+        end
+      end
+    end)
+
+    -- Restore, also when an assertion above failed.
+    vim.go.foldmethod, vim.go.foldenable = saved_fm, saved_fe
+    if not done then
+      error(err, 0)
+    end
+  end
 end
