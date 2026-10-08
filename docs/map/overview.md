@@ -94,30 +94,27 @@ flowchart LR
 
 ## Drift
 
-0 errors · 8 warnings · 6 info
+0 errors · 8 warnings · 3 info
 
 | Severity | Check | Message |
 |---|---|---|
-| warn | `sibling-reference-missing` | docs/IDEAS.md references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
-| warn | `sibling-reference-missing` | docs/FEATURES/README.md references 'documentation.nvim/docs/FEATURES_FORMAT.md', which does not exist in the documentation.nvim checkout |
-| warn | `sibling-reference-missing` | docs/FEATURE_LOG.md references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
-| warn | `sibling-reference-missing` | lua/runtime-analysis/telemetry/README.md references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
-| warn | `sibling-reference-missing` | docs/FEATURES/README.md references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
 | warn | `sibling-reference-missing` | docs/api.md references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
+| warn | `sibling-reference-missing` | docs/IDEAS.md references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
+| warn | `sibling-reference-missing` | lua/runtime-analysis/telemetry/README.md references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
+| warn | `sibling-reference-missing` | docs/FEATURE_LOG.md references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
+| warn | `sibling-reference-missing` | docs/FEATURES/README.md references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
+| warn | `sibling-reference-missing` | docs/FEATURES/README.md references 'documentation.nvim/docs/FEATURES_FORMAT.md', which does not exist in the documentation.nvim checkout |
 | warn | `sibling-reference-missing` | lua/runtime-analysis/init.lua references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
 | warn | `sibling-reference-missing` | lua/runtime-analysis/view.lua references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
 
 <details>
-<summary>6 informational findings</summary>
+<summary>3 informational findings</summary>
 
 
 | Check | Message |
 |---|---|
 | `missing-readme` | lua/runtime-analysis has no README.md |
-| `missing-readme` | lua/runtime-analysis/config has no README.md |
-| `missing-readme` | lua/runtime-analysis/startup has no README.md |
 | `unreferenced-module` | runtime-analysis.bench is required by no other file in the tree |
-| `unreferenced-module` | runtime-analysis.health is required by no other file in the tree |
 | `unreferenced-module` | runtime-analysis.statusline is required by no other file in the tree |
 
 </details>
