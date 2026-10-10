@@ -226,4 +226,34 @@ return function(H)
       "record: stores the redacted url"
     )
   end
+
+  -- Option `history_secret_keys`: own list replaces the default; `{}` is off.
+  -- Entries already on disk are cleaned on the next write.
+  do
+    local R = history.REDACTED
+    local ra = require("runtime-analysis")
+    local saved = ra.opts.history_secret_keys
+    ra.opts.history_secret_keys = { "X-Sig" }
+    eq(
+      history.redact_url("https://a.io/?x-sig=1&token=2"),
+      "https://a.io/?x-sig=" .. R .. "&token=2",
+      "opts: own list replaces the default"
+    )
+    ra.opts.history_secret_keys = {}
+    eq(
+      history.redact_url("https://a.io/?token=2"),
+      "https://a.io/?token=2",
+      "opts: empty list switches redaction off"
+    )
+
+    local dir = vim.fn.tempname()
+    history.record("GET", "https://a.io/?token=legacy", 200, nil, { dir = dir })
+    ra.opts.history_secret_keys = saved
+    history.record("GET", "https://a.io/ok", 200, nil, { dir = dir })
+    eq(
+      history.list({ dir = dir })[2].url,
+      "https://a.io/?token=" .. R,
+      "record: older entries are redacted on the next write"
+    )
+  end
 end

@@ -32,26 +32,13 @@ local M = {}
 ---as an `env` variable on reopening and could silently send something else.
 M.REDACTED = "<redacted>"
 
----@type string[]
-local DEFAULT_SECRET_KEYS = {
-  "api_key",
-  "apikey",
-  "key",
-  "token",
-  "access_token",
-  "auth",
-  "secret",
-  "password",
-  "sig",
-  "signature",
-}
-
----The effective key list (lower-cased set), `history_secret_keys` or the
----default. An empty list is a valid choice: it switches redaction off.
+---The effective key list (lower-cased set): `history_secret_keys` from
+---`setup()`, else the shipped default (single source: `config.DEFAULTS`). An
+---empty list is a valid choice: it switches redaction off.
 ---@internal
 ---@return table<string, true>
 local function secret_key_set()
-  local keys = DEFAULT_SECRET_KEYS
+  local keys = require("runtime-analysis.config").DEFAULTS.history_secret_keys
   local ok, ra = pcall(require, "runtime-analysis")
   if ok then
     local custom = (ra.opts or {}).history_secret_keys
@@ -86,24 +73,21 @@ local function redact_pairs(str, set)
   local parts = vim.split(str, "&", { plain = true })
   for i, part in ipairs(parts) do
     local k, v = part:match("^([^=]*)=(.*)$")
-    if k and v ~= "" and not v:find("{{", 1, true) and set[pct_decode(k):lower()] then
+    -- A value that is only `{{var}}` templates stays; `abc{{var}}` still has
+    -- a literal part that may be the secret.
+    if k and (v:gsub("{{[^}]*}}", "")) ~= "" and set[pct_decode(k):lower()] then
       parts[i] = k .. "=" .. M.REDACTED
     end
   end
   return table.concat(parts, "&")
 end
 
----Replace the value of every secret-looking query/fragment parameter in
----`url` by `M.REDACTED`. A value containing `{{...}}` is a template, not a
----secret, and stays; a URL without query or fragment comes back byte-equal.
+---@internal
 ---@param url string
+---@param set table<string, true>
 ---@return string
-function M.redact_url(url)
+local function redact(url, set)
   if type(url) ~= "string" or not url:find("[?#]") then
-    return url
-  end
-  local set = secret_key_set()
-  if next(set) == nil then
     return url
   end
   local base, frag = url:match("^([^#]*)#(.*)$")
@@ -117,6 +101,18 @@ function M.redact_url(url)
     out = out .. "#" .. (frag:find("=", 1, true) and redact_pairs(frag, set) or frag)
   end
   return out
+end
+
+---Replace the value of every secret-looking query/fragment parameter in
+---`url` by `M.REDACTED`. A value made only of `{{...}}` templates is not a
+---secret and stays; a URL without query or fragment comes back byte-equal.
+---@param url string
+---@return string
+function M.redact_url(url)
+  if type(url) ~= "string" or not url:find("[?#]") then
+    return url
+  end
+  return redact(url, secret_key_set())
 end
 
 --- Entries are tiny (a handful of fields, no bodies) so a count cap is
@@ -229,9 +225,18 @@ function M.record(method, url, status, note, opts)
   if not status then
     final_note = note
   end
+  -- Entries stored before redaction existed (or under a shorter key list)
+  -- still carry their secrets on disk; redaction is idempotent, so one pass
+  -- per write cleans them without a migration step.
+  local set = secret_key_set()
+  for _, e in ipairs(entries) do
+    if type(e) == "table" then
+      e.url = redact(e.url, set)
+    end
+  end
   entries[#entries + 1] = {
     method = method,
-    url = M.redact_url(url),
+    url = redact(url, set),
     status = status,
     note = final_note,
     at = os.time(),
