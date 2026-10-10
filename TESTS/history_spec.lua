@@ -173,4 +173,57 @@ return function(H)
       "history.record: ... with the right content"
     )
   end
+
+  -- Secret query values: replaced by the placeholder, never cut off.
+  do
+    local R = history.REDACTED
+    local r = history.redact_url
+    eq(r("https://a.io/x?api_key=abc"), "https://a.io/x?api_key=" .. R, "redact: single key")
+    eq(
+      r("https://a.io/x?q=1&Token=abc&z=2"),
+      "https://a.io/x?q=1&Token=" .. R .. "&z=2",
+      "redact: case, middle position"
+    )
+    eq(
+      r("https://a.io/x?a=1&access_token=s&sig=t"),
+      "https://a.io/x?a=1&access_token=" .. R .. "&sig=" .. R,
+      "redact: several keys"
+    )
+    eq(
+      r("https://a.io/x?ap%69_key=abc"),
+      "https://a.io/x?ap%69_key=" .. R,
+      "redact: percent-encoded key"
+    )
+    eq(
+      r("https://a.io/x?key=abc#frag"),
+      "https://a.io/x?key=" .. R .. "#frag",
+      "redact: plain fragment kept"
+    )
+    eq(
+      r("https://a.io/x#access_token=abc&state=1"),
+      "https://a.io/x#access_token=" .. R .. "&state=1",
+      "redact: fragment params"
+    )
+    eq(
+      r("https://a.io/x?api_key={{apiKey}}"),
+      "https://a.io/x?api_key={{apiKey}}",
+      "redact: {{var}} untouched"
+    )
+    eq(
+      r("https://a.io/x?monkey=1&keys=2&key="),
+      "https://a.io/x?monkey=1&keys=2&key=",
+      "redact: other names / empty value untouched"
+    )
+    for _, u in ipairs({ "https://a.io/x", "https://a.io/x/key/abc", "{{baseUrl}}/u/:id", "" }) do
+      eq(r(u), u, "redact: no query stays byte-equal: " .. u)
+    end
+
+    local dir = vim.fn.tempname()
+    history.record("GET", "https://a.io/x?password=hunter2&q=1", 200, nil, { dir = dir })
+    eq(
+      history.list({ dir = dir })[1].url,
+      "https://a.io/x?password=" .. R .. "&q=1",
+      "record: stores the redacted url"
+    )
+  end
 end

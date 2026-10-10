@@ -16,16 +16,108 @@
 --- wording for response bodies was "behind an explicit opt-in, if at all",
 --- and no opt-in for either is implemented here — a real gap this file
 --- does not pretend to close silently. The url field is stored verbatim
---- and is the one remaining honest limit: a secret embedded in a query
---- string (`?api_key=...`) is not stripped, because doing so generically
---- and correctly is a real, separate problem, not a small addition to a
---- request-only history.
+--- and is the one remaining honest limit, now narrowed: the *value* of a
+--- query (or fragment) parameter whose key is on `history_secret_keys`
+--- (`api_key`, `token`, ...) is replaced by `REDACTED` before saving -- never
+--- the query truncated, because `:RA history` reopening needs it. The limit
+--- that remains: a secret under a key not on the list, or in the path.
 
 local disk = require("lib.nvim.cache.disk")
 local project_key = require("lib.nvim.fs.project_key")
 local notify = require("lib.nvim.notify").create("[runtime-analysis]")
 
 local M = {}
+
+---What replaces a secret query value. Not `{{...}}`: that would be resolved
+---as an `env` variable on reopening and could silently send something else.
+M.REDACTED = "<redacted>"
+
+---@type string[]
+local DEFAULT_SECRET_KEYS = {
+  "api_key",
+  "apikey",
+  "key",
+  "token",
+  "access_token",
+  "auth",
+  "secret",
+  "password",
+  "sig",
+  "signature",
+}
+
+---The effective key list (lower-cased set), `history_secret_keys` or the
+---default. An empty list is a valid choice: it switches redaction off.
+---@internal
+---@return table<string, true>
+local function secret_key_set()
+  local keys = DEFAULT_SECRET_KEYS
+  local ok, ra = pcall(require, "runtime-analysis")
+  if ok then
+    local custom = (ra.opts or {}).history_secret_keys
+    if type(custom) == "table" then
+      keys = custom
+    end
+  end
+  local set = {}
+  for _, k in ipairs(keys) do
+    if type(k) == "string" then
+      set[k:lower()] = true
+    end
+  end
+  return set
+end
+
+---@internal
+---@param s string
+---@return string
+local function pct_decode(s)
+  return (s:gsub("%%(%x%x)", function(h)
+    return string.char(tonumber(h, 16))
+  end))
+end
+
+---Redact the values of listed keys in one `a=b&c=d` string.
+---@internal
+---@param str string
+---@param set table<string, true>
+---@return string
+local function redact_pairs(str, set)
+  local parts = vim.split(str, "&", { plain = true })
+  for i, part in ipairs(parts) do
+    local k, v = part:match("^([^=]*)=(.*)$")
+    if k and v ~= "" and not v:find("{{", 1, true) and set[pct_decode(k):lower()] then
+      parts[i] = k .. "=" .. M.REDACTED
+    end
+  end
+  return table.concat(parts, "&")
+end
+
+---Replace the value of every secret-looking query/fragment parameter in
+---`url` by `M.REDACTED`. A value containing `{{...}}` is a template, not a
+---secret, and stays; a URL without query or fragment comes back byte-equal.
+---@param url string
+---@return string
+function M.redact_url(url)
+  if type(url) ~= "string" or not url:find("[?#]") then
+    return url
+  end
+  local set = secret_key_set()
+  if next(set) == nil then
+    return url
+  end
+  local base, frag = url:match("^([^#]*)#(.*)$")
+  base = base or url
+  local path, query = base:match("^([^?]*)%?(.*)$")
+  local out = base
+  if path then
+    out = path .. "?" .. redact_pairs(query, set)
+  end
+  if frag then
+    out = out .. "#" .. (frag:find("=", 1, true) and redact_pairs(frag, set) or frag)
+  end
+  return out
+end
 
 --- Entries are tiny (a handful of fields, no bodies) so a count cap is
 --- simpler than a time-based one and just as effective — the same
@@ -139,7 +231,7 @@ function M.record(method, url, status, note, opts)
   end
   entries[#entries + 1] = {
     method = method,
-    url = url,
+    url = M.redact_url(url),
     status = status,
     note = final_note,
     at = os.time(),

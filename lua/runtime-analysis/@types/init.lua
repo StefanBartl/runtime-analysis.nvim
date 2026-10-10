@@ -7,9 +7,9 @@
 --- module, `RA`.
 
 ---@class RA
----@field opts { split: string, request_filetype: string, deps_popup: boolean, history_max_entries: integer }
+---@field opts { split: string, request_filetype: string, deps_popup: boolean, history_max_entries: integer, history_secret_keys: string[] }
 ---@field open_request fun(lines?: string[])
----@field setup fun(opts?: { split?: string, request_filetype?: string, deps_popup?: boolean, history_max_entries?: integer, telemetry?: RA.Telemetry.LazyOpts })
+---@field setup fun(opts?: { split?: string, request_filetype?: string, deps_popup?: boolean, history_max_entries?: integer, history_secret_keys?: string[], telemetry?: RA.Telemetry.LazyOpts })
 
 ---One `###`-separated request block — `runtime-analysis.parse.split`'s own
 ---output, and what `runtime-analysis.parse.block_at`/`parse` are handed.

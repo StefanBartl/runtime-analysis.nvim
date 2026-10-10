@@ -5,7 +5,7 @@
 
 local M = {}
 
----@type { split: string, request_filetype: string, deps_popup: boolean, history_max_entries: integer }
+---@type { split: string, request_filetype: string, deps_popup: boolean, history_max_entries: integer, history_secret_keys: string[] }
 M.DEFAULTS = {
   -- Where the response pane opens relative to the request buffer.
   split = "vsplit",
@@ -27,6 +27,22 @@ M.DEFAULTS = {
   -- ago it was first started -- which holds at any bound, so the bound is
   -- yours to pick.
   history_max_entries = 200,
+
+  -- Query/fragment parameter names (case-insensitive) whose value `:RA
+  -- history` stores as a placeholder instead of verbatim. `{{var}}` values
+  -- are left alone; `{}` switches redaction off.
+  history_secret_keys = {
+    "api_key",
+    "apikey",
+    "key",
+    "token",
+    "access_token",
+    "auth",
+    "secret",
+    "password",
+    "sig",
+    "signature",
+  },
 
   -- `telemetry` is the fifth accepted option (see `KNOWN_OPTS` in
   -- `runtime-analysis.init`), and it deliberately has **no default here**.

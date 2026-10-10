@@ -39,9 +39,16 @@ local DEFAULTS = require("runtime-analysis.config").DEFAULTS
 
 -- The exact top-level keys `M.setup(opts)` reads — see the
 -- `runtime-analysis.config.validate` call at the top of `M.setup` below.
-local KNOWN_OPTS = { "split", "request_filetype", "deps_popup", "history_max_entries", "telemetry" }
+local KNOWN_OPTS = {
+  "split",
+  "request_filetype",
+  "deps_popup",
+  "history_max_entries",
+  "history_secret_keys",
+  "telemetry",
+}
 
----@type { split: string, request_filetype: string, deps_popup: boolean, history_max_entries: integer }
+---@type { split: string, request_filetype: string, deps_popup: boolean, history_max_entries: integer, history_secret_keys: string[] }
 M.opts = vim.deepcopy(DEFAULTS)
 
 ---@internal
@@ -110,7 +117,7 @@ function M.open_request(lines)
 end
 
 ---Plugin entry point.
----@param opts? { split?: string, request_filetype?: string, deps_popup?: boolean, history_max_entries?: integer, telemetry?: RA.Telemetry.LazyOpts }
+---@param opts? { split?: string, request_filetype?: string, deps_popup?: boolean, history_max_entries?: integer, history_secret_keys?: string[], telemetry?: RA.Telemetry.LazyOpts }
 function M.setup(opts)
   require("runtime-analysis.config.validate").check(
     opts,
