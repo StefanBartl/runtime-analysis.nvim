@@ -268,6 +268,8 @@ this project has recorded, newest first, formatted as `date  status
 METHOD url`. Picking one calls `M.open_request({"METHOD url", ""})` —
 exactly documentation.nvim's own Endpoints-mode integration, since a
 history entry *is*, by design, exactly that much information and no more.
+A secret query value is stored as `<redacted>` (see below): type it in again
+or write `{{var}}` and keep the value in `:RA env`.
 Reports (does not error) when there is nothing recorded yet for this
 project.
 
