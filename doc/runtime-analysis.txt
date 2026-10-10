@@ -270,6 +270,9 @@ Response assertions ~
                                 Picking one reopens it via open_request —
                                 see |runtime-analysis-history| below for
                                 exactly what is and is not recorded.
+                                A secret query value (`?api_key=...`) is
+                                kept as `<redacted>`: type it in again or
+                                use `{{var}}` with |:RA-env|.
                                 Reports (does not error) when nothing has
                                 been recorded yet.
 
