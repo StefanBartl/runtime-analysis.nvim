@@ -302,10 +302,19 @@ though nothing rendered it). A cancelled request is recorded at cancel
 time with `note = "cancelled"`; everything else is recorded when the
 outcome is actually known, never both, never twice for the same send.
 
-**Honest limit, not silently worked around:** the url itself is stored
-verbatim. A secret embedded in a query string (`?api_key=...`) is not
-stripped — doing so generically and correctly is a real, separate problem,
-not a small addition to a request-only history.
+**Secrets in the query string:** the url is stored as typed, except that the
+*value* of a query (or fragment) parameter whose key is on
+`history_secret_keys` (default: `api_key`, `apikey`, `key`, `token`,
+`access_token`, `auth`, `secret`, `password`, `sig`, `signature`; matched
+case-insensitively, `{}` switches it off) is replaced by `<redacted>`. The
+query is never cut off, because reopening an entry from `:RA history` needs
+it. Reopening therefore shows `?api_key=<redacted>`: type the value in again,
+or better, write `?api_key={{apiKey}}` and keep the value in `:RA env` — a
+`{{var}}` value is stored as the template and left untouched.
+
+**Honest limit, not silently worked around:** only the listed key names are
+caught. A secret under an unlisted key, or inside the path, is still stored
+verbatim.
 
 ## `:RA history clear`
 
