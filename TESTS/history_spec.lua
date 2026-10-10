@@ -214,7 +214,36 @@ return function(H)
       "https://a.io/x?monkey=1&keys=2&key=",
       "redact: other names / empty value untouched"
     )
-    for _, u in ipairs({ "https://a.io/x", "https://a.io/x/key/abc", "{{baseUrl}}/u/:id", "" }) do
+    eq(
+      r("https://a.io/x?a=1;token=2"),
+      "https://a.io/x?a=1;token=" .. R,
+      "redact: semicolon separator"
+    )
+    eq(
+      r("https://a.io/#/route?token=2&x=1"),
+      "https://a.io/#/route?token=" .. R .. "&x=1",
+      "redact: query inside the fragment"
+    )
+    eq(
+      r("https://u:pw@a.io:8080/x?q=1"),
+      "https://u:" .. R .. "@a.io:8080/x?q=1",
+      "redact: userinfo password"
+    )
+    eq(
+      r("https://u:p%40w@a.io/"),
+      "https://u:" .. R .. "@a.io/",
+      "redact: userinfo password with encoded @"
+    )
+    eq(r("https://u:{{pw}}@a.io/"), "https://u:{{pw}}@a.io/", "redact: userinfo template untouched")
+    for _, u in ipairs({
+      "https://user@a.io/",
+      "https://a.io:8080/p@q",
+      "https://a.io/x?e=a@b.c",
+      "https://a.io/x",
+      "https://a.io/x/key/abc",
+      "{{baseUrl}}/u/:id",
+      "",
+    }) do
       eq(r(u), u, "redact: no query stays byte-equal: " .. u)
     end
 

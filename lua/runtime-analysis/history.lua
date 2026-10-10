@@ -64,22 +64,49 @@ local function pct_decode(s)
   end))
 end
 
----Redact the values of listed keys in one `a=b&c=d` string.
+---Whether `v` has a literal part. A value that is only `{{var}}` templates
+---is a reference, not a secret; `abc{{var}}` still has a literal part that
+---may be the secret.
+---@internal
+---@param v string
+---@return boolean
+local function has_literal(v)
+  return (v:gsub("{{[^}]*}}", "")) ~= ""
+end
+
+---Redact the values of listed keys in one `a=b&c=d` string (`;` separates
+---too).
 ---@internal
 ---@param str string
 ---@param set table<string, true>
 ---@return string
 local function redact_pairs(str, set)
-  local parts = vim.split(str, "&", { plain = true })
-  for i, part in ipairs(parts) do
-    local k, v = part:match("^([^=]*)=(.*)$")
-    -- A value that is only `{{var}}` templates stays; `abc{{var}}` still has
-    -- a literal part that may be the secret.
-    if k and (v:gsub("{{[^}]*}}", "")) ~= "" and set[pct_decode(k):lower()] then
-      parts[i] = k .. "=" .. M.REDACTED
-    end
+  return (
+    str:gsub("[^&;]+", function(part)
+      local k, v = part:match("^([^=]*)=(.*)$")
+      if k and has_literal(v) and set[pct_decode(k):lower()] then
+        return k .. "=" .. M.REDACTED
+      end
+    end)
+  )
+end
+
+---`https://user:password@host/` carries its secret in the authority, which
+---no key list can name. Only the password part is replaced.
+---@internal
+---@param url string
+---@return string
+local function redact_userinfo(url)
+  local scheme, auth, rest = url:match("^(%a[%w+.%-]*://)([^/?#]*)(.*)$")
+  local at = auth and auth:match("^.*()@")
+  if not at then
+    return url
   end
-  return table.concat(parts, "&")
+  local user, pw = auth:sub(1, at - 1):match("^([^:]*):(.*)$")
+  if not user or not has_literal(pw) then
+    return url
+  end
+  return scheme .. user .. ":" .. M.REDACTED .. auth:sub(at) .. rest
 end
 
 ---@internal
@@ -87,9 +114,10 @@ end
 ---@param set table<string, true>
 ---@return string
 local function redact(url, set)
-  if type(url) ~= "string" or not url:find("[?#]") then
+  if type(url) ~= "string" or next(set) == nil or not url:find("[?#@]") then
     return url
   end
+  url = redact_userinfo(url)
   local base, frag = url:match("^([^#]*)#(.*)$")
   base = base or url
   local path, query = base:match("^([^?]*)%?(.*)$")
@@ -98,18 +126,26 @@ local function redact(url, set)
     out = path .. "?" .. redact_pairs(query, set)
   end
   if frag then
-    out = out .. "#" .. (frag:find("=", 1, true) and redact_pairs(frag, set) or frag)
+    -- `#access_token=..` (implicit OAuth) or `#/route?token=..` (SPA router)
+    local route, fquery = frag:match("^([^?]*)%?(.*)$")
+    if route then
+      frag = route .. "?" .. redact_pairs(fquery, set)
+    elseif frag:find("=", 1, true) then
+      frag = redact_pairs(frag, set)
+    end
+    out = out .. "#" .. frag
   end
   return out
 end
 
 ---Replace the value of every secret-looking query/fragment parameter in
----`url` by `M.REDACTED`. A value made only of `{{...}}` templates is not a
----secret and stays; a URL without query or fragment comes back byte-equal.
+---`url`, and the password of a `user:password@` authority, by
+---`M.REDACTED`. A value made only of `{{...}}` templates is not a secret
+---and stays; a URL without any of these comes back byte-equal.
 ---@param url string
 ---@return string
 function M.redact_url(url)
-  if type(url) ~= "string" or not url:find("[?#]") then
+  if type(url) ~= "string" or not url:find("[?#@]") then
     return url
   end
   return redact(url, secret_key_set())
@@ -272,8 +308,16 @@ function M.list(opts)
   opts = opts or {}
   local entries, err = read_entries(cache_key(opts.root), opts)
   local out = {}
+  local set = secret_key_set()
   for i = #entries, 1, -1 do
-    out[#out + 1] = entries[i]
+    local e = entries[i]
+    -- Read-side too: an entry written before redaction existed must not be
+    -- shown (or handed to documentation.nvim) in clear while it waits for
+    -- the next write to clean the file.
+    if type(e) == "table" then
+      e.url = redact(e.url, set)
+    end
+    out[#out + 1] = e
   end
   return out, err
 end
