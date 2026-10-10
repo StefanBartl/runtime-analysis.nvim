@@ -92,6 +92,7 @@ same as: >lua
     request_filetype = "http",  -- default
     deps_popup = true,          -- default
     history_max_entries = 200,  -- default
+    history_secret_keys = { ... },  -- see |runtime-analysis-opts.history_secret_keys|
     telemetry = nil,            -- see |runtime-analysis-telemetry|
   })
 <
@@ -122,6 +123,16 @@ opts.history_max_entries ~
   How many past sends |:RA-history| keeps, per project. A ring: the file's
   size stays a function of how much the plugin is used, not of how long ago
   it was first started.
+
+                                    *runtime-analysis-opts.history_secret_keys*
+opts.history_secret_keys ~
+  Type: `string[]`. Default: `api_key`, `apikey`, `key`, `token`,
+  `access_token`, `auth`, `secret`, `password`, `sig`, `signature`.
+  Query and fragment parameter names (case-insensitive) whose value
+  |:RA-history| stores as `<redacted>` instead of verbatim. A value made only
+  of `{{var}}` templates is kept. `{}` switches redaction off. Your own list
+  replaces the default, it is not merged into it. See
+  |runtime-analysis-history|.
 
                                                *runtime-analysis-opts.telemetry*
 opts.telemetry ~
@@ -398,16 +409,25 @@ Request history ~
   Persisted via lib.nvim.cache.disk, namespaced per project by
   lib.nvim.fs.project_key() (the Git root, or the cwd) — a `.http`
   collection in one repository never shows up in another's history.
-  Capped at `history.MAX_ENTRIES` (200) total, oldest dropped first.
+  Capped at |runtime-analysis-opts.history_max_entries| (default 200) total,
+  oldest dropped first.
 
   Every outcome is recorded exactly once: a real response, a transport
   failure, an explicit |:RA-cancel|, and even a superseded send's real
   eventual result once it is known. Never recorded twice for the same
   send.
 
-  Honest limit: the url is stored verbatim — a secret embedded in a query
-  string is not stripped, since doing so generically and correctly is a
-  real, separate problem.
+  Secrets in the query string: the value of a query (or fragment)
+  parameter whose key is on |runtime-analysis-opts.history_secret_keys| is
+  stored as `<redacted>`; the query itself is never cut off, because
+  reopening an entry from |:RA-history| needs it. Reopening therefore shows
+  `?api_key=<redacted>`: type the value in again, or write
+  `?api_key={{apiKey}}` and keep the value in |:RA-env|. A value made only
+  of `{{var}}` templates is stored as is. Entries saved earlier are cleaned
+  the same way on the next write.
+
+  Honest limit: only the listed key names are caught. A secret under an
+  unlisted key, or inside the path, is still stored verbatim.
 
                                               *runtime-analysis-environments*
 Variables and environments ~
@@ -702,7 +722,7 @@ the method and path are pre-filled and the reader completes the base URL
 >lua
   local M = {}
 
-  ---@field opts { split: string, request_filetype: string, deps_popup: boolean, history_max_entries: integer }
+  ---@field opts { split: string, request_filetype: string, deps_popup: boolean, history_max_entries: integer, history_secret_keys: string[] }
   ---@field open_request fun(lines?: string[])
   ---@field setup fun(opts?: table)
 <
