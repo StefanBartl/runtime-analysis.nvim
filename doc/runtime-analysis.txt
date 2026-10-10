@@ -424,9 +424,11 @@ Request history ~
   `?api_key=<redacted>`: type the value in again, or write
   `?api_key={{apiKey}}` and keep the value in |:RA-env|. A value made only
   of `{{var}}` templates is stored as is. Entries saved earlier are cleaned
-  the same way on the next write.
+  the same way on the next write, and shown redacted before that. The
+  password of a `https://user:password@host/` authority is replaced too.
 
-  Honest limit: only the listed key names are caught. A secret under an
+  Honest limit: only the listed key names (and a userinfo password) are
+  caught. A secret under an
   unlisted key, or inside the path, is still stored verbatim.
 
                                               *runtime-analysis-environments*

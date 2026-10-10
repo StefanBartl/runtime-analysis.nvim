@@ -311,11 +311,12 @@ query is never cut off, because reopening an entry from `:RA history` needs
 it. Reopening therefore shows `?api_key=<redacted>`: type the value in again,
 or better, write `?api_key={{apiKey}}` and keep the value in `:RA env` — a
 value made only of `{{var}}` templates is stored as is. Entries saved earlier are
-cleaned the same way on the next write.
+cleaned the same way on the next write, and shown redacted before that.
+The password of a `https://user:password@host/` authority is replaced too.
 
-**Honest limit, not silently worked around:** only the listed key names are
-caught. A secret under an unlisted key, or inside the path, is still stored
-verbatim.
+**Honest limit, not silently worked around:** only the listed key names (and a
+userinfo password) are caught. A secret under an unlisted key, or inside the
+path, is still stored verbatim.
 
 ## `:RA history clear`
 
