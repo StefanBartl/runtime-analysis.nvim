@@ -71,6 +71,7 @@ flowchart LR
   nlua_runtime_analysis_telemetry_lazy_lua --> nlua_runtime_analysis_config_validate_lua
   nlua_runtime_analysis_telemetry_registry_lua --> nlua_runtime_analysis_telemetry_fingerprint_lua
   nlua_runtime_analysis_telemetry_renderers --> nlua_runtime_analysis_telemetry_report_file_lua
+  nlua_runtime_analysis_telemetry_report_lua --> nlua_runtime_analysis_telemetry_fingerprint_lua
   nlua_runtime_analysis_telemetry_report_lua --> nlua_runtime_analysis_telemetry_store_lua
   nlua_runtime_analysis_telemetry_report_lua --> nlua_runtime_analysis_ui_columns_lua
   nlua_runtime_analysis_telemetry_report_file_lua --> nlua_runtime_analysis_telemetry_store_lua
