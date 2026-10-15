@@ -479,6 +479,32 @@ return function(H)
     end
   end
 
+  -- review of 422d214: a string past the digest window and a big number can fingerprint alike
+  do
+    local long_a = ("x"):rep(80) .. "A" .. ("y"):rep(30)
+    local long_b = ("x"):rep(80) .. "B" .. ("y"):rep(30)
+    H.eq(fingerprint.of(1, long_a), fingerprint.of(1, long_b), "premise: they fingerprint alike")
+    H.ok(
+      not fingerprint.is_value_exact(fingerprint.of(1, long_a)),
+      "a string over 64 bytes is not value-exact"
+    )
+    H.ok(fingerprint.is_value_exact(fingerprint.of(1, ("x"):rep(64))), "64 bytes are all digested")
+    H.eq(
+      fingerprint.of(1, 2 ^ 53),
+      fingerprint.of(1, 2 ^ 53 + 1),
+      "premise: big numbers read alike"
+    )
+    H.ok(
+      not fingerprint.is_value_exact(fingerprint.of(1, 2 ^ 53)),
+      "a 16-digit number is not value-exact"
+    )
+    H.ok(fingerprint.is_value_exact(fingerprint.of(1, 123456789)), "an ordinary integer is")
+    H.ok(
+      fingerprint.is_value_exact(fingerprint.of(2, 3.25, "short")),
+      "a short float and a short string are"
+    )
+  end
+
   -- bounded cardinality: distinct fingerprints do not grow without limit
   do
     local mod = {

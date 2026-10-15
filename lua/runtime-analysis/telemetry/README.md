@@ -1040,8 +1040,10 @@ dominant fingerprint is only a *shape*: a table (`<table:map>`, `<table:#3>`),
 a function or userdata is fingerprinted by shape or type, so two different ones
 look alike and "100 % share one argument" would be wrong. The same holds for a
 list with such a part (`(<string:..>, <table:map>)`) and for calls with more
-than four arguments (the tail is not looked at). Strings (length plus digest),
-numbers, booleans and `nil` are compared by value and keep the hint. The argument
+than four arguments (the tail is not looked at). Strings of up to 64 bytes (length plus
+digest), numbers of fewer than 14 significant digits, booleans and `nil` are compared by
+value and keep the hint; a longer string is told apart by its first 64 bytes only and a
+larger number is written with 14 digits, so those do not get it either. The argument
 profile itself still shows the shapes; only the advice goes.
 
 ## Sampling

@@ -80,7 +80,9 @@ end
 ---digest) are fingerprinted by value; a table, function, userdata or thread only by its shape
 ---or type, so two different ones fingerprint alike, and the arguments past `MAX_ARGS` are not
 ---looked at at all. A share of such a fingerprint says "same shape", not "same value", and is
----no ground for advising memoization. A list counts as exact only when every part is.
+---no ground for advising memoization. A list counts as exact only when every part is. A string longer
+---than the digest window (`DIGEST_BYTES`) and a number with 14 or more significant digits are not
+---exact either: two of them can fingerprint alike.
 ---@param fp string  # a fingerprint from `M.of`
 ---@return boolean
 function M.is_value_exact(fp)
@@ -92,7 +94,24 @@ function M.is_value_exact(fp)
   end
   -- `<function>`, `<userdata>`, `<thread>`, `<cdata>`: a type name and nothing else (a string
   -- is `<string:n:digest>`, with a colon)
-  return fp:find("<%a+>") == nil
+  if fp:find("<%a+>") then
+    return false
+  end
+  -- a string longer than the digest window is told apart by its first `DIGEST_BYTES` only
+  for len in fp:gmatch("<string:(%d+):") do
+    if tonumber(len) > DIGEST_BYTES then
+      return false
+    end
+  end
+  -- a number is written with 14 significant digits: 2^53 and 2^53 + 1 read alike
+  local without_strings = fp:gsub("<string:%d+:%x+>", "")
+  for mantissa, exponent in without_strings:gmatch("(%d[%d%.]*)e?([%+%-]?%d*)") do
+    -- `%.14g` writes 2^53 as `9.007199254741e+15`: a positive exponent of 14 or more has dropped digits
+    if #mantissa:gsub("%.", "") >= 14 or (tonumber(exponent) or 0) >= 14 then
+      return false
+    end
+  end
+  return true
 end
 
 ---Fingerprint a whole argument list.
