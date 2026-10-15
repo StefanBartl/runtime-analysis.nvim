@@ -76,6 +76,25 @@ function M.value(v)
   return ("<%s>"):format(t)
 end
 
+---Does equal fingerprint mean equal arguments? Nil, booleans, numbers and strings (length plus
+---digest) are fingerprinted by value; a table, function, userdata or thread only by its shape
+---or type, so two different ones fingerprint alike, and the arguments past `MAX_ARGS` are not
+---looked at at all. A share of such a fingerprint says "same shape", not "same value", and is
+---no ground for advising memoization. A list counts as exact only when every part is.
+---@param fp string  # a fingerprint from `M.of`
+---@return boolean
+function M.is_value_exact(fp)
+  if type(fp) ~= "string" then
+    return false
+  end
+  if fp:find("<table:", 1, true) or fp:find("…+", 1, true) then
+    return false
+  end
+  -- `<function>`, `<userdata>`, `<thread>`, `<cdata>`: a type name and nothing else (a string
+  -- is `<string:n:digest>`, with a colon)
+  return fp:find("<%a+>") == nil
+end
+
 ---Fingerprint a whole argument list.
 ---@param n integer  # result of select("#", ...) at the call site
 ---@param ... any

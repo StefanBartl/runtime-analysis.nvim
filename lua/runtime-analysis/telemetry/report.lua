@@ -8,6 +8,7 @@
 --- (`lib.lua.memo`). Without that line the feature is a table of numbers.
 
 local store = require("runtime-analysis.telemetry.store")
+local fingerprint = require("runtime-analysis.telemetry.fingerprint")
 
 local M = {}
 
@@ -150,6 +151,9 @@ function M.build(namespace, data, meta, opts)
         if
           first
           and first.fingerprint ~= "()"
+          -- same SHAPE is not same VALUE: two different tables fingerprint alike, so a
+          -- dominant `(<table:map>)` says nothing about repeated arguments
+          and fingerprint.is_value_exact(first.fingerprint)
           and args_total >= DOMINANT_MIN_CALLS
           and first.share >= DOMINANT_SHARE
         then

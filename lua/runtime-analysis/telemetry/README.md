@@ -1035,7 +1035,14 @@ fs.find_root                12 480 calls
 ```
 
 The hint is suppressed below 20 calls and for zero-argument calls (`()` is
-always 100 % dominant and never actionable).
+always 100 % dominant and never actionable). It is also suppressed when the
+dominant fingerprint is only a *shape*: a table (`<table:map>`, `<table:#3>`),
+a function or userdata is fingerprinted by shape or type, so two different ones
+look alike and "100 % share one argument" would be wrong. The same holds for a
+list with such a part (`(<string:..>, <table:map>)`) and for calls with more
+than four arguments (the tail is not looked at). Strings (length plus digest),
+numbers, booleans and `nil` are compared by value and keep the hint. The argument
+profile itself still shows the shapes; only the advice goes.
 
 ## Sampling
 

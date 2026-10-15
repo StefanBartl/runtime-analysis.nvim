@@ -395,6 +395,90 @@ return function(H)
     t.unwrap()
   end
 
+  -- the hint is a claim about VALUES: a shape-only fingerprint (table, function, ...) never earns it
+  do
+    H.ok(fingerprint.is_value_exact(fingerprint.of(1, "x")), "a string is compared by value")
+    H.ok(
+      fingerprint.is_value_exact(fingerprint.of(3, 1, true, nil)),
+      "numbers, booleans and nil too"
+    )
+    H.ok(fingerprint.is_value_exact("()"), "no arguments (the hint has its own rule for that)")
+    H.ok(not fingerprint.is_value_exact(fingerprint.of(1, { a = 1 })), "a map is only a shape")
+    H.ok(not fingerprint.is_value_exact(fingerprint.of(1, { 1, 2 })), "an array is only a length")
+    H.ok(not fingerprint.is_value_exact(fingerprint.of(1, {})), "so is an empty table")
+    H.ok(not fingerprint.is_value_exact(fingerprint.of(1, print)), "a function is only a type")
+    H.ok(
+      not fingerprint.is_value_exact(fingerprint.of(2, "x", { a = 1 })),
+      "one shape-only part is enough"
+    )
+    H.ok(
+      not fingerprint.is_value_exact(fingerprint.of(6, 1, 2, 3, 4, 5, 6)),
+      "the tail past four arguments is unknown"
+    )
+    H.ok(not fingerprint.is_value_exact(nil))
+
+    local cases = {
+      {
+        "table argument",
+        function()
+          return { a = 1 }
+        end,
+        false,
+      },
+      {
+        "array argument",
+        function()
+          return { 1, 2, 3 }
+        end,
+        false,
+      },
+      {
+        "function argument",
+        function()
+          return print
+        end,
+        false,
+      },
+      {
+        "string argument",
+        function()
+          return "/repo/lib.nvim"
+        end,
+        true,
+      },
+      {
+        "number argument",
+        function()
+          return 42
+        end,
+        true,
+      },
+    }
+    for _, c in ipairs(cases) do
+      local mod = {
+        f = function(x)
+          return x
+        end,
+      }
+      local t = telemetry.new({ namespace = ns("hint_" .. c[1]:gsub("%s", "_")), persist = false })
+      t.wrap(mod, "m")
+      t.start({ profile_args = { "m.f" } })
+      for _ = 1, 30 do
+        mod.f(c[2]())
+      end
+      local entry = t.report().entries[1]
+      H.eq(entry.calls, 30, c[1] .. ": counted")
+      H.eq(entry.args[1].count, 30, c[1] .. ": one fingerprint holds every call")
+      if c[3] then
+        H.ok(entry.hint ~= nil, c[1] .. ": 100 % the same value gets the hint")
+      else
+        H.eq(entry.hint, nil, c[1] .. ": 100 % the same SHAPE gets none")
+      end
+      t.stop()
+      t.unwrap()
+    end
+  end
+
   -- bounded cardinality: distinct fingerprints do not grow without limit
   do
     local mod = {
