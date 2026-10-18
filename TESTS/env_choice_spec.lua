@@ -97,7 +97,7 @@ return function(H)
   )
   vim.api.nvim_win_set_cursor(0, { 1, 0 })
   local seen = #requests
-  env.select = function(names, _opts, cb)
+  env.select = function(_, _opts, cb)
     vim.api.nvim_win_set_cursor(0, { 4, 0 })
     cb("dev")
   end
