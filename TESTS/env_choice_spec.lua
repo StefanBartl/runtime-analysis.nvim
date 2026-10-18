@@ -86,6 +86,34 @@ return function(H)
   eq(#requests, 1, "and the request is sent")
   ok(requests[1] and requests[1]:match("/picked$") ~= nil, "resolved with the chosen environment")
 
+  -- the cursor moves to another block while the choice is open: that other request is NOT sent
+  env._reset_for_test()
+  vim.api.nvim_buf_set_lines(
+    bufnr,
+    0,
+    -1,
+    false,
+    { "GET {{baseUrl}}/picked", "", "###", "GET {{baseUrl}}/other-block", "" }
+  )
+  vim.api.nvim_win_set_cursor(0, { 1, 0 })
+  local seen = #requests
+  env.select = function(names, _opts, cb)
+    vim.api.nvim_win_set_cursor(0, { 4, 0 })
+    cb("dev")
+  end
+  vim.cmd("RA send")
+  vim.wait(400, function()
+    return #requests > seen
+  end, 10)
+  eq(#requests, seen, "a block that is not the one asked about is not sent")
+  env.select = function(names, _opts, cb)
+    offered = names
+    cb(choice)
+  end
+  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { "GET {{baseUrl}}/picked", "" })
+  vim.api.nvim_win_set_cursor(0, { 1, 0 })
+  env.set_current("dev")
+
   -- an environment is selected already: nothing is asked
   offered = nil
   vim.cmd("RA send")

@@ -366,8 +366,9 @@ end
 ---then either the real response or an error/cancelled message — never
 ---silence while nothing visibly happens.
 ---@param ra RA
+---@param asked_block? { text: string, first: integer }  the block that was asked about before a question: the request is sent only if the same block (same text, same place) is under the cursor now
 ---@internal
-local function send_current_buffer(ra)
+local function send_current_buffer(ra, asked_block)
   local parse = require("runtime-analysis.parse")
   local source_bufnr = vim.api.nvim_get_current_buf()
   local lines = vim.api.nvim_buf_get_lines(source_bufnr, 0, -1, false)
@@ -379,6 +380,15 @@ local function send_current_buffer(ra)
     local block = parse.block_at(blocks, cursor_line)
     block_lines = block and block.lines or lines
     block_first = block and block.first or 1
+  end
+  if
+    asked_block
+    and (asked_block.first ~= block_first or asked_block.text ~= table.concat(block_lines, "\n"))
+  then
+    notify.warn(
+      "the request changed or the cursor moved while the environment was chosen -- send it again"
+    )
+    return
   end
 
   -- an `@expect status N` directive is read (and
@@ -429,7 +439,7 @@ local function send_current_buffer(ra)
           )
           return
         end
-        send_current_buffer(ra)
+        send_current_buffer(ra, { text = table.concat(block_lines, "\n"), first = block_first })
       end)
       return
     end
