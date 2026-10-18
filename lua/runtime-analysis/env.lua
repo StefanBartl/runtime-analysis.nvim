@@ -180,6 +180,18 @@ function M.set_current(name, opts)
   return true, nil
 end
 
+---Seam for the choice among the environments (`nil`: `vim.ui.select`); specs replace it.
+---@type (fun(names: string[], opts: table, cb: fun(choice: string|nil)))|nil
+M.select = nil
+
+---Offer the environments to pick from; `cb` gets the name, or `nil` when the choice was dismissed.
+---@param names string[]
+---@param cb fun(choice: string|nil)
+function M.choose(names, cb)
+  local pick = M.select or vim.ui.select
+  pick(names, { prompt = "Environment for this request> " }, cb)
+end
+
 ---Every `{{name}}` placeholder in `str`, deduplicated, first-seen order.
 ---@internal
 ---@param str string
@@ -219,6 +231,7 @@ end
 ---@param opts? { root: string? } See `M.load_all`.
 ---@return { method: string, url: string, headers: table<string, string>, body: string? }? resolved
 ---@return string? err
+---@return "no_environment"|nil reason  set when the only thing missing is a selected environment (a caller may offer the choice)
 function M.resolve(request, opts)
   local names = {}
   vim.list_extend(names, find_placeholders(request.url))
@@ -239,7 +252,8 @@ function M.resolve(request, opts)
       ("request uses {{%s}} but no environment is selected — run :RA env <name> (available: %s)"):format(
         table.concat(names, "}}, {{"),
         #available > 0 and table.concat(available, ", ") or "none defined"
-      )
+      ),
+      "no_environment"
   end
 
   local vars = M.load_all(opts)[current_name] or {}

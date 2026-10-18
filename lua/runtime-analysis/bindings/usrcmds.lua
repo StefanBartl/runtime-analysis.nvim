@@ -405,8 +405,34 @@ local function send_current_buffer(ra)
   -- the pending-request record, and the history entry all read `request`,
   -- never `resolved_request`), so a `{{token}}` renders as `{{token}}`
   -- everywhere except inside the one real outgoing request.
-  local resolved_request, resolve_err = require("runtime-analysis.env").resolve(request)
+  local env = require("runtime-analysis.env")
+  local resolved_request, resolve_err, reason = env.resolve(request)
   if not resolved_request then
+    -- no environment selected: the ones there are are offered, the choice is set, and the request goes out after it
+    local available = reason == "no_environment" and env.list_names() or {}
+    if #available > 0 then
+      env.choose(available, function(choice)
+        if not choice then
+          notify.info("request not sent: no environment chosen")
+          return
+        end
+        local ok_set, set_err = env.set_current(choice)
+        if not ok_set then
+          notify.error(set_err or "could not select the environment")
+          return
+        end
+        if vim.api.nvim_get_current_buf() ~= source_bufnr then
+          notify.warn(
+            "environment "
+              .. choice
+              .. " selected; the request buffer is not the current one any more -- send it again"
+          )
+          return
+        end
+        send_current_buffer(ra)
+      end)
+      return
+    end
     notify.error(resolve_err or "could not resolve the {{...}} placeholders")
     return
   end
