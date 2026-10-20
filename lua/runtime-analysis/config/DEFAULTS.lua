@@ -44,7 +44,7 @@ M.DEFAULTS = {
     "signature",
   },
 
-  -- `telemetry` is the fifth accepted option (see `KNOWN_OPTS` in
+  -- `telemetry` is the fifth accepted option (declared `optional` in the config object of
   -- `runtime-analysis.init`), and it deliberately has **no default here**.
   -- Auto-instrumentation is opt-in: the absence of the key is what means "do
   -- not instrument", exactly as if `telemetry.auto()` were never called. A

@@ -37,19 +37,20 @@ local M = {}
 
 local DEFAULTS = require("runtime-analysis.config").DEFAULTS
 
--- The exact top-level keys `M.setup(opts)` reads — see the
--- `runtime-analysis.config.validate` call at the top of `M.setup` below.
-local KNOWN_OPTS = {
-  "split",
-  "request_filetype",
-  "deps_popup",
-  "history_max_entries",
-  "history_secret_keys",
-  "telemetry",
-}
+-- The keys `M.setup(opts)` takes are the keys of DEFAULTS plus `telemetry`, which has no default
+-- (LUA-86: its absence is what means "off") and is declared by hand. An unknown key (with a
+-- did-you-mean hint) or a value of the wrong type is reported through `notify` and left out, so
+-- the default applies.
+local cfg = require("lib.lua.config").new(DEFAULTS, {
+  name = "runtime-analysis",
+  optional = { telemetry = "table|boolean" },
+  notify = function(message)
+    notify.warn(message)
+  end,
+})
 
 ---@type { split: string, request_filetype: string, deps_popup: boolean, history_max_entries: integer, history_secret_keys: string[] }
-M.opts = vim.deepcopy(DEFAULTS)
+M.opts = cfg.get()
 
 ---@internal
 ---Whether `lines` is usable as request-buffer content: a non-empty table of
@@ -119,14 +120,9 @@ end
 ---Plugin entry point.
 ---@param opts? { split?: string, request_filetype?: string, deps_popup?: boolean, history_max_entries?: integer, history_secret_keys?: string[], telemetry?: RA.Telemetry.LazyOpts }
 function M.setup(opts)
-  require("runtime-analysis.config.validate").check(
-    opts,
-    KNOWN_OPTS,
-    "runtime-analysis.setup()",
-    notify
-  )
-
-  M.opts = vim.tbl_deep_extend("force", vim.deepcopy(DEFAULTS), opts or {})
+  -- Every call starts from the defaults.
+  cfg.setup(opts)
+  M.opts = cfg.get()
 
   require("runtime-analysis.bindings.usrcmds").setup(M)
 

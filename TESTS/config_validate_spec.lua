@@ -98,11 +98,11 @@ return function(H)
       ra.setup({ slpit = "vsplit" })
     end)
     ok(
-      captured and captured.msg:find('"slpit"', 1, true) ~= nil,
+      captured and captured.msg:find("'slpit'", 1, true) ~= nil,
       "runtime-analysis.setup(): a typo'd top-level key warns through the real notifier"
     )
     ok(
-      captured and captured.msg:find('did you mean "split"?', 1, true) ~= nil,
+      captured and captured.msg:find("did you mean 'split'?", 1, true) ~= nil,
       "runtime-analysis.setup(): the warning suggests the real key"
     )
     -- Still fully functional despite the typo -- commands registered, no error.
