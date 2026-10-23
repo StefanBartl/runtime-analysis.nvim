@@ -18,6 +18,29 @@ Newest first, by date; original document order within a date.
 
 ---
 
+## 2026-10-23
+
+**The result float moved into `ui.kit.viewer`.** `lua/runtime-analysis/ui/float.lua`
+(218 lines) held the winbar key legend, the `?` cheatsheet, `table_view`, the
+decoration hook that survives a refresh and the keymaps derived from one list.
+That is a `ui.kit` component in this plugin's clothes, and the stated trigger
+("a second consumer") had been met on 2026-09-17 and a third added since
+(`hover.nvim`'s status board). `ui.nvim` now has it as `keys`, `table_view` and
+`on_lines` of `ui.kit.viewer` (`lua/ui/kit/viewer_keys.lua`, ui.nvim only; lib.nvim's
+frozen copy of the kit keeps its `viewer.lua`, the drift spec names the deliberate
+difference). `float.lua` is now 130 lines of what is specific to `:RA`: that a
+refresh, a drill-down into the row under the cursor and an HTML export are the
+built-in keys, the keymap description prefix, and the fallback.
+
+Decision: with a `ui.nvim` that predates viewer keys the float falls back to the
+message area, like it does without a kit. A float that opens without the keys the
+report is built around would be worse than the same text in `:messages`.
+`TESTS/float_spec.lua` pins what is this plugin's (the keys a call hands over, in
+order, and what each does) against a recording stand-in for the kit; the kit's own
+behaviour is specified in ui.nvim (`TESTS/ui_kit_viewer_keys_spec.lua`).
+
+---
+
 ## 2026-09-18
 
 ### Targeted test-coverage/bug audit — this repo's turn in the cross-plugin campaign

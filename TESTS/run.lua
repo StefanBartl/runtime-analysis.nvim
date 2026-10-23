@@ -63,6 +63,7 @@ local specs = {
   "startup_spec.lua",
   "startup_stall_spec.lua",
   "startup_profile_spec.lua",
+  "float_spec.lua",
   "flamegraph_spec.lua",
   "cost_vs_use_spec.lua",
   "provenance_spec.lua",
