@@ -95,10 +95,18 @@ flowchart LR
 
 ## Drift
 
-0 errors · 0 warnings · 3 info
+0 errors · 8 warnings · 3 info
 
-No errors or warnings.
-
+| Severity | Check | Message |
+|---|---|---|
+| warn | `sibling-reference-missing` | docs/api.md references 'docmap.nvim/docs/ECOSYSTEM.md', which does not exist in the docmap.nvim checkout |
+| warn | `sibling-reference-missing` | docs/IDEAS.md references 'docmap.nvim/docs/ECOSYSTEM.md', which does not exist in the docmap.nvim checkout |
+| warn | `sibling-reference-missing` | lua/runtime-analysis/telemetry/README.md references 'docmap.nvim/docs/ECOSYSTEM.md', which does not exist in the docmap.nvim checkout |
+| warn | `sibling-reference-missing` | docs/FEATURE_LOG.md references 'docmap.nvim/docs/ECOSYSTEM.md', which does not exist in the docmap.nvim checkout |
+| warn | `sibling-reference-missing` | docs/FEATURES/README.md references 'docmap.nvim/docs/ECOSYSTEM.md', which does not exist in the docmap.nvim checkout |
+| warn | `sibling-reference-missing` | docs/FEATURES/README.md references 'docmap.nvim/docs/FEATURES_FORMAT.md', which does not exist in the docmap.nvim checkout |
+| warn | `sibling-reference-missing` | lua/runtime-analysis/init.lua references 'docmap.nvim/docs/ECOSYSTEM.md', which does not exist in the docmap.nvim checkout |
+| warn | `sibling-reference-missing` | lua/runtime-analysis/view.lua references 'docmap.nvim/docs/ECOSYSTEM.md', which does not exist in the docmap.nvim checkout |
 
 <details>
 <summary>3 informational findings</summary>
