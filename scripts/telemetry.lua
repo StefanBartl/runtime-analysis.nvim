@@ -3,7 +3,7 @@
 --
 -- `telemetry.load()` already does the reading part (it was built for
 -- exactly this — a fresh process joining against a previous session's
--- counts, the motivating case being documentation.nvim's dead-function
+-- counts, the motivating case being docmap.nvim's dead-function
 -- check), and `report.build()` already turns raw `Data` into the same
 -- report shape `:RATelemetry`'s live-instance path renders. This script is
 -- the argument parser around both, not new analysis.

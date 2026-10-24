@@ -128,10 +128,10 @@ vim.g.lib_nvim_deps_disable_first_run = true                -- every plugin
 
 ## Dev-only: the module map
 
-[documentation.nvim](https://github.com/StefanBartl/documentation.nvim)
+[docmap.nvim](https://github.com/StefanBartl/docmap.nvim)
 generates [`map/`](map/overview.md), this repository's own module map, adopted
 per that project's
-[`docs/REUSE.md`](https://github.com/StefanBartl/documentation.nvim/blob/main/docs/REUSE.md).
+[`docs/REUSE.md`](https://github.com/StefanBartl/docmap.nvim/blob/main/docs/REUSE.md).
 **It is not a runtime dependency** — nothing here needs it installed as a
 plugin.
 

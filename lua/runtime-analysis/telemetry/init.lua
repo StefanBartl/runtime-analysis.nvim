@@ -49,7 +49,7 @@
 ---   call given an explicit `opts.module_id` — a plain `wrap(tbl, "servers")`
 ---   prefix is a caller-chosen label, not necessarily a real module path, and
 ---   is deliberately left unresolved rather than guessed. A consumer joining
----   telemetry against a static key set (documentation.nvim's dead-function
+---   telemetry against a static key set (docmap.nvim's dead-function
 ---   check, for one) must treat an unresolved key as "unmatched", never as
 ---   "no calls" — those are different claims.
 --- - `Options.info` (branch/version/whatever the caller wants bundled with
@@ -1087,7 +1087,7 @@ function M.new(opts)
   end
 
   ---Every wrapped key that resolves to a real Lua module path, alongside
-  ---that path — the join a consumer (e.g. documentation.nvim matching a
+  ---that path — the join a consumer (e.g. docmap.nvim matching a
   ---telemetry key back to its static IR) can make honestly.
   ---
   ---Only `wrap_loaded()` targets resolve, plus any `wrap()` call given an
@@ -1268,7 +1268,7 @@ end
 ---live instance for it.
 ---
 ---For a consumer that only wants to know what happened in *some other*
----Neovim session — documentation.nvim's dead-function join is the motivating
+---Neovim session — docmap.nvim's dead-function join is the motivating
 ---case: a fresh `:DocMap check` run has no telemetry instance for the tree
 ---it is analyzing, and standing one up just to read counts would start
 ---collecting for a namespace nothing intends to keep running.
@@ -1380,7 +1380,7 @@ function M.snapshot(namespace, name, opts)
 end
 
 ---Every snapshot saved for `namespace`, newest first — for a picker UI
----(`:RATelemetry snapshot list`, or documentation.nvim's own Telemetry
+---(`:RATelemetry snapshot list`, or docmap.nvim's own Telemetry
 ---panel once this ships) to build a list from.
 ---@param namespace string
 ---@param opts? Lib.Cache.Opts

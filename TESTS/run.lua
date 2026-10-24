@@ -17,7 +17,7 @@ vim.opt.rtp:append(vim.fn.getcwd())
 -- to `ipairs`: `LIB_NVIM_DIR` is `nil` whenever unset (the normal case for
 -- CI), and a `nil` in a table literal's first slot makes `ipairs` stop
 -- immediately without inspecting the slots after it — a real bug, found
--- and fixed this same way in documentation.nvim's own copy of this file
+-- and fixed this same way in docmap.nvim's own copy of this file
 -- (see that repo's FEATURES.md), not repeated here.
 local function add_lib_nvim()
   if pcall(require, "lib.nvim.net.curl") then
@@ -83,7 +83,7 @@ local specs = {
 }
 
 --- Straight to stdout rather than through `print` — the same reason
---- documentation.nvim's own runner gives: `print` in a headless Neovim goes
+--- docmap.nvim's own runner gives: `print` in a headless Neovim goes
 --- through the message area, and a spec that opens a window (`view_spec`
 --- opens a real split) forces a redraw that swallows the pending newline.
 ---@param s string

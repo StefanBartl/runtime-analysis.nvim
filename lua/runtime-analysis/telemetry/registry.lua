@@ -154,7 +154,7 @@ local function make_wrapper(site)
     -- current line), not `"Sln"` (+ name resolution), which measured
     -- ~1.5x more expensive for a caller *name* this already has a cheaper,
     -- unambiguous substitute for: a source:line pair identifies the exact
-    -- call site, which is the same join key `documentation.nvim`'s own
+    -- call site, which is the same join key `docmap.nvim`'s own
     -- static `calls` extraction already uses (a call edge's `line`, not a
     -- resolved caller name). Level 2 from inside this wrapper is the
     -- wrapper's own caller — the immediate caller of the wrapped function,

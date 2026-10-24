@@ -1,9 +1,9 @@
 ---@module 'scripts.gen_map'
 --- CLI entry point for this repository's own module map, adopted per
---- documentation.nvim's own reuse guide
---- (https://github.com/StefanBartl/documentation.nvim/blob/main/docs/REUSE.md)
+--- docmap.nvim's own reuse guide
+--- (https://github.com/StefanBartl/docmap.nvim/blob/main/docs/REUSE.md)
 --- — the housekeeping section, `scripts/gen_map.lua` +
---- documentation.nvim as a dev dependency.
+--- docmap.nvim as a dev dependency.
 ---
 ---   nvim --headless -l scripts/gen_map.lua                    # regenerate
 ---   nvim --headless -l scripts/gen_map.lua --check            # verify, write nothing
@@ -11,9 +11,9 @@
 ---   nvim --headless -l scripts/gen_map.lua --full             # + LuaLS enrichment
 ---
 --- Everything above the options table at the bottom is generic, copied
---- verbatim from documentation.nvim's own copy of this file — see docs/REUSE.md
+--- verbatim from docmap.nvim's own copy of this file — see docs/REUSE.md
 --- for what changing it would cost future updates. `layers` and a
---- self-rendered `docs/BINDINGS.md` (both present in documentation.nvim's own
+--- self-rendered `docs/BINDINGS.md` (both present in docmap.nvim's own
 --- copy) are deliberately not carried over here: `layers` encodes that
 --- repository's own core/editor architecture boundary, which this plugin has
 --- no equivalent of, and this repository's `docs/BINDINGS.md` is explicitly
@@ -25,7 +25,7 @@ vim.opt.runtimepath:prepend(root)
 --- Put a dependency on the runtimepath, if it is not already reachable.
 ---
 --- A headless `nvim -l` run starts with no plugin manager, so nothing beyond
---- `root` is on the rtp — `documentation` and `lib.nvim` both have to be found
+--- `root` is on the rtp — `docmap` and `lib.nvim` both have to be found
 --- by hand. Three candidates, in descending order of explicitness: an
 --- environment variable (what CI sets), a `.deps/` checkout (what CI clones
 --- into), and a sibling checkout (what a local development tree looks like).
@@ -68,27 +68,27 @@ local function ensure(modname, dirname)
 end
 
 ensure("lib.nvim.fs.read", "lib.nvim")
-ensure("documentation.core.cli", "documentation.nvim")
+ensure("docmap.core.cli", "docmap.nvim")
 
 -- Sibling checkouts, for `sibling-reference-missing`. Relative to `root`, so
 -- the declaration stays true on every machine and simply finds nothing on CI,
 -- where no sibling is checked out -- which is silence, not a finding.
 --
 -- `name` is the repository *directory* name a doc citation uses, which is not
--- the module prefix the entry is keyed by: `documentation.nvim` against a
--- `documentation` key. This repository is the reason the check exists -- it
+-- the module prefix the entry is keyed by: `docmap.nvim` against a
+-- `docmap` key. This repository is the reason the check exists -- it
 -- carried nine dead `docs/ECOSYSTEM.md` citations, a path that only exists in
--- documentation.nvim.
+-- docmap.nvim.
 local siblings = {
   ["lib.nvim"] = {
     repo = "StefanBartl/lib.nvim",
     name = "lib.nvim",
     local_path = "../lib.nvim",
   },
-  documentation = {
-    repo = "StefanBartl/documentation.nvim",
-    name = "documentation.nvim",
-    local_path = "../documentation.nvim",
+  docmap = {
+    repo = "StefanBartl/docmap.nvim",
+    name = "docmap.nvim",
+    local_path = "../docmap.nvim",
   },
   mdview = {
     repo = "StefanBartl/mdview.nvim",
@@ -102,7 +102,7 @@ local siblings = {
   },
 }
 
-local opts = require("documentation.config").build(root, {
+local opts = require("docmap.config").build(root, {
   source = "lua/runtime-analysis",
   title = "runtime-analysis.nvim",
   out_dir = "docs/map",
@@ -111,6 +111,6 @@ local opts = require("documentation.config").build(root, {
   external_repos = siblings,
 })
 
-local code = require("documentation.core.cli").run(opts, _G.arg or {})
+local code = require("docmap.core.cli").run(opts, _G.arg or {})
 
 vim.cmd("cq " .. code)

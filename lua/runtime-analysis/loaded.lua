@@ -1,6 +1,6 @@
 ---@module 'runtime-analysis.loaded'
 --- Enumerate what a module actually has on its table right now —
---- the half of "diff loaded-vs-declared" this repository owns. documentation.nvim knows every function the source
+--- the half of "diff loaded-vs-declared" this repository owns. docmap.nvim knows every function the source
 --- *declares*; this answers what `package.loaded` actually holds in the
 --- current process, which the static half structurally cannot: a module
 --- never required this session, a field a metatable materializes only on
@@ -14,7 +14,7 @@
 --- (a headless `:DocMap check` run, a different Neovim entirely) sees
 --- nothing and must render that as "not loaded here", never as "declared
 --- but dead" — the identical "absence of data is not evidence" rule the
---- telemetry join (ECOSYSTEM.md step 8, in documentation.nvim) already
+--- telemetry join (ECOSYSTEM.md step 8, in docmap.nvim) already
 --- states for its own case. The real use case this answers cleanly is a
 --- config author pointing `:DocBrowse` at the very config that is running
 --- it — the plugin under analysis and the plugin doing the analysis are
@@ -27,7 +27,7 @@
 local M = {}
 
 ---Every function-valued key directly on `package.loaded[module_id]` — one
----level, matching how documentation.nvim's own IR keys a node's functions
+---level, matching how docmap.nvim's own IR keys a node's functions
 ---(`node.module .. "#" .. fn.name`, no deeper qualification): a nested
 ---table under a key is a further require-able module in its own right
 ---(its own IR node, its own separate call to this function), not a
@@ -88,14 +88,14 @@ end
 --
 -- **One identifier, not two.** Telemetry genuinely needs a separate
 -- namespace from whatever module prefix it wraps — `core/telemetry_self.lua`
--- wraps `main = "documentation"` (the require path) under
--- `namespace = "documentation.nvim"` (`opts.title`), and those differ for
+-- wraps `main = "docmap"` (the require path) under
+-- `namespace = "docmap.nvim"` (`opts.title`), and those differ for
 -- this repo itself. A loaded snapshot has no such split to make: it is
 -- scoped by `prefix` (the same convention `wrap_loaded(prefix)` already
 -- uses) and nothing else, so `prefix` is also the storage key — the
 -- alternative (a caller-chosen namespace kept in sync with the prefix by
 -- hand) would be one more thing to get out of sync for no benefit, since
--- documentation.nvim's own reading side can derive the identical `prefix`
+-- docmap.nvim's own reading side can derive the identical `prefix`
 -- from `opts.source` without needing to be told a second string.
 -- -----------------------------------------------------------------------
 
@@ -205,7 +205,7 @@ end
 ---own (no autocmd, no interval), so an unexpected capture cannot silently
 ---start evicting a prefix's older, possibly still-wanted ones. The only
 ---call site is `:RA loaded snapshot <prefix> [name]`.
----@param prefix string Module-id prefix to scope the walk to, e.g. `"documentation"` — also the storage key; see this section's own header for why there is no separate namespace argument.
+---@param prefix string Module-id prefix to scope the walk to, e.g. `"docmap"` — also the storage key; see this section's own header for why there is no separate namespace argument.
 ---@param name? string Default: a timestamp (`tostring(os.date("%Y-%m-%dT%H-%M-%S"))`), the same default `telemetry.snapshot` uses.
 ---@return string|nil saved_name `nil` when `prefix` is invalid, or nothing under it is loaded at all.
 function M.snapshot(prefix, name)
@@ -241,7 +241,7 @@ end
 
 ---Every snapshot saved for `prefix`, newest first — the same shape
 ---`telemetry.list_snapshots` already returns, for a picker UI
----(`:RA loaded snapshots <prefix>`, or documentation.nvim's own Loaded
+---(`:RA loaded snapshots <prefix>`, or docmap.nvim's own Loaded
 ---panel) to build a list from.
 ---@param prefix string
 ---@return { name: string, saved_at: integer }[]

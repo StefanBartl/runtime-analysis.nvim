@@ -1,7 +1,7 @@
 # Commands
 
 One compound verb, two flat aliases, and one second compound command —
-split along the same line documentation.nvim's own `docs/commands.md` draws
+split along the same line docmap.nvim's own `docs/commands.md` draws
 between `:DocMap` and `:DocBrowse`: `:RA` **does** something to a request,
 `:RATelemetry` **reports** on what has already run.
 
@@ -32,7 +32,7 @@ case, a committed file holding several.
 argument) is also this plugin's public integration surface — see
 [`api.md`](api.md), [`IDEAS.md`](IDEAS.md) and the module doc-comment in
 [`lua/runtime-analysis/init.lua`](../lua/runtime-analysis/init.lua) for how
-documentation.nvim's `:DocBrowse` Endpoints mode calls it with a pre-filled
+docmap.nvim's `:DocBrowse` Endpoints mode calls it with a pre-filled
 `METHOD path` instead of the default template.
 
 ### The `Auth:` header shorthand
@@ -266,14 +266,14 @@ Opens a `vim.ui.select` picker (whichever picker UI is already configured
 — telescope, fzf-lua, snacks, or Neovim's own default) over every send
 this project has recorded, newest first, formatted as `date  status
 METHOD url`. Picking one calls `M.open_request({"METHOD url", ""})` —
-exactly documentation.nvim's own Endpoints-mode integration, since a
+exactly docmap.nvim's own Endpoints-mode integration, since a
 history entry *is*, by design, exactly that much information and no more.
 A secret query value is stored as `<redacted>` (see below): type it in again
 or write `{{var}}` and keep the value in `:RA env`.
 Reports (does not error) when there is nothing recorded yet for this
 project.
 
-`vim.ui.select` rather than the quickfix list documentation.nvim's own
+`vim.ui.select` rather than the quickfix list docmap.nvim's own
 commands favor: this is "pick exactly one thing and act on it", not "here
 are several locations to jump through" — the native pick-one primitive is
 the right one for this shape of question.
@@ -451,7 +451,7 @@ docs already put on your clipboard. Invoked with a real range instead
 (`'<,'>RA import`, e.g. after visually selecting a `curl` snippet already
 sitting in some buffer), reads the selected lines instead of the
 clipboard. Parses into a fresh request buffer via `M.open_request` — the
-same integration surface documentation.nvim's own Endpoints mode already
+same integration surface docmap.nvim's own Endpoints mode already
 uses — rather than mutating the current one.
 
 Recognizes `-X`/`--request`, `-H`/`--header` (repeatable),
@@ -625,7 +625,7 @@ loaded in this session, not a list frozen at `setup()`.
 `runtime-analysis.loaded` ([`FEATURE_LOG.md`](FEATURE_LOG.md) §5.3) already
 answers the flat, one-level
 question "what functions does this module have right now", the half
-documentation.nvim's own `:DocBrowse` "loaded" mode joins against; this
+docmap.nvim's own `:DocBrowse` "loaded" mode joins against; this
 answers the deeper one a config author actually needs — what a table
 *contains*, after however many merge passes built it.
 
@@ -644,7 +644,7 @@ resolved:**
   by comparing keys, no invocation needed. When `__index` is a function,
   only its presence is reported: calling it would be a real side effect
   on the code being inspected, the same "record it, don't guess it"
-  trade-off `documentation.core.loaded_diff` and `endpoint_coverage.lua`
+  trade-off `docmap.core.loaded_diff` and `endpoint_coverage.lua`
   already take elsewhere in this ecosystem.
 - **Renders via the same float every other report in this plugin already
   uses** — `ui.kit.viewer`, falling back to `vim.notify` when
@@ -687,7 +687,7 @@ combined into one count, not tracked per buffer.
 [`FEATURE_LOG.md`](FEATURE_LOG.md) §5.4: persisted, named captures of
 `runtime-analysis.loaded`'s live read, so it can be viewed later, or from a
 process that never itself loaded the code in question —
-documentation.nvim's `:DocMap serve` Loaded Analysis panel is the consumer
+docmap.nvim's `:DocMap serve` Loaded Analysis panel is the consumer
 this was built for, since a browser tab answering `GET /api/loaded` has no
 live `package.loaded` of its own to read and, unlike its Telemetry panel
 counterpart, has no "latest" fallback to reach for instead.
@@ -762,7 +762,7 @@ loaded yet this session still shows up:
 ```
 NAMESPACE              STATE    MODE             WRAPPED       CALLS  SESSIONS      SIZE  SINCE
 cascade.nvim           running  count+args+time      163     411 545        77   40.8 KB  2026-08-27
-documentation.nvim     stopped  count+args           185   2 368 131        41   76.2 KB  2026-08-05
+docmap.nvim     stopped  count+args           185   2 368 131        41   76.2 KB  2026-08-05
 
 31 namespace(s) · 1 running · 0 disabled · 66 486 701 calls · 784.1 KB on disk
 ```
@@ -907,7 +907,7 @@ Per-target options: `mains` (required), `namespace` (required), `deep`
 
 **Only a genuinely empty or recognized argument acts.** An unknown
 subcommand reports what it expected rather than falling through to a
-default — the same rule documentation.nvim's `:DocMap` follows for the
+default — the same rule docmap.nvim's `:DocMap` follows for the
 identical reason: a typo silently doing the wrong thing (rewriting a report,
 resetting data) is worse than a typo doing nothing.
 
@@ -932,7 +932,7 @@ it is a large, independent surface (23 subcommands, namespace completion,
 its own extensive README) about a plugin's *runtime history* in general,
 not specifically about the request runner `:RA` is named for. Nesting it as
 `:RA telemetry start markdown.nvim` buries a namespace argument three
-levels deep for no real gain, and documentation.nvim already established
+levels deep for no real gain, and docmap.nvim already established
 the precedent this mirrors: `:DocMap` and `:DocBrowse` are two commands,
 not `:DocMap browse ...`, split along the same "does something" vs.
 "reports on something" line used here.

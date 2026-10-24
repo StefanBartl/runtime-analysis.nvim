@@ -3,7 +3,7 @@
 Hand-maintained, not generated — this small a surface (one compound verb,
 two flat aliases, one second compound command, no keymaps, a handful of
 opt-in autocommands) is small enough that a generator (the way
-[documentation.nvim's own `docs/BINDINGS.md`](https://github.com/StefanBartl/documentation.nvim/blob/main/docs/BINDINGS.md)
+[docmap.nvim's own `docs/BINDINGS.md`](https://github.com/StefanBartl/docmap.nvim/blob/main/docs/BINDINGS.md)
 is built from its live keymap table) would cost more than it saves. Update
 this file by hand whenever a command's shape changes.
 
@@ -48,7 +48,7 @@ whatever is actually in `package.loaded` right now, `:RA usage <Tab>`
 completes `start`/`stop`, `:RA loaded <Tab>` completes `snapshot`/
 `snapshots`). `:RATelemetry` stays a
 second, separate compound command rather than folding under `:RA telemetry
-...`, the same split documentation.nvim draws between `:DocMap`
+...`, the same split docmap.nvim draws between `:DocMap`
 (writes/verifies) and `:DocBrowse` (only reads) — here between "runs a
 request" and "reports on what already ran".
 
@@ -164,7 +164,7 @@ See [`commands.md`](commands.md) for the honest limits (only mappings set after
 
 Named, persisted captures of `runtime-analysis.loaded`'s live
 `package.loaded` read, so it can be viewed later, or from a process that
-never itself loaded the code in question — documentation.nvim's `:DocMap
+never itself loaded the code in question — docmap.nvim's `:DocMap
 serve` Loaded Analysis panel is the consumer this was built for. `:RA
 loaded snapshot <prefix> [name]` scopes the walk to `prefix` (and anything
 `prefix .`-prefixed), the same scoping `wrap_loaded(prefix)` already uses;

@@ -2,7 +2,7 @@
 --- The mechanism behind `:RATelemetrySetupAll`/`:RATelemetrySetupAllFull` --
 --- manager-agnostic orchestration over whatever `telemetry.lazy.candidates()`
 --- (the one lazy.nvim-specific resolution step) hands back. Split out the
---- same way `documentation.editor.generate_all` sits apart from its own
+--- same way `docmap.editor.generate_all` sits apart from its own
 --- `bindings/usrcmds/generate_all.lua`: this file never prompts, never
 --- notifies -- a caller (`telemetry/command.lua`) owns the UI, this owns
 --- "what actually happens to one candidate".
@@ -102,7 +102,7 @@ end
 ---resolves. Synchronous -- nothing here does IO slow enough to warrant a
 ---callback (a JSON write per namespace, at most a few dozen namespaces), so
 ---`on_done`/the return value fire before this function returns, both
----offered for the same reason `documentation.editor.generate_all.run()`
+---offered for the same reason `docmap.editor.generate_all.run()`
 ---offers `on_done` despite that one genuinely being async: one call site
 ---(`telemetry/command.lua`) reads the return value directly, and matching
 ---the sibling module's shape costs nothing.
@@ -138,7 +138,7 @@ function M.run(run_opts)
       -- dir), not left to `telemetry.load`'s own default: a candidate with a
       -- custom cache directory must be checked *there*, not wherever most
       -- other plugins happen to persist to -- the same reasoning
-      -- `documentation.editor.generate_all.autoload` already gives for
+      -- `docmap.editor.generate_all.autoload` already gives for
       -- checking a project's own configured `out_dir` rather than a
       -- hardcoded path.
       --

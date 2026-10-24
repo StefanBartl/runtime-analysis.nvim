@@ -1,6 +1,6 @@
 # runtime-analysis.nvim — module map
 
-> **Generated** by `documentation`. Do not edit by hand — run `:DocMap`
+> **Generated** by `docmap`. Do not edit by hand — run `:DocMap`
 > (or `nvim --headless -l scripts/gen_map.lua`) to regenerate.
 
 **4 modules** · 3 namespaces · 40 helper files
@@ -95,18 +95,10 @@ flowchart LR
 
 ## Drift
 
-0 errors · 8 warnings · 3 info
+0 errors · 0 warnings · 3 info
 
-| Severity | Check | Message |
-|---|---|---|
-| warn | `sibling-reference-missing` | docs/api.md references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
-| warn | `sibling-reference-missing` | docs/IDEAS.md references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
-| warn | `sibling-reference-missing` | lua/runtime-analysis/telemetry/README.md references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
-| warn | `sibling-reference-missing` | docs/FEATURE_LOG.md references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
-| warn | `sibling-reference-missing` | docs/FEATURES/README.md references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
-| warn | `sibling-reference-missing` | docs/FEATURES/README.md references 'documentation.nvim/docs/FEATURES_FORMAT.md', which does not exist in the documentation.nvim checkout |
-| warn | `sibling-reference-missing` | lua/runtime-analysis/init.lua references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
-| warn | `sibling-reference-missing` | lua/runtime-analysis/view.lua references 'documentation.nvim/docs/ECOSYSTEM.md', which does not exist in the documentation.nvim checkout |
+No errors or warnings.
+
 
 <details>
 <summary>3 informational findings</summary>

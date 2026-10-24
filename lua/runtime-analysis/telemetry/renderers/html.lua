@@ -1,10 +1,10 @@
 ---@module 'runtime-analysis.telemetry.renderers.html'
 --- A purpose-built HTML dashboard — The Markdown
 --- report answers "what happened" in prose; this answers the same
---- question sortable and filterable, the way documentation.nvim's own
+--- question sortable and filterable, the way docmap.nvim's own
 --- Analysis tab already does for static findings.
 ---
---- **Not `documentation.nvim`'s renderer, stolen wholesale.** That module
+--- **Not `docmap.nvim`'s renderer, stolen wholesale.** That module
 --- (`core/render/html.lua`) is ~4,500 lines, of which ~3,850 are one
 --- embedded JavaScript single-page app tightly coupled to its own IR
 --- (module nodes, require/call edges, findings) — genuinely reusing it
@@ -18,7 +18,7 @@
 --- search input) — in a new, small, self-contained page written for this
 --- data, not that one. A few hundred lines here versus a few thousand
 --- there, and no dependency from this plugin's own report onto
---- documentation.nvim's internal (and IR-specific) module.
+--- docmap.nvim's internal (and IR-specific) module.
 ---
 --- One flat table, one row per (namespace, function) pair — `calls`,
 --- `errors`, `mean_ms` when timing is on, the single most-called argument
@@ -39,10 +39,10 @@ local M = {}
 -- client-side JavaScript function baked into that string, not Lua.
 local esc = require("lib.lua.strings.encoding").html_escape
 
--- Same design tokens as documentation.nvim's own `core/render/html.lua` —
+-- Same design tokens as docmap.nvim's own `core/render/html.lua` —
 -- see this module's own doc-comment for why they are copied rather than
 -- required from there (a fork of static values, not of behavior; nothing
--- here re-executes documentation.nvim's own code).
+-- here re-executes docmap.nvim's own code).
 local CSS = [[
 :root{
   --bg:#fbfbfa; --panel:#fff; --ink:#1a1a19; --muted:#6b6b68; --line:#e4e4e1;

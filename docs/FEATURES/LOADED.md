@@ -2,15 +2,15 @@
 
 `runtime-analysis.loaded` — what is actually on a module's table right
 now, in the current process, as opposed to what the source declares.
-documentation.nvim's own static scan structurally cannot answer this: a
+docmap.nvim's own static scan structurally cannot answer this: a
 callback bound as a value, a metatable-materialized field, a key built
 from a loop all look identical to "never happened" from source alone.
 
-## Live read, joined by documentation.nvim
+## Live read, joined by docmap.nvim
 
 `M.functions(module_id)`/`M.is_loaded(module_id)` read `package.loaded`
 directly — no wrapping, no instrumentation, called on demand, never on a
-hot path. documentation.nvim's own `core/loaded_diff.lua` joins the result
+hot path. docmap.nvim's own `core/loaded_diff.lua` joins the result
 against its IR for `:DocBrowse loaded` mode: declared-but-not-loaded and
 loaded-but-not-declared, each a real discrepancy in its own direction.
 
@@ -35,11 +35,11 @@ own named snapshots, applied to a different kind of runtime fact: same
 **One identifier, not two, unlike telemetry.** A telemetry namespace can
 genuinely differ from the module prefix it wraps; a loaded snapshot has
 nothing to name except the prefix it was captured under, so `M.snapshot`
-takes no separate namespace argument — documentation.nvim's own reading
+takes no separate namespace argument — docmap.nvim's own reading
 side derives the identical prefix independently from `opts.source`, never
 told which one was used.
 
-documentation.nvim's Loaded Analysis panel (`:DocMap serve`,
+docmap.nvim's Loaded Analysis panel (`:DocMap serve`,
 `GET /api/loaded`) is the consumer this was built for: a server route
 answering a browser tab has no live `package.loaded` of its own to read,
 so it only ever reads named snapshots — never a "latest" fallback the way

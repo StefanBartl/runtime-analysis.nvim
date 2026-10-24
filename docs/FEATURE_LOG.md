@@ -470,22 +470,22 @@ lift than the original framing suggested.
 loaded-vs-declared snapshot is worth having at all" — was resolved by
 direct user pushback, not further analysis.** Feedback on the roadmap
 entry disagreed with the premise outright: a report can already be saved
-and reopened; surfacing it in documentation.nvim as persisted state data,
+and reopened; surfacing it in docmap.nvim as persisted state data,
 listed and clicked through one at a time, was not seen as the hard problem
 the entry's own hedging suggested. It wasn't. Once reframed as "the exact
 mechanism §4.5 already proved, applied to a different runtime fact rather
 than a new design question", the remaining work was mechanical.
 
 **One identifier, not two — traced, not assumed, from how telemetry's own
-two actually differ.** `documentation.nvim`'s own `core/telemetry_self.lua`
-wraps `main = "documentation"` (a require prefix) under
-`namespace = "documentation.nvim"` (`opts.title`) — genuinely two
+two actually differ.** `docmap.nvim`'s own `core/telemetry_self.lua`
+wraps `main = "docmap"` (a require prefix) under
+`namespace = "docmap.nvim"` (`opts.title`) — genuinely two
 different strings, for that repo itself, because a telemetry namespace can
 wrap arbitrary code under any prefix. A loaded snapshot has nothing to
 name except the prefix it was captured under, so `M.snapshot(prefix,
 name)` takes no separate namespace argument at all — the alternative (a
 caller-chosen namespace kept in sync with the prefix by hand) would be one
-more thing to drift for no benefit, since documentation.nvim's own reading
+more thing to drift for no benefit, since docmap.nvim's own reading
 side derives the identical prefix independently from `opts.source`/
 `opts.lua_root`, never told which one was used.
 
@@ -499,7 +499,7 @@ snapshot <prefix> [name]` / `:RA loaded snapshots <prefix>` — the only
 call sites, "always explicit" the identical posture `telemetry.snapshot`
 already has.
 
-On the documentation.nvim side (same commit set): `core/loaded_diff.lua`'s
+On the docmap.nvim side (same commit set): `core/loaded_diff.lua`'s
 live `M.rows(ir)` and a new `M.rows_from_snapshot(ir, snapshot)` now share
 one `diff(ir, present_for)` implementation; `editor/serve.lua` gained
 `GET /api/loaded[?snapshot=]`/`GET /api/loaded/snapshots`; a new Loaded
@@ -512,9 +512,9 @@ captures" — a different, not-asked-for question Telemetry's own compare
 view already answers if it's ever wanted here too).
 
 Verified against real data before calling it done: a real headless session
-took a real snapshot, started `documentation.editor.serve`, and curled
+took a real snapshot, started `docmap.editor.serve`, and curled
 both new routes — the snapshot list came back real, the diff came back
-correct against documentation.nvim's own IR, including a synthetic
+correct against docmap.nvim's own IR, including a synthetic
 `loaded_only` field planted specifically to confirm that direction (a
 mostly-cold headless session produces mostly `declared_only` rows by
 default, which would have hidden a bug in the other direction). A request
@@ -525,11 +525,11 @@ Test coverage: `TESTS/loaded_spec.lua` here (snapshot/list/load/
 retention/eviction — retention's own test asserts the count evicted down
 to the cap rather than which specific one, since `saved_at` is
 second-granularity and three snapshots saved back-to-back inside one test
-can tie); `TESTS/browse_loaded_spec.lua` on the documentation.nvim side.
+can tie); `TESTS/browse_loaded_spec.lua` on the docmap.nvim side.
 
 ### §4.5 Named, dated telemetry snapshots
 
-Raised the same day, from documentation.nvim's side, wanting a Telemetry
+Raised the same day, from docmap.nvim's side, wanting a Telemetry
 Analysis panel with a "compare saved states" picker, not just the current
 aggregate `store.load`/`save` already provide. `telemetry.snapshot(namespace,
 name?)` captures the current aggregate under a name without resetting the
@@ -566,13 +566,13 @@ behavior all work as designed.
 ### `opts.snapshot_retention` — a per-instance override
 
 Same day, found during a doc-currency audit of both this plugin and
-documentation.nvim: `M.SNAPSHOT_RETENTION` above was a real feature —
+docmap.nvim: `M.SNAPSHOT_RETENTION` above was a real feature —
 governing how many snapshots a namespace keeps — implemented as a
 hardcoded module constant with no way to configure it per namespace, only
 by mutating the global directly. Confirmed with the user (alongside a
-matching gap in documentation.nvim, `core/snippet.lua`'s `MAX_LINES`) that
+matching gap in docmap.nvim, `core/snippet.lua`'s `MAX_LINES`) that
 this specific one was worth a real option; a third candidate found the
-same pass (`core/duplicates.lua`'s `MIN_SIZE` in documentation.nvim) was
+same pass (`core/duplicates.lua`'s `MIN_SIZE` in docmap.nvim) was
 deliberately left alone — its own code comment already argues callers
 should not need to override it.
 
@@ -641,7 +641,7 @@ welchem item davon zugegriffen, lesend, schreibend"), with strings raised
 in the same breath. The string half was answered without writing any code:
 Lua strings are immutable, interned value types with no per-occurrence
 identity to attach a counter to — "how was this string initialized and
-used" is a static-analysis question, documentation.nvim's job by this
+used" is a static-analysis question, docmap.nvim's job by this
 whole ecosystem's own stated thesis, and the part of it runtime instrumentation
 *can* honestly answer ("which argument values does this function actually
 see") already exists as argument fingerprinting.
@@ -699,10 +699,10 @@ enough to feel limiting" — revisited the same day it was first written,
 and answered "not yet" the first time it was asked (see §4.4's own
 history in this file's earlier revision). Asked again directly, the answer changed: build it, and use
 option (a) of `docs/IDEAS.md` §3.1's three-way choice — steal
-documentation.nvim's renderer's *design*, not its code.
+docmap.nvim's renderer's *design*, not its code.
 
 **What "steal the renderer" turned out to mean, concretely.**
-documentation.nvim's `core/render/html.lua` is roughly 4,500 lines, of
+docmap.nvim's `core/render/html.lua` is roughly 4,500 lines, of
 which roughly 3,850 are one embedded JavaScript single-page application
 tightly coupled to its own IR (module nodes, require/call edges,
 findings). Genuinely reusing it for telemetry's own, completely
@@ -717,7 +717,7 @@ properties — colors, spacing, light/dark via `prefers-color-scheme` and
 search input), written fresh for telemetry's own data. New module:
 [`lua/runtime-analysis/telemetry/renderers/html.lua`](../lua/runtime-analysis/telemetry/renderers/html.lua)
 — a few hundred lines, not a few thousand, and no dependency from this
-plugin's own report onto documentation.nvim's internal, IR-specific
+plugin's own report onto docmap.nvim's internal, IR-specific
 module.
 
 **One flat, sortable, filterable table** — one row per (namespace,
@@ -839,7 +839,7 @@ each resolved on its own terms, not by default:**
    it — answerable by comparing keys, no invocation needed. When
    `__index` is a function, only its presence is reported: calling it
    would be a real side effect on the code being inspected, the same
-   "record it, don't guess it" trade-off `documentation.core.loaded_diff`
+   "record it, don't guess it" trade-off `docmap.core.loaded_diff`
    and `endpoint_coverage.lua` already take elsewhere in this ecosystem
    (§5.3, §6.2). `:RA inspect` stays a pure read.
 3. **Where the result renders.** `ui.kit.viewer`, falling back
@@ -855,7 +855,7 @@ Full writeup: `docs/commands.md`'s own `:RA inspect <module>` section.
 
 "The sharpest form of the static × runtime join" this document names —
 and the one item on this list that genuinely needed new work on *both*
-sides, not just a join module on documentation.nvim's end.
+sides, not just a join module on docmap.nvim's end.
 
 **This repository's own half:** a new `runtime-analysis.loaded` module,
 deliberately thin — `M.functions(module_id)` walks `package.loaded[module_id]`
@@ -871,8 +871,8 @@ analysis — the identical caveat the telemetry join (§6.1) and endpoint
 coverage (§6.2) already state for their own "no data" cases.
 
 **Shipped entirely as new work in
-[documentation.nvim](https://github.com/StefanBartl/documentation.nvim)**
-— a new `documentation.core.loaded_diff` module (soft dependency,
+[docmap.nvim](https://github.com/StefanBartl/docmap.nvim)**
+— a new `docmap.core.loaded_diff` module (soft dependency,
 `pcall(require, "runtime-analysis.loaded")`), joined into a new 9th
 `:DocBrowse` mode ("loaded"), spanning the whole tree like
 Telemetry/Endpoints rather than one node's neighborhood. One row per
@@ -888,12 +888,12 @@ colon-declared method on a nested table is excluded outright rather than
 guessed at, the same reasoning `endpoint_coverage.lua`'s route matching
 already states for what it deliberately does not attempt.
 
-Full writeup: documentation.nvim's `lua/documentation/editor/browse/README.md`
-("Loaded mode" section) and `lua/documentation/core/loaded_diff.lua` itself.
+Full writeup: docmap.nvim's `lua/docmap/editor/browse/README.md`
+("Loaded mode" section) and `lua/docmap/core/loaded_diff.lua` itself.
 
 ### §6.2 Endpoint coverage
 
-The last non-speculative Medium item. documentation.nvim knows every
+The last non-speculative Medium item. docmap.nvim knows every
 route the source declares; this plugin's request history knows which
 ones were actually sent. "Three of your eleven routes have never been
 exercised" is a real answer neither side can give alone. Request history
@@ -901,8 +901,8 @@ exercised" is a real answer neither side can give alone. Request history
 entry said it would, was the join itself.
 
 **Shipped entirely as new work in
-[documentation.nvim](https://github.com/StefanBartl/documentation.nvim)**
-— a new `documentation.core.endpoint_coverage` module, soft dependency
+[docmap.nvim](https://github.com/StefanBartl/docmap.nvim)**
+— a new `docmap.core.endpoint_coverage` module, soft dependency
 (`pcall(require, "runtime-analysis.history")`), joined into the existing
 Endpoints browse mode as a leading `○` badge for a route history never
 matched, plus real sends (timestamp + outcome) in the detail pane when
@@ -923,13 +923,13 @@ matched wrong.
 **One real addition on this repository's own side, small but genuine.**
 `history.list()`/`history.clear()` gained an `opts.root` override —
 `M.record` stays cwd-only (recording is always "I just sent a request
-from *here*"), but a cross-repo reader like documentation.nvim's join
+from *here*"), but a cross-repo reader like docmap.nvim's join
 analyzes `opts.root`, which is not necessarily cwd at all, and needed
 *that* project's history rather than whichever one Neovim happened to be
 sitting in.
 
-Full writeup: documentation.nvim's `lua/documentation/editor/browse/README.md`
-("Endpoints mode" section) and `lua/documentation/core/endpoint_coverage.lua`
+Full writeup: docmap.nvim's `lua/docmap/editor/browse/README.md`
+("Endpoints mode" section) and `lua/docmap/core/endpoint_coverage.lua`
 itself.
 
 ### §3.1 Call trees, not just counts
@@ -944,7 +944,7 @@ baseline, `debug.getinfo(2, "S")` (source only) added ~0.31 µs,
 `debug.getinfo(2, "Sl")` (+ current line) ~0.32 µs, `debug.getinfo(2,
 "Sln")` (+ name resolution) ~0.51 µs — name resolution costs ~60% more
 for information a source:line pair already makes unambiguous, and it is
-the identical join key documentation.nvim's own static `calls` extraction
+the identical join key docmap.nvim's own static `calls` extraction
 already uses (a call edge's line number, not a resolved caller name). Shipped
 with `"Sl"`, landing cheaper than the already-shipped `+ timing` tier
 (0.394 µs).
@@ -985,13 +985,13 @@ staying exact; and markdown rendering.
 
 ### §6.1 Mode 8 — telemetry in `:DocBrowse` (§6.3 folded in)
 
-The reason two plugins exist, per `documentation.nvim/docs/ECOSYSTEM.md`'s own framing —
+The reason two plugins exist, per `docmap.nvim/docs/ECOSYSTEM.md`'s own framing —
 shipped as the design doc specified, cross-repo. This repository's own
 half (`telemetry.load()`, `Data.modules`, `resolved_modules()`) had
 already shipped earlier; what landed today is entirely on
-[documentation.nvim](https://github.com/StefanBartl/documentation.nvim)'s
-side: a new `documentation.core.telemetry_join` module joining
-`documentation.core.check.used_keys(ir)` (extracted from
+[docmap.nvim](https://github.com/StefanBartl/docmap.nvim)'s
+side: a new `docmap.core.telemetry_join` module joining
+`docmap.core.check.used_keys(ir)` (extracted from
 `check_dead_functions`'s own body, so the check and the mode can never
 quietly disagree about "has a static caller") against a
 `runtime-analysis.telemetry` namespace, plus a new `telemetry` mode in
@@ -1001,7 +1001,7 @@ turned out to be the exact same piece of work as one of this join's own
 two aggregate lines, not a separate follow-on — folded into this entry
 rather than getting its own.
 
-**What actually shipped, concretely, all in documentation.nvim:**
+**What actually shipped, concretely, all in docmap.nvim:**
 `opts.telemetry_namespace` (new, defaults to `opts.title` — every
 telemetry instance in this ecosystem is already namespaced by the
 plugin's own display name); a `telemetry` browse mode badging each
@@ -1018,23 +1018,23 @@ backlog prioritized by evidence of real use, the line the design doc
 itself calls "the most immediately useful number in this whole
 document").
 
-Verified in documentation.nvim's `TESTS/browse_telemetry_spec.lua`
+Verified in docmap.nvim's `TESTS/browse_telemetry_spec.lua`
 against a real telemetry instance when `runtime-analysis.nvim` is
 reachable on the rtp — a real wrap, real calls, a real flush to disk,
 read back through `telemetry.load()` with no live instance, the same
 path a fresh `:DocMap check` run actually takes. Full writeup:
-documentation.nvim's own `docs/ECOSYSTEM.md` step 8; the original
+docmap.nvim's own `docs/ECOSYSTEM.md` step 8; the original
 lib.nvim-side design is fully done.
 
-### Housekeeping — `scripts/gen_map.lua` + documentation.nvim as a dev dependency
+### Housekeeping — `scripts/gen_map.lua` + docmap.nvim as a dev dependency
 
-`NEW_PROJECT.md` §4's last unchecked box: adopt documentation.nvim's own
+`NEW_PROJECT.md` §4's last unchecked box: adopt docmap.nvim's own
 module map generator, per its
-[`docs/REUSE.md`](https://github.com/StefanBartl/documentation.nvim/blob/main/docs/REUSE.md)
+[`docs/REUSE.md`](https://github.com/StefanBartl/docmap.nvim/blob/main/docs/REUSE.md)
 — copy two files, edit five lines. `scripts/gen_map.lua` copied verbatim
 except the options table at the bottom (`source = "lua/runtime-analysis"`,
 `title`, `repo_url`); `layers` and the self-rendered `docs/BINDINGS.md`
-block documentation.nvim's own copy carries were deliberately *not*
+block docmap.nvim's own copy carries were deliberately *not*
 copied — `layers` encodes that repository's own core/editor architecture
 boundary, which this plugin has no equivalent of, and this repository's
 `docs/BINDINGS.md` is explicitly hand-maintained rather than generated
@@ -1050,7 +1050,7 @@ this repo already used), and a `docs/BINDINGS.md` reference to the
 `SHARED_FILE` constant `runtime-analysis.env` exports, written as a
 dotted path the checker read as a missing module member. The second one
 is a real limitation worth recording plainly rather than chasing:
-`doc-references-missing` cross-references against `documentation.core
+`doc-references-missing` cross-references against `docmap.core
 .docs`'s own function index (`idx.fns_by_module`), built from
 `vim.treesitter`-extracted function definitions — a plain data-field
 assignment on the module table is never in that index no matter what
@@ -1062,16 +1062,16 @@ to stop presenting the constant as a dotted module-member reference.
 
 New `map` job in `.github/workflows/ci.yml`, mirroring
 `docs/REUSE.md`'s own CI template exactly: checks out this repo plus
-`lib.nvim` and `documentation.nvim` into `.deps/`, then
+`lib.nvim` and `docmap.nvim` into `.deps/`, then
 `nvim --headless -l scripts/gen_map.lua --check` — writes nothing, fails
 loudly on drift or staleness rather than letting a committed
 `docs/map/` quietly rot on `main`. `scripts/hooks/pre-commit` (also
-copied from documentation.nvim, unmodified past its three project-specific
+copied from docmap.nvim, unmodified past its three project-specific
 variables) gives the same check locally, opt-in via
 `git config core.hooksPath scripts/hooks`.
 
 `docs/map/{index.html,module_map.json,overview.md}` committed as a real
-build artifact, the same convention documentation.nvim uses on itself —
+build artifact, the same convention docmap.nvim uses on itself —
 `0 errors, 0 warnings, 3 info` at the moment of committing, `94/170`
 published functions fully documented.
 
@@ -1146,7 +1146,7 @@ both function and table fields, because a table is the way down to a function
 **It mirrors resolution with one deliberate exception: it never calls
 `require`.** Completing `lib.nvim.` by requiring every candidate would load
 modules -- top-level code, autocmd registration -- as a side effect of a
-keypress, which is the same hazard documentation.nvim avoids by skipping its
+keypress, which is the same hazard docmap.nvim avoids by skipping its
 module completion until a scan has already run. So the completer reads only
 the global-table walk (pure indexing) and `package.loaded`. An unloaded module
 does not complete; typing it out by hand still works, because `inspect` does
@@ -1667,7 +1667,7 @@ lines; a bare invocation reads the system clipboard (falling back to the
 unnamed register) — "paste a curl command," the roadmap entry's own
 framing, taken literally for the common case of nothing selected. Parses
 into a new buffer via `ra.open_request`, the identical entry point
-documentation.nvim's own Endpoints mode already uses. `:RA export` resolves
+docmap.nvim's own Endpoints mode already uses. `:RA export` resolves
 the `###` block under the cursor (the same resolution `:RA send` already
 uses) and yanks the formatted command to the unnamed register, mirroring
 `:RA yank`'s own register convention for the response body.
@@ -1839,13 +1839,13 @@ either, on either side, and this is stated as a deliberate widening of the
 original decision, not a silent scope change.
 
 **New commands: `:RA history`, `:RA history clear`.** The picker is
-`vim.ui.select`, not the quickfix list documentation.nvim's own commands
+`vim.ui.select`, not the quickfix list docmap.nvim's own commands
 favor — "pick exactly one thing and act on it" is a different shape of
 question than "here are locations to jump through," and `vim.ui.select`
 defers to whatever picker UI (telescope, fzf-lua, snacks, or Neovim's own
 default) the reader already has configured rather than this plugin
 inventing its own. Picking an entry reopens it via `open_request` —
-exactly documentation.nvim's own Endpoints-mode integration, since a
+exactly docmap.nvim's own Endpoints-mode integration, since a
 history entry is, by design, precisely that much information.
 
 **Every outcome recorded exactly once**, including cases the roadmap entry
@@ -2030,7 +2030,7 @@ index into `arg` instead of slicing it via `table.unpack`.
 Is `curl` present, is `lib.nvim` the version this expects, is the telemetry
 cache directory writable, is mdview available for `report_style = "auto"`.
 Shipped as [`lua/runtime-analysis/health.lua`](../lua/runtime-analysis/health.lua),
-modeled on documentation.nvim's own `editor/health.lua`: reports resolved
+modeled on docmap.nvim's own `editor/health.lua`: reports resolved
 configuration (live telemetry instances, persistently disabled namespaces,
 the cache directory and whether it is writable) rather than only
 presence/absence.
@@ -2040,12 +2040,12 @@ presence/absence.
 Both sibling plugins had one; this had a README and nothing `:help` could
 find. Shipped as [`doc/runtime-analysis.txt`](../doc/runtime-analysis.txt),
 `doc/tags` gitignored (generated by `:helptags`, not committed — the same
-convention documentation.nvim and mdview.nvim both already use).
+convention docmap.nvim and mdview.nvim both already use).
 
 ### `docs/commands.md` + `docs/BINDINGS.md`
 
 A `docs/commands.md`, once there are more than three commands —
-documentation.nvim's is the model. Both shipped in the same pass:
+docmap.nvim's is the model. Both shipped in the same pass:
 [`docs/commands.md`](commands.md) and [`docs/BINDINGS.md`](BINDINGS.md), the
 latter required by `NEW_PROJECT.md`'s own checklist and not existing at all
 before this.
@@ -2065,7 +2065,7 @@ user's own keymap to either name — turned out not to force a choice at all.
 exact same handlers `:RA`'s routes do; nothing was renamed, only added to.
 `:RATelemetry` stays a separate second compound command rather than folding
 under `:RA telemetry ...` — see `docs/commands.md`'s own section on why, the
-same split documentation.nvim draws between `:DocMap` and `:DocBrowse`.
+same split docmap.nvim draws between `:DocMap` and `:DocBrowse`.
 
 ### `config/init.lua` + `config/DEFAULTS.lua` + `bindings/` + a top-level `@types/init.lua`
 

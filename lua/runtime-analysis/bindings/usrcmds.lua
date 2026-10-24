@@ -8,14 +8,14 @@
 --- shape every sibling plugin uses. `:RATelemetry` is not registered here:
 --- it stays a second, separate compound command on its own terms (see
 --- `telemetry/command.lua`'s doc comment) — the same split
---- documentation.nvim draws between `:DocMap` (writes/verifies) and
+--- docmap.nvim draws between `:DocMap` (writes/verifies) and
 --- `:DocBrowse` (only reads), here drawn between "runs a request" and
 --- "reports on what already ran".
 ---
 --- **Why both `:RA request`/`:RA send` and `:RARequest`/`:RASend` exist.**
 --- `NEW_PROJECT.md`'s own checklist prefers one compound verb per plugin, and
 --- `:RA` is that verb. But `:RARequest`/`:RASend` are this plugin's oldest,
---- most-referenced public surface — documentation.nvim's `:DocBrowse`
+--- most-referenced public surface — docmap.nvim's `:DocBrowse`
 --- Endpoints mode already opens a request buffer via `open_request()`
 --- directly (not through either command name), so no integration depends on
 --- the *names* staying flat, but a user's own keymap to either flat command
@@ -44,7 +44,7 @@
 ---
 --- No `keymaps.lua` or `autocmds.lua` sit beside this file: this plugin sets
 --- zero default keymaps and zero autocmds, by design — every entry point is a
---- command, the same "no global keymaps at all" choice documentation.nvim's
+--- command, the same "no global keymaps at all" choice docmap.nvim's
 --- own `:DocBrowse` keymap sheet documents for the identical reason (a request
 --- buffer's own edits are what drive this plugin, not a keybinding). An empty
 --- placeholder file for either would be scaffolding with nothing to scaffold.
@@ -101,7 +101,7 @@ composer.register_type("RA_LOADED_MODULE", {
 -- **The completer deliberately does not do the `require()` half.** Tab is not
 -- a command, and completing `lib.nvim.` by `require`-ing every candidate would
 -- load modules — running their top-level code, registering their autocmds — as
--- a side effect of a keypress. documentation.nvim skips its module completion
+-- a side effect of a keypress. docmap.nvim skips its module completion
 -- until a scan has already happened for the same reason. So this reads only
 -- what is already there: the `_G` walk (pure table indexing) and
 -- `package.loaded` (what `require` has *already* returned). A module that is
@@ -547,7 +547,7 @@ local function send_current_buffer(ra, asked_block)
   end)
 end
 
----`vim.ui.select` rather than the quickfix list documentation.nvim's own
+---`vim.ui.select` rather than the quickfix list docmap.nvim's own
 ---commands favor — this is "pick exactly one thing and act on it", not
 ---"here are several locations to jump through", so the native
 ---pick-one primitive is the right one, and it defers to whatever picker UI
@@ -582,7 +582,7 @@ local function browse_history(ra)
     if not choice then
       return
     end
-    -- Reopens exactly the way documentation.nvim's own Endpoints mode
+    -- Reopens exactly the way docmap.nvim's own Endpoints mode
     -- already does — method and path pre-filled, nothing else assumed —
     -- since this history entry is, by design, exactly that much and no
     -- more (see history.lua's own doc-comment for why headers and body
@@ -663,7 +663,7 @@ end
 
 ---`:RA import` — parses a `curl` command line into a
 ---new request buffer via `ra.open_request`, the same entry point
----documentation.nvim's own Endpoints mode already uses. Two sources, in
+---docmap.nvim's own Endpoints mode already uses. Two sources, in
 ---order of precedence: a real visual/line-range invocation (`'<,'>RA
 ---import`) reads the selected lines; a bare `:RA import` reads the system
 ---clipboard (`+`), falling back to the unnamed register — "paste a curl
@@ -804,7 +804,7 @@ end
 
 ---`:RA loaded snapshots <prefix>` — list every
 ---saved snapshot for `prefix`, newest first. The same read
----documentation.nvim's own Loaded panel picker does over the server API,
+---docmap.nvim's own Loaded panel picker does over the server API,
 ---exposed here as a plain command for a quick local check.
 ---@param prefix string?
 ---@internal

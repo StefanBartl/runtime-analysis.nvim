@@ -181,20 +181,20 @@ of bug is ever found.
 
 ## The static × runtime join
 
-The reason this plugin exists next to documentation.nvim rather than
-folded into it. documentation.nvim's static scan can prove a function is
+The reason this plugin exists next to docmap.nvim rather than
+folded into it. docmap.nvim's static scan can prove a function is
 never called from anywhere it can *see* — never that it is actually dead;
 a callback bound as a value, or a call from a sibling repo entirely, looks
 identical to genuinely dead code to a pure static read. `telemetry.load()`
 answers the one question a static scan structurally cannot: was this
 *actually* called. `wrap_loaded()` is what makes the join possible at
 all — it resolves a wrapped key back to a real Lua module path
-automatically, the same key shape documentation.nvim's own IR uses.
+automatically, the same key shape docmap.nvim's own IR uses.
 
 - **Module:** `telemetry/init.lua` (`inst.wrap_loaded`,
   `inst.resolved_modules`)
-- **Docs:** [`docs/api.md`](../api.md), documentation.nvim's own
-  [`docs/PIPELINE.md`](https://github.com/StefanBartl/documentation.nvim/blob/main/docs/PIPELINE.md)
+- **Docs:** [`docs/api.md`](../api.md), docmap.nvim's own
+  [`docs/PIPELINE.md`](https://github.com/StefanBartl/docmap.nvim/blob/main/docs/PIPELINE.md)
   "Telemetry" section for the consumer side of the same join.
 
 ## Instrumenting your own Neovim config, not just plugins

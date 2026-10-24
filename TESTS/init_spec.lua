@@ -22,7 +22,7 @@ return function(H)
     )
   end
 
-  -- With prefilled lines — what documentation.nvim's Endpoints mode hands
+  -- With prefilled lines — what docmap.nvim's Endpoints mode hands
   -- over: method and path, nothing assumed about the base URL.
   do
     ra.open_request({ "GET /users/:id", "" })

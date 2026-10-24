@@ -93,7 +93,7 @@ t.start({ call_tree = function(key) return key == "fs.read" end })
 ```
 fs.read  —  4 812 calls
     ← 61 %  lua/lib/nvim/fs/init.lua:42
-    ← 23 %  lua/documentation/core/scan.lua:118
+    ← 23 %  lua/docmap/core/scan.lua:118
     ← 16 %  <other: 9 distinct>
 ```
 
@@ -101,8 +101,8 @@ fs.read  —  4 812 calls
 (name resolution added) measured ~0.51 µs against `"Sl"`'s ~0.32 µs —
 `~60 %` more expensive for information a call site's own source location
 already narrows down unambiguously, and it is the identical join key
-`documentation.nvim`'s own static `calls` extraction already uses (a call
-edge's line number, not a resolved caller name) — see `documentation.nvim/docs/ECOSYSTEM.md`
+`docmap.nvim`'s own static `calls` extraction already uses (a call
+edge's line number, not a resolved caller name) — see `docmap.nvim/docs/ECOSYSTEM.md`
 step 8 for that join in practice. `sample = N` applies to `call_tree`
 exactly as it already does to `profile_args`/`time`/`errors`: only every
 Nth call pays for the `debug.getinfo` lookup, `calls` itself stays exact
@@ -571,7 +571,7 @@ t.wrap(require("lsp.servers"), "servers", { module_id = "lsp.servers" })
 
 A key with no entry in `resolved_modules()` / `data.modules` is **unmatched**,
 not "zero calls" — a consumer joining telemetry against a static key set (the
-motivating case: documentation.nvim.s `dead-function` check)
+motivating case: docmap.nvim.s `dead-function` check)
 must keep those two claims distinguishable, or the join produces false
 positives it can't tell apart from real ones. That design document stayed in
 lib.nvim when this module moved out of it — it is about the *consumer* of
@@ -931,7 +931,7 @@ Written to `stdpath("cache")/runtime-analysis.nvim/telemetry/<namespace>.html`
 `lib.nvim.cross.open_default` — the same cross-platform "hand this
 to the OS" mechanism `:DocMap open` already uses.
 
-**Deliberately not documentation.nvim's own renderer, reused wholesale.**
+**Deliberately not docmap.nvim's own renderer, reused wholesale.**
 That module's `core/render/html.lua` is roughly 4,500 lines, of which
 roughly 3,850 are one embedded JavaScript single-page application
 tightly coupled to its own IR (module nodes, require/call edges,
@@ -1418,7 +1418,7 @@ not a substitute for genuinely automatic tree-wide catching.
 | `report_style.lua` | resolve `report_style` ("auto"/"kit"/"preview-tab"/"mdview"/"file"/"html") to a concrete destination |
 | `renderers/preview_tab.lua` | the in-editor tier of mdview: a real buffer in its own tab, no relay, no binary |
 | `renderers/mdview.lua` | bridges a report to a browser tab via mdview.nvim's `:MDView standalone` |
-| `renderers/html.lua` | the sortable/filterable HTML dashboard (§4.4) — a small, self-contained page, not documentation.nvim's own renderer reused |
+| `renderers/html.lua` | the sortable/filterable HTML dashboard (§4.4) — a small, self-contained page, not docmap.nvim's own renderer reused |
 | `config.lua` | module-level defaults (`report_style`) via `telemetry.setup()` |
 | `reminder.lua` | the time/volume lifecycle trigger |
 | `toggle.lua` | persistent per-namespace enable/disable, independent of an instance's own data |

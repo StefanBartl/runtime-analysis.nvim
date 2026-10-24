@@ -1,7 +1,7 @@
 -- TESTS/view_spec.lua — runtime-analysis.view
 --
 -- Real buffers and windows, not mocked — the same reason
--- documentation.nvim's own docmap_browse_spec mounts real floats: a
+-- docmap.nvim's own docmap_browse_spec mounts real floats: a
 -- window/buffer lifecycle is exactly the kind of thing a mock would get
 -- subtly wrong.
 

@@ -11,7 +11,7 @@
 
   - [Intro](#intro)
   - [0. The map — who owns what](#0-the-map--who-owns-what)
-  - [1. runtime-analysis × documentation.nvim — beyond the join already planned](#1-runtime-analysis--documentationnvim--beyond-the-join-already-planned)
+  - [1. runtime-analysis × docmap.nvim — beyond the join already planned](#1-runtime-analysis--documentationnvim--beyond-the-join-already-planned)
     - [1.1 Churn × call count — **built 2026-08-20**](#11-churn--call-count--built-2026-08-20-documentationnvim-103ceb7)
     - [1.2 Auto-coverage × telemetry — **built 2026-08-20**](#12-auto-coverage--telemetry--built-2026-08-20-documentationnvim-103ceb7)
     - [1.3 `:DocMap impact` weighted by runtime reach](#13-docmap-impact-weighted-by-runtime-reach)
@@ -48,13 +48,13 @@
 
 **Nothing here is scheduled, and nothing here is costed.** This is the layer
 *before* a roadmap: ideas worth writing down so they are not re-derived, with
-enough reasoning attached to judge them later. It borrows documentation.nvim's
+enough reasoning attached to judge them later. It borrows docmap.nvim's
 own three-file split, which is worth keeping apart on purpose:
 
 | Document | Holds |
 |---|---|
 | [`../README.md`](../README.md) + [`telemetry/README.md`](../lua/runtime-analysis/telemetry/README.md) | What shipped, and the trade-off behind it. |
-| **this file** | Ideas that only exist **between** plugins: runtime-analysis × documentation.nvim × mdview.nvim × lib.nvim. |
+| **this file** | Ideas that only exist **between** plugins: runtime-analysis × docmap.nvim × mdview.nvim × lib.nvim. |
 
 The plugin backlog already names three items of the static × runtime join. Those
 are **not repeated here**, only cross-referenced — this document is the wider
@@ -73,40 +73,40 @@ otherwise-attractive ideas are ranked low below on exactly that ground.
 ## 0. The map — who owns what
 
 Four repositories, one sentence of job each
-([`documentation.nvim/docs/ECOSYSTEM.md`](https://github.com/StefanBartl/documentation.nvim/blob/main/docs/ECOSYSTEM.md)
+([`docmap.nvim/docs/ECOSYSTEM.md`](https://github.com/StefanBartl/docmap.nvim/blob/main/docs/ECOSYSTEM.md)
 §4 argued this boundary; nothing since has revised it):
 
 | Repository | Owns | Cannot see |
 |---|---|---|
 | **lib.nvim** | shared primitives: `net.curl`, `cache.disk`, `git`, `ui.kit`, `usercmd`, `progress`, `notify`, `autocmd`, `fs`, `token`, `store` | anything about a *specific* plugin's semantics |
-| **documentation.nvim** | static truth — what exists, what is documented, how it connects; 14 drift checks; `:DocMap`, `:DocBrowse`, the committed HTML artifact | whether any of it ever ran |
+| **docmap.nvim** | static truth — what exists, what is documented, how it connects; 14 drift checks; `:DocMap`, `:DocBrowse`, the committed HTML artifact | whether any of it ever ran |
 | **runtime-analysis.nvim** | runtime truth — what actually ran (telemetry), what an endpoint actually returns (the request runner) | what the source *declares* but never loaded |
 | **mdview.nvim** | presentation — Markdown to a browser, sanitized, over a token-gated loopback relay | what the Markdown means |
 
 Three of the four seams already carry traffic:
 
-- documentation.nvim → runtime-analysis: `:DocBrowse` Endpoints mode, `gs` →
+- docmap.nvim → runtime-analysis: `:DocBrowse` Endpoints mode, `gs` →
   `require("runtime-analysis").open_request(lines)` (soft, `pcall`-guarded).
 - runtime-analysis → mdview: `report_style = "mdview"` → `:MDView standalone`
   against a self-rewriting report file.
 - lib.nvim → runtime-analysis: `lib.strategies.telemetry_wrap`, a thin caller
   of this plugin's own public `wrap()`.
 
-The seam with **no traffic at all** is documentation.nvim ↔ mdview.nvim, and
+The seam with **no traffic at all** is docmap.nvim ↔ mdview.nvim, and
 §3 below is about whether that is a gap or a correct absence.
 
 ---
 
-## 1. runtime-analysis × documentation.nvim — beyond the join already planned
+## 1. runtime-analysis × docmap.nvim — beyond the join already planned
 
 The backlog has Mode 8 (telemetry in `:DocBrowse`), endpoint coverage, and
 documentation-priority-by-usage. Everything below is a *different* crossing,
-found by walking documentation.nvim's actual command surface and asking what
+found by walking docmap.nvim's actual command surface and asking what
 each one would answer differently with runtime evidence attached.
 
 ---
 
-### 1.1 Churn × call count — **built 2026-08-20**, `documentation.nvim` `103ceb7`
+### 1.1 Churn × call count — **built 2026-08-20**, `docmap.nvim` `103ceb7`
 
 `core/churn.lua` ranks modules by **change frequency × complexity**, Tornhill's
 signal, and its own header states the weakness honestly: it is a scalarization,
@@ -133,14 +133,14 @@ wrong. So the column separates the rows and the sort stays put, which is
 §1.5's rule one step weaker. The wording requirement above is asserted by a
 spec that was checked to go red when "unused" is substituted.
 
-Measured against `documentation.nvim`'s own 41 recorded sessions:
+Measured against `docmap.nvim`'s own 41 recorded sessions:
 `editor.browse.view`, complexity 383, top of the ranking, *47 calls, none in
 the last week*; `core.check` one row below it, *37 722 calls, 4 839 this
 week*. Two rows that rendered identically the day before.
 
 ---
 
-### 1.2 Auto-coverage × telemetry — **built 2026-08-20**, `documentation.nvim` `103ceb7`
+### 1.2 Auto-coverage × telemetry — **built 2026-08-20**, `docmap.nvim` `103ceb7`
 
 `core/coverage.lua` derives whether a function is *tested* by counting bare-name
 mentions in the test tree, and documents its blind spot: a function exercised
@@ -164,7 +164,7 @@ three either need no list or belong to `dead-function`, which already has
 suppression rules a second verdict would eventually disagree with.
 
 **And the first real run corrected how the cell reads.** Against
-`documentation.nvim` it returns fifteen functions led by
+`docmap.nvim` it returns fifteen functions led by
 `check.declared_param_names` at 33 843 calls — internal helpers reached
 through public entry points that specs *do* call. The list is documented as
 "no spec names it" rather than "untested", because that is what it measures
@@ -205,9 +205,9 @@ is where they **disagree**:
 (see `docs/FEATURE_LOG.md`, `call_tree` opt-in via `debug.getinfo(2, "Sl")`).
 Written down here because it was the payoff that justified paying that
 cost, not because it is ready to build on its own: this idea is still the
-cross-repo join itself (documentation.nvim's static require graph against
+cross-repo join itself (docmap.nvim's static require graph against
 this module's now-real runtime caller data), unbuilt, and belongs in
-whichever repo's roadmap picks it up next — most naturally documentation.nvim's,
+whichever repo's roadmap picks it up next — most naturally docmap.nvim's,
 since `:DocMap why` is its command.
 
 ---
@@ -215,18 +215,18 @@ since `:DocMap why` is its command.
 ### 1.5 Runtime evidence as a *check input*, not just a view
 
 **Both instances shipped** — `dead-function` on 2026-08-30, `unreferenced-module`
-on 2026-08-31 (`documentation.nvim` `b632673`). The rule below held in both,
+on 2026-08-31 (`docmap.nvim` `b632673`). The rule below held in both,
 and the second one is where it earned its keep.
 
 The two differ in *which* runtime fact settles the question, and that is worth
 recording because the second one is not the obvious choice:
 
 - `dead-function` reads **telemetry** — did this function ever run — through
-  `documentation.core.telemetry_join`.
+  `docmap.core.telemetry_join`.
 - `unreferenced-module` reads a **`loaded` snapshot** — was this module ever
-  `require()`d — through `documentation.core.loaded_diff.loaded_modules`. It
+  `require()`d — through `docmap.core.loaded_diff.loaded_modules`. It
   deliberately does **not** read the live `package.loaded` of the process
-  running the check: `documentation.core.scan` requires the scanned tree's own
+  running the check: `docmap.core.scan` requires the scanned tree's own
   modules in order to read them, so a self-scan would find nearly everything
   loaded and suppress every finding. Evidence produced by the observation is
   not evidence. A snapshot is taken on purpose, in a session someone was
@@ -241,7 +241,7 @@ manufactured**, and one of the three suppressed was `lib.strategies.metatable`
 — the aggregator itself.
 
 Every crossing above is a view. The stronger form is feeding runtime evidence
-back into documentation.nvim's **check** pipeline, where it changes a severity
+back into docmap.nvim's **check** pipeline, where it changes a severity
 rather than a rendering. The general shape was worth naming because it comes
 with a rule that must not be broken:
 
@@ -267,10 +267,10 @@ was not an accident, and this is the consumer it was built for.
 ### 1.6 `doc-references-missing`, in the other direction
 
 **Both halves shipped 2026-08-04** — see [`docs/FEATURE_LOG.md`](FEATURE_LOG.md)'s
-§6.1 entry. documentation.nvim reads prose and asks whether the entity it
+§6.1 entry. docmap.nvim reads prose and asks whether the entity it
 names still exists; the mirror question needed runtime: is anything
 documented that is never used, and is anything used constantly that no doc
-mentions? Both are now the two aggregate lines `documentation.core.
+mentions? Both are now the two aggregate lines `docmap.core.
 telemetry_join.doc_usage_summary` prints alongside `:DocMap`'s own doc-
 coverage line.
 
@@ -284,7 +284,7 @@ runner sees **what the endpoint actually returned**. Crossing a real response ag
 `@return` — or against a route whose handler carries no doc block at all
 (`core/endpoints.lua` already records that) — is drift detection over an API
 contract, which is this ecosystem's whole thesis applied one layer out from
-where documentation.nvim can reach.
+where docmap.nvim can reach.
 
 Deliberately *not* a schema validator. The useful, cheap version is "this route
 is documented as returning an object and returned an array", not JSON Schema.
@@ -312,7 +312,7 @@ anywhere reports and that everybody has wanted at least once.
 #### Why the two belong in one feature
 
 They are the same measurement pointed in opposite directions, and the
-existing seam already separates them the right way: documentation.nvim's
+existing seam already separates them the right way: docmap.nvim's
 `core/endpoints.lua` knows the routes this project *declares*, and
 `deps.lua`'s `requires_external`/`calls_external` know the services it
 *reaches for*. One collector, keyed by which side of that line a call sits
@@ -395,7 +395,7 @@ collector is not built in a way that assumes a human triggered the traffic.
 
 ### 1.8 ~~A live badge in the annotation popup~~ — built 2026-08-20
 
-> **Shipped**, in `documentation.nvim`'s LSP hover rather than in a popup of
+> **Shipped**, in `docmap.nvim`'s LSP hover rather than in a popup of
 > its own — `K` on a function now reads
 > `**3** incoming calls · **1** outgoing call · called **412**× in the last 7
 > days`. Nearly free, as this entry predicted, and it found two real defects
@@ -420,7 +420,7 @@ collector is not built in a way that assumes a human triggered the traffic.
 
 
 The smallest possible item in this section, listed because it is nearly free
-and would be felt daily: documentation.nvim's annotation popup already renders
+and would be felt daily: docmap.nvim's annotation popup already renders
 params, returns, prose and a bounded snippet per function. One more line —
 `called 4 812× (7d)` when a namespace has data, absent entirely when it does
 not — puts runtime truth exactly where a reader is already looking, with no new
@@ -433,7 +433,7 @@ apply. This is surface 1 in that document's own ranking, at its cheapest.
 
 ### 1.9 Multi-language telemetry — importing profiles, not instrumenting them
 
-documentation.nvim costs out language backends beyond Lua (JS/TS shipped 2026-08-03; C/Python/Rust/Go planned).
+docmap.nvim costs out language backends beyond Lua (JS/TS shipped 2026-08-03; C/Python/Rust/Go planned).
 The question this section answers: if that side gains a language, can this
 plugin's telemetry follow it? The honest answer splits the plugin in two,
 and only one half survives the question.
@@ -488,15 +488,15 @@ has already been bitten by exactly this shape once:
 `core/telemetry_join.lua`'s `M.rows` looked up `ir.nodes[module_id]` with a
 dotted module id against a table keyed by file path, silently empty for
 every `wrap_loaded()` user, for as long as that feature existed before
-being caught (see this repository's own history / documentation.nvim's
+being caught (see this repository's own history / docmap.nvim's
 paired note). An importer has the same failure mode one level worse:
-documentation.nvim's static function names have to line up with whatever
+docmap.nvim's static function names have to line up with whatever
 identifier the *foreign* profiler chose to emit (a mangled C++ symbol, a
 Python qualified name with or without the module prefix, a V8 function
 name that may or may not match the source), with no shared convention
 enforcing it the way `package.loaded` keys at least loosely track Lua
 module paths today. Worth a real profile from a real project checked
-against a real documentation.nvim scan before committing to any of the
+against a real docmap.nvim scan before committing to any of the
 four importers above, not assumed to just line up.
 
 **And it is honestly a different product, not a smaller version of this
@@ -580,7 +580,7 @@ a request *builder* in the browser is §3.2's problem and much more expensive.
 ### 2.4 mdview's relay as the token-gated server, if a browser tier ever happens
 
 `ECOSYSTEM.md` §6 and §9 both land here already: if a browser-side request
-runner is ever built, the honest options are documentation.nvim's
+runner is ever built, the honest options are docmap.nvim's
 self-contained page or **mdview's relay** — a Go binary that already serves a
 web client behind a per-session token with Origin checks, i.e. the exact
 security posture `serve.lua` would have to grow from scratch. Recorded here so
@@ -616,22 +616,22 @@ file that can be attached to an issue. Worth copying the *shape*, not the code.
 
 ### 3.1 Two browser tiers already exist — decided, 2026-08-04
 
-documentation.nvim emits a self-contained interactive HTML page (no CDN, no
+docmap.nvim emits a self-contained interactive HTML page (no CDN, no
 build step). mdview ships a Go relay plus a prebuilt web client. Both are
 "Markdown/code → browser" pipelines, built independently, and **nothing
 crosses between them** — the one empty seam noted in §0.
 
 The question this document posed but did not answer itself: when
-runtime-analysis wanted a real dashboard (shipped), would it (a) steal documentation.nvim's renderer,
+runtime-analysis wanted a real dashboard (shipped), would it (a) steal docmap.nvim's renderer,
 (b) ride mdview's relay, or (c) stay in Markdown? Asked directly, decided
-**(a)** — but not a literal code dependency on documentation.nvim's own
+**(a)** — but not a literal code dependency on docmap.nvim's own
 4,500-line renderer, which is tightly coupled to its own IR: the *design*
 (CSS custom properties, visual language) reused in a new, small,
 self-contained page written for telemetry's own data. No third pipeline
 resulted — `renderers/html.lua` is telemetry's own report renderer, the
 same category `report.lua`'s Markdown output and `renderers/mdview.lua`'s
 browser bridge already occupy, not a new independent HTML generator
-competing with documentation.nvim's or mdview's own.
+competing with docmap.nvim's or mdview's own.
 
 ---
 
@@ -640,18 +640,18 @@ competing with documentation.nvim's or mdview's own.
 `ECOSYSTEM.md` §7 surface 2, unchanged and still correct: a Runtime tab always
 present in the artifact (so the page stays byte-identical) that populates from
 an endpoint when served, and shows an honest empty state under `file://`.
-Requires the serve tier on documentation.nvim's side and a read endpoint over
+Requires the serve tier on docmap.nvim's side and a read endpoint over
 telemetry data on this side. Explicitly later than the in-editor mode — the
 in-editor version has to prove the join is worth looking at often before the
 expensive surface is worth building.
 
 **A concrete candidate for what else the Runtime tab could show, moved
-here from documentation.nvim's own personal notes (2026-08-10):**
+here from docmap.nvim's own personal notes (2026-08-10):**
 persistent data a plugin writes at runtime — normally scattered across
 `stdpath("data")`/`stdpath("cache")`, opaque without opening the raw
 files by hand — surfaced nicely formatted. This is a runtime question,
 not a static one (`ECOSYSTEM.md`'s own split), so it belongs here rather
-than in documentation.nvim's own backlog; a first cut could ride
+than in docmap.nvim's own backlog; a first cut could ride
 `runtime-analysis.telemetry`'s existing `stdpath("cache")` namespace
 convention (`store.lua`) as the obvious starting example, generalizing
 outward to other plugins' own data once the shape of "nicely formatted
@@ -664,7 +664,7 @@ here, a dedicated panel in the Runtime tab above (rather than only
 ### 3.3 One `ECOSYSTEM.md`, four repositories reading it
 
 A soft, real problem visible while writing this document: the architecture doc
-lives in documentation.nvim, the bridge design lives in **lib.nvim**, and this
+lives in docmap.nvim, the bridge design lives in **lib.nvim**, and this
 plugin's README links to both. Two consequences already observable:
 
 - `lua/runtime-analysis/telemetry/README.md` linked the
@@ -692,7 +692,7 @@ on-thesis housekeeping idea available.
 > in the dependency all three share, and request history keys on it today.
 > What was missing was the sentence and one plugin actually agreeing.
 >
-> `documentation.nvim` now normalises `opts.root` through
+> `docmap.nvim` now normalises `opts.root` through
 > `lib.nvim.fs.normkey` — `project_key`'s own normalisation — instead of an
 > inline forward-slash-and-trim (engine commit on 2026-08-20). Its registry
 > keys live handles on the same function, so the plugin also agrees with
@@ -719,10 +719,10 @@ on-thesis housekeeping idea available.
 > something wants the combined per-project view this entry was protecting.
 
 
-Request history wants per-project scoping. documentation.nvim
+Request history wants per-project scoping. docmap.nvim
 scopes an artifact per repository. mdview scopes a session per `cwd`. lib.nvim
 already has `fs.project_key` and a `store/project` module. If history, telemetry
-namespaces and documentation.nvim's artifact all resolved "which project is
+namespaces and docmap.nvim's artifact all resolved "which project is
 this" the same way, a per-project *combined* view becomes possible later at
 zero cost. If they do not, it never does. **The cheapest decision in this
 document to make early and the most expensive to retrofit.**
@@ -839,7 +839,7 @@ Ranked by *value per unit of work*, not by ambition:
 
 Note what is *absent* from that list: everything requiring a browser tier,
 everything requiring `debug.getinfo` on the hot path, and everything requiring
-documentation.nvim's committed artifact to change. Those are the three
+docmap.nvim's committed artifact to change. Those are the three
 expensive directions, and none of the five touches any of them.
 
 ---
@@ -848,7 +848,7 @@ expensive directions, and none of the five touches any of them.
 
 | Idea | Why not | Revisit if |
 |---|---|---|
-| **documentation.nvim hard-depending on this plugin** | `ECOSYSTEM.md` §7 states the rule and the ecosystem already applies it in four places (`progress`→fidget, `telemetry`→mdview, `check.lua`→lua-language-server, `gs`→runtime-analysis). A static analyzer that will not run without a runtime plugin has lost the property that makes it useful in CI | Never |
+| **docmap.nvim hard-depending on this plugin** | `ECOSYSTEM.md` §7 states the rule and the ecosystem already applies it in four places (`progress`→fidget, `telemetry`→mdview, `check.lua`→lua-language-server, `gs`→runtime-analysis). A static analyzer that will not run without a runtime plugin has lost the property that makes it useful in CI | Never |
 | **mdview.nvim depending on either analysis plugin** | mdview is presentation and knows nothing about Lua semantics. Every crossing in §2 runs in this direction only, and that asymmetry is what keeps mdview usable by people who have neither of the others | Never |
 | **Runtime data in the committed artifact** | Breaks the byte-comparison gate at generation time; personal, high-churn usage data at commit time. §1.5 has the full rule, `ECOSYSTEM.md` §7 has the argument | Never |
 | **A third browser pipeline** | Two already exist and neither is finished being used. §3.1 is the decision to make first | A decision from §3.1 says so explicitly |

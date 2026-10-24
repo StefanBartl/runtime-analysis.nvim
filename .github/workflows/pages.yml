@@ -1,6 +1,6 @@
 # Publish this repository's generated module map to GitHub Pages.
 #
-# The map is produced by documentation.nvim (a dev-only dependency — see the
+# The map is produced by docmap.nvim (a dev-only dependency — see the
 # README) and committed under `docs/map/`. The page is self-contained,
 # offline-capable HTML with no build step, so this uploads that directory as
 # committed and deploys it. Nothing is generated here: `ci.yml`'s `map` job

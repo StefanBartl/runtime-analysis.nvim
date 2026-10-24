@@ -40,7 +40,7 @@ lazy-loaded dev copy will look broken for exactly that reason.
   its overhead is part of its contract; a feature that meaningfully slows the
   session it is observing has invalidated its own readings. Benchmark it —
   [`FEATURES/BENCH.md`](FEATURES/BENCH.md) is in this repository for a reason.
-- **Data on disk is the interface.** documentation.nvim and docmap-desktop read
+- **Data on disk is the interface.** docmap.nvim and docmap-desktop read
   this plugin's telemetry and loaded data, never its internals. The one call
   across that boundary is `M.open_request`. Keep the file formats stable, and
   treat a change to one as a change to a public API — see [`api.md`](api.md).

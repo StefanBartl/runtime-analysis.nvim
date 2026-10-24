@@ -30,7 +30,7 @@ enough times for its numbers to survive being read.
 
 ## Around it
 
-> **[documentation.nvim](https://github.com/StefanBartl/documentation.nvim)** —
+> **[docmap.nvim](https://github.com/StefanBartl/docmap.nvim)** —
 > it knows what exists and is documented; this plugin knows what actually
 > happens when the code runs. The same project, from the two sides that can
 > contradict each other — see [the join](docs/FEATURES/README.md#the-static--runtime-join).
@@ -74,7 +74,7 @@ question each page answers.
 
 ### The Rest
 
-- [Features](docs/FEATURES/README.md) — one page per area: [requests](docs/FEATURES/REQUESTS.md), [telemetry](docs/FEATURES/TELEMETRY.md), [the loaded-module view](docs/FEATURES/LOADED.md), [stall detection](docs/FEATURES/STARTUP.md), [benchmarking](docs/FEATURES/BENCH.md), and [the static × runtime join](docs/FEATURES/README.md#the-static--runtime-join) with documentation.nvim and docmap-desktop.
+- [Features](docs/FEATURES/README.md) — one page per area: [requests](docs/FEATURES/REQUESTS.md), [telemetry](docs/FEATURES/TELEMETRY.md), [the loaded-module view](docs/FEATURES/LOADED.md), [stall detection](docs/FEATURES/STARTUP.md), [benchmarking](docs/FEATURES/BENCH.md), and [the static × runtime join](docs/FEATURES/README.md#the-static--runtime-join) with docmap.nvim and docmap-desktop.
 - [Lua API](docs/api.md) — what another plugin may call, and what is deliberately not API.
 - [Workflow](docs/WORKFLOW.md) — not what each command reports, but which one answers which question about a running session.
 - [Feature log](docs/FEATURE_LOG.md) — the decision record: what shipped and the trade-off behind it.

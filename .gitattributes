@@ -17,13 +17,13 @@ scripts/hooks/*   text eol=lf
 # green where nobody is looking, red where the work happens.
 *.lua             text eol=lf
 
-# Markdown/vimdoc too — the same documentation.nvim engine that generates
+# Markdown/vimdoc too — the same docmap.nvim engine that generates
 # this repo's own docs/map reads these to build the map's "docs"
 # cross-reference index (refs/backlinks per markdown file), which is
 # line-oriented and pattern-matches per line. A `\r` left on every line by
 # a CRLF checkout changes what those patterns see there, so a
 # Windows-edited `.md` produces a different `refs` count than the same
-# content checked out with LF. Found in documentation.nvim's own repo
+# content checked out with LF. Found in docmap.nvim's own repo
 # first (2026-08-14, editing docs/COMMANDS.md there made `--check` report
 # its map stale for a reason unrelated to the map being wrong) — this repo
 # generates through the identical engine, so the same trap applies here.
@@ -41,7 +41,7 @@ scripts/hooks/*   text eol=lf
 # `map` CI gate reports the map as stale forever — on a clean checkout, with
 # nothing actually wrong. Regenerating appears to fix it locally until the
 # next `git checkout` or `git stash` converts them back. Same convention
-# documentation.nvim's own `.gitattributes` already uses, verbatim reasoning.
+# docmap.nvim's own `.gitattributes` already uses, verbatim reasoning.
 docs/map/index.html      text eol=lf linguist-generated=true
 docs/map/module_map.json text eol=lf linguist-generated=true
 docs/map/overview.md     text eol=lf linguist-generated=true

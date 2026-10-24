@@ -36,7 +36,7 @@ return function(H)
 
   -- Only function-valued keys, not data fields -- matches the same
   -- distinction telemetry_join.lua's own doc-comment states on the
-  -- documentation.nvim side for exactly the same reason (a module map's
+  -- docmap.nvim side for exactly the same reason (a module map's
   -- own function index is what this has to line up against).
   do
     package.loaded["__loaded_spec_fixture"] = {

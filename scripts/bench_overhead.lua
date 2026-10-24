@@ -24,7 +24,7 @@
 -- not zero, since counting is inherent to being wrapped at all. Uses
 -- `vim.uv.hrtime()` (nanosecond monotonic clock), the same clock
 -- `timing.lua`-shaped measurement already uses elsewhere in this
--- ecosystem (documentation.nvim's own `core/timing.lua`), not `os.clock()`
+-- ecosystem (docmap.nvim's own `core/timing.lua`), not `os.clock()`
 -- (CPU time, not wall time — the wrong clock for a hot-path-cost question).
 
 vim.opt.rtp:append(vim.fn.getcwd())

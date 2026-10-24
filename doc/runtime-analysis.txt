@@ -9,15 +9,15 @@ CONTENTS                                          *runtime-analysis-contents*
   4. Configuration .................................. |runtime-analysis-config|
   5. Commands ...................................... |runtime-analysis-commands|
   6. Telemetry ................................... |runtime-analysis-telemetry|
-  7. Integration with documentation.nvim ....... |runtime-analysis-integration|
+  7. Integration with docmap.nvim ....... |runtime-analysis-integration|
   8. Health check .................................. |runtime-analysis-health|
   9. Further reading .............................. |runtime-analysis-roadmap|
 
 ==============================================================================
 1. INTRODUCTION                                       *runtime-analysis-intro*
 
-runtime-analysis.nvim answers what documentation.nvim
-(https://github.com/StefanBartl/documentation.nvim) cannot: not what a
+runtime-analysis.nvim answers what docmap.nvim
+(https://github.com/StefanBartl/docmap.nvim) cannot: not what a
 codebase *declares*, but what actually happens when it runs. See that
 plugin's docs/ECOSYSTEM.md for the architecture this pairing is part of.
 
@@ -387,7 +387,7 @@ Response assertions ~
                                 `wrap_loaded(prefix)` already uses) as a
                                 named snapshot, so it can be read later —
                                 or from a different process entirely, e.g.
-                                documentation.nvim's own Loaded Analysis
+                                docmap.nvim's own Loaded Analysis
                                 panel over `:DocMap serve` — rather than
                                 only in the live session that took it.
                                 {name} defaults to a timestamp. Always
@@ -554,7 +554,7 @@ Auth: shorthand ~
 :RATelemetry [args]             See |runtime-analysis-telemetry| below — a
                                 second, separate compound command rather
                                 than `:RA telemetry ...` (the same split
-                                documentation.nvim draws between |:DocMap|
+                                docmap.nvim draws between |:DocMap|
                                 and |:DocBrowse|). Registered by the same
                                 `setup()` call above, opt-in in the sense
                                 that requiring the telemetry module alone
@@ -707,12 +707,12 @@ Compare-now only: no persistence, no named runs. See
 (§3.6).
 
 ==============================================================================
-7. INTEGRATION WITH documentation.nvim          *runtime-analysis-integration*
+7. INTEGRATION WITH docmap.nvim          *runtime-analysis-integration*
 
 `M.open_request(lines)` is this plugin's one public integration surface,
 written against a small named interface rather than another plugin reaching
-into this one's internal files (per documentation.nvim's docs/ECOSYSTEM.md
-§7). documentation.nvim's |:DocBrowse| Endpoints mode is the first consumer:
+into this one's internal files (per docmap.nvim's docs/ECOSYSTEM.md
+§7). docmap.nvim's |:DocBrowse| Endpoints mode is the first consumer:
 pressing `gs` on a route it found by static analysis calls
 `require("runtime-analysis").open_request({"METHOD path", ""})` — a soft
 dependency (`pcall(require, "runtime-analysis")`), absent with a clear
@@ -720,7 +720,7 @@ message when this plugin is not installed.
 
 Deliberately not an immediate send: a route's path (`/users/:id`) is
 relative and may contain unfilled `:param`s — genuinely nothing
-documentation.nvim's static analysis could send correctly on its own — so
+docmap.nvim's static analysis could send correctly on its own — so
 the method and path are pre-filled and the reader completes the base URL
 (and any params) before running |:RASend| themselves.
 
@@ -735,11 +735,11 @@ the method and path are pre-filled and the reader completes the base URL
                                                     *runtime-analysis-loaded*
 Loaded-vs-declared ~
 
-`runtime-analysis.loaded` answers what documentation.nvim's own static
+`runtime-analysis.loaded` answers what docmap.nvim's own static
 scan structurally cannot: what is actually on a module's table right now,
 in the current process — as opposed to what the source *declares*.
 `M.functions(module_id)`/`M.is_loaded(module_id)` are the live read;
-documentation.nvim's own `core/loaded_diff.lua` joins them against its IR
+docmap.nvim's own `core/loaded_diff.lua` joins them against its IR
 for |:DocBrowse| `loaded` mode.
 
 The one honest limit that shapes all of it: this reads `package.loaded` in
@@ -749,7 +749,7 @@ it sees nothing, which must render as "not loaded here", never as
 
 |:RA-loaded-snapshot| persists what a live read like the above would say,
 under a name, so it can be read later — or from a different process
-entirely. documentation.nvim's Loaded Analysis panel (`:DocMap serve`,
+entirely. docmap.nvim's Loaded Analysis panel (`:DocMap serve`,
 `GET /api/loaded`) is exactly that second process: a server route
 answering a browser tab has no live `package.loaded` of its own, so it
 only ever reads named snapshots, never a live aggregate the way its
@@ -776,7 +776,7 @@ its commands yet in this session.
 9. FURTHER READING                                   *runtime-analysis-roadmap*
 
 What has shipped, and why: docs/FEATURE_LOG.md. Ideas
-that only exist between this plugin and its siblings (documentation.nvim,
+that only exist between this plugin and its siblings (docmap.nvim,
 mdview.nvim, lib.nvim): docs/IDEAS.md.
 
 ==============================================================================

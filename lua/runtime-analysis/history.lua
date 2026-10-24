@@ -291,7 +291,7 @@ end
 ---`opts.root`, unlike `M.record`, is a real feature here rather than a
 ---test-only escape hatch: `M.record` always writes for wherever the reader
 ---is *currently working* (cwd), which is the only sensible meaning for "I
----just sent a request" — but a cross-repo reader (documentation.nvim's own
+---just sent a request" — but a cross-repo reader (docmap.nvim's own
 ---endpoint-coverage join) analyzes a tree via
 ---`opts.root`, which is not necessarily cwd at all, and needs *that*
 ---project's history, not whichever one Neovim happens to be sitting in.
@@ -312,7 +312,7 @@ function M.list(opts)
   for i = #entries, 1, -1 do
     local e = entries[i]
     -- Read-side too: an entry written before redaction existed must not be
-    -- shown (or handed to documentation.nvim) in clear while it waits for
+    -- shown (or handed to docmap.nvim) in clear while it waits for
     -- the next write to clean the file.
     if type(e) == "table" then
       e.url = redact(e.url, set)

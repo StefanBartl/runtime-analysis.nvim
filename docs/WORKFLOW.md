@@ -72,7 +72,7 @@ t.start()
 `wrap_loaded` over a manual `wrap()` per module whenever the target is a
 real plugin already on `package.loaded` — it resolves `Data.modules`
 automatically (the dotted `@module` path), which is what lets a consumer
-like documentation.nvim's own `telemetry_join.lua` match a call count back
+like docmap.nvim's own `telemetry_join.lua` match a call count back
 to a real function later, cold, in a different process. **Off costs
 nothing, literally** — instrumentation is installed, not compiled in, so
 "just leave it running" is a real option for a plugin you maintain, not
@@ -101,7 +101,7 @@ Do the work, let real usage accumulate, then snapshot again and diff the
 two directly — `telemetry.compare_snapshots(ns, "pre-refactor",
 "post-refactor")` / `:RATelemetry snapshot-compare ns pre-refactor
 post-refactor` — rather than hand-diffing `telemetry.load_snapshot()`
-calls yourself (or, from documentation.nvim's side, its own Telemetry
+calls yourself (or, from docmap.nvim's side, its own Telemetry
 Analysis panel's "Compare vs:" picker, if you'd rather stay in the
 browser). The diff is the actual answer to "did this change what gets
 called," not a guess read off two snapshots that both postdate the
@@ -130,14 +130,14 @@ since the names alone will not say which ran where later.
 
 ## The static × runtime join: read *this* side's data, not a guess from the other
 
-documentation.nvim's own static scan can prove a function is *never
+docmap.nvim's own static scan can prove a function is *never
 called from anywhere it can see* — never that it is dead. A function only
 ever invoked through a `vim.keymap.set` callback value, or from a sibling
 repo entirely, looks identical to genuinely dead code from a pure static
 read. That is the entire reason this plugin exists next to it: telemetry
 answers "was it *actually* called," the one question a static scan
-structurally cannot. Read documentation.nvim's own
-[`docs/WORKFLOW.md`](https://github.com/StefanBartl/documentation.nvim/blob/main/docs/WORKFLOW.md)
+structurally cannot. Read docmap.nvim's own
+[`docs/WORKFLOW.md`](https://github.com/StefanBartl/docmap.nvim/blob/main/docs/WORKFLOW.md)
 ("If runtime-analysis.nvim is installed…") for the full badge vocabulary
 (`✕`/`!`/`○`/blank) that join renders with — not repeated here, since it
 is that plugin's own rendering, not this one's data.

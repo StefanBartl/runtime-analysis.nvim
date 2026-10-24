@@ -29,7 +29,7 @@ Every command, argument by argument, is [../commands.md](../commands.md).
 
 ## The static × runtime join
 
-documentation.nvim's `:DocBrowse telemetry` mode joins this plugin's counts
+docmap.nvim's `:DocBrowse telemetry` mode joins this plugin's counts
 against its static analysis; `:DocBrowse loaded` does the same for the
 declared-against-loaded diff. Both read this plugin's data, never its
 internals. The one *call* between the two plugins is `M.open_request`, which
@@ -38,24 +38,24 @@ named surface, a soft dependency, described in [../api.md](../api.md).
 
 The same join also answers outside Neovim entirely:
 [docmap-desktop](https://github.com/StefanBartl/docmap-desktop) runs
-documentation.nvim's standalone binary as a subprocess and serves its
+docmap.nvim's standalone binary as a subprocess and serves its
 `/api/telemetry` and `/api/loaded` routes over a real HTTP origin, so a project
 opened in that app shows the same Telemetry and Loaded panels a live Neovim
 session would.
 
 The architecture behind all of it —
-[documentation.nvim/docs/ECOSYSTEM.md](https://github.com/StefanBartl/documentation.nvim/blob/main/docs/ECOSYSTEM.md)
+[docmap.nvim/docs/ECOSYSTEM.md](https://github.com/StefanBartl/docmap.nvim/blob/main/docs/ECOSYSTEM.md)
 — **is not in this repository.** One document describes all four pieces
-(`lib.nvim`, documentation.nvim, this plugin, `mdview.nvim`), so the other
+(`lib.nvim`, docmap.nvim, this plugin, `mdview.nvim`), so the other
 three link to it rather than keeping a copy. The same is true of the queue:
 what gets built next lives in one plan for all three repositories, kept in
 the author's working notes outside the repositories.
 
 ## The catalog
 
-A [`documentation.nvim/docs/FEATURES_FORMAT.md`](https://github.com/StefanBartl/documentation.nvim/blob/main/docs/FEATURES_FORMAT.md)-shaped
+A [`docmap.nvim/docs/FEATURES_FORMAT.md`](https://github.com/StefanBartl/docmap.nvim/blob/main/docs/FEATURES_FORMAT.md)-shaped
 catalog of this plugin's own signature features — for
-`documentation.nvim`'s own Features tab to render, when this repo's own
+`docmap.nvim`'s own Features tab to render, when this repo's own
 generated map is opened, the same way it renders that plugin's own
 `docs/FEATURES/`. This folder is the *user-facing* catalog: what a feature
 is, which module and command are behind it, today —
@@ -75,7 +75,7 @@ has. [`docs/commands.md`](../commands.md) remains the complete reference.
   zero-cost-when-stopped instrumentation, reading a namespace without a
   live instance, named/dated snapshots for comparing two points in time.
 - **[LOADED.md](LOADED.md)** — `runtime-analysis.loaded`: the
-  loaded-vs-declared live read documentation.nvim joins against its own
+  loaded-vs-declared live read docmap.nvim joins against its own
   IR, and persisted snapshots of it for cold viewing outside the session
   that took them.
 - **[STARTUP.md](STARTUP.md)** — `runtime-analysis.startup`: a libuv timer

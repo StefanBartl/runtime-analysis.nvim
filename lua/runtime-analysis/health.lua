@@ -6,7 +6,7 @@
 --- failed" with no obvious cause; `lib.nvim` missing is a hard failure on
 --- `require` this plugin cannot recover from; mdview absent only degrades one
 --- `report_style` value, so it is reported, not erred. Same posture
---- documentation.nvim's own `editor/health.lua` uses, mirrored here rather
+--- docmap.nvim's own `editor/health.lua` uses, mirrored here rather
 --- than reinvented.
 
 local M = {}
@@ -26,7 +26,7 @@ local h_info_raw = H.info or H.report_info
 ---ever reached `:checkhealth`. It is rendered into the message here instead,
 ---in the shape `vim.health`'s own `format_report_message` gives a warning's
 ---advice, so an info line and a warning line read alike. Same wrapper, same
----reason, as documentation.nvim's `editor/health.lua`.
+---reason, as docmap.nvim's `editor/health.lua`.
 ---@param msg string
 ---@param advice string[]? Rendered under the message, one line each.
 local function h_info(msg, advice)

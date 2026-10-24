@@ -18,11 +18,11 @@ open_request(lines)
 
 `M.open_request(lines)` is this plugin's **one** public integration point,
 written against a small named interface from the start — per
-[`documentation.nvim/docs/ECOSYSTEM.md`](https://github.com/StefanBartl/documentation.nvim/blob/main/docs/ECOSYSTEM.md)
+[`docmap.nvim/docs/ECOSYSTEM.md`](https://github.com/StefanBartl/docmap.nvim/blob/main/docs/ECOSYSTEM.md)
 §7's own stated rule, rather than another plugin reaching into this one's
 internal files.
 
-documentation.nvim's `:DocBrowse` Endpoints mode is the first consumer:
+docmap.nvim's `:DocBrowse` Endpoints mode is the first consumer:
 pressing `gs` on a route it found by static analysis calls
 
 ```lua
@@ -97,7 +97,7 @@ corrupt both reports rather than replace one. `on_done(nil, err)` says so.
 
 ## `require("runtime-analysis.loaded")`
 
-The live `package.loaded` read documentation.nvim joins against its own static
+The live `package.loaded` read docmap.nvim joins against its own static
 IR. Narrative: [`FEATURES/LOADED.md`](FEATURES/LOADED.md).
 
 ```lua

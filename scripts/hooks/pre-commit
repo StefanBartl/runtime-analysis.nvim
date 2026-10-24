@@ -14,7 +14,7 @@
 # intend, and misbehaves under `--amend` and rebase. When it fails, the fix is
 # one explicit command.
 #
-# Copied from documentation.nvim's own scripts/hooks/pre-commit per its
+# Copied from docmap.nvim's own scripts/hooks/pre-commit per its
 # docs/REUSE.md — see the housekeeping section here.
 
 # --- project-specific: match this repo's documentation opts (source/out_dir) -

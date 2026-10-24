@@ -34,7 +34,7 @@
 ---      presence: calling it would be a real side effect on the very
 ---      code being inspected, and "reporting is honest but less useful"
 ---      is exactly the trade-off this repository has taken every other
----      time this question came up (`documentation.core.loaded_diff` and
+---      time this question came up (`docmap.core.loaded_diff` and
 ---      `endpoint_coverage.lua`'s own "record it, don't guess it" rule).
 ---   3. **Renders via the same float every other report in this plugin
 ---      already uses** — `ui.kit.viewer`, falling back to

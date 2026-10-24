@@ -149,7 +149,7 @@ return function(H)
   -- module-id resolution: a plain wrap() resolves only if the caller vouches
   -- for the prefix explicitly -- the prefix is a label, not necessarily a
   -- real module path, and a guess here is exactly the failure mode the
-  -- documentation.nvim join has to avoid (see wrap_loaded's own resolution
+  -- docmap.nvim join has to avoid (see wrap_loaded's own resolution
   -- test further down, where the module path is never guessed either).
   -- -------------------------------------------------------------------------
   do
@@ -1290,7 +1290,7 @@ return function(H)
   -- -------------------------------------------------------------------------
   -- telemetry.load() / store.load_readonly(): read a namespace off disk with
   -- no live instance, distinguishing "never persisted" (nil) from "persisted,
-  -- zero calls" -- the distinction documentation.nvim's join depends on so an
+  -- zero calls" -- the distinction docmap.nvim's join depends on so an
   -- unanalyzed tree renders as "no data", not a graveyard.
   -- -------------------------------------------------------------------------
   do
@@ -2527,7 +2527,7 @@ return function(H)
   -- dependency, soft-required). Stubs package.loaded["pdfport"] rather than
   -- depending on a real pdfport.nvim + pandoc install being present on the
   -- machine running the suite -- same pattern github_stats.nvim/
-  -- documentation.nvim/markdown.nvim use for their own pdfport integrations.
+  -- docmap.nvim/markdown.nvim use for their own pdfport integrations.
   -- -------------------------------------------------------------------------
   do
     local namespace = ns("export_pdf")
