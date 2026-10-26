@@ -771,7 +771,7 @@ The question it answers is comparative — which of forty namespaces is still
 recording, which one is quietly the biggest on disk, which one has not
 collected anything since August — and a comparative answer has to line up in
 columns. The shape is deliberately
-[reposcope.nvim](https://github.com/StefanBartl/reposcope.nvim)'s
+[reposcope.nvim](https://github.com/WKDSteve/reposcope.nvim)'s
 `:Reposcope dashboard`: same two-space gutter, same heading row, same
 `<CR>`-the-row-under-the-cursor, so two overviews from one ecosystem need
 learning only once. `<CR>` opens that namespace's own full report (which

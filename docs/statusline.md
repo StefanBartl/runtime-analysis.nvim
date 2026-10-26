@@ -41,7 +41,7 @@ set statusline+=%{v:lua.require('runtime-analysis.statusline').status()}
 
 ### ui.nvim
 
-Nothing to do. [ui.nvim](https://github.com/StefanBartl/ui.nvim) ships a
+Nothing to do. [ui.nvim](https://github.com/WKDSteve/ui.nvim) ships a
 `runtime_analysis_ampel` segment that calls this module.
 
 ## What "slow" means
@@ -95,7 +95,7 @@ internal store — but the *interpretation* is this plugin's own opinion
 about its own data: what counts as slow, what "today" means, which glyph.
 That belonged here, with a test.
 
-Two siblings — [sandbox.nvim](https://github.com/StefanBartl/sandbox.nvim)
-and [sessions.nvim](https://github.com/StefanBartl/sessions.nvim) — already
+Two siblings — [sandbox.nvim](https://github.com/WKDSteve/sandbox.nvim)
+and [sessions.nvim](https://github.com/WKDSteve/sessions.nvim) — already
 shipped their own component, with ui.nvim reduced to a thin adapter over
 it. This closes the same gap.

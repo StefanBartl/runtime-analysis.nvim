@@ -871,7 +871,7 @@ analysis — the identical caveat the telemetry join (§6.1) and endpoint
 coverage (§6.2) already state for their own "no data" cases.
 
 **Shipped entirely as new work in
-[docmap.nvim](https://github.com/StefanBartl/docmap.nvim)**
+[docmap.nvim](https://github.com/WKDSteve/docmap.nvim)**
 — a new `docmap.core.loaded_diff` module (soft dependency,
 `pcall(require, "runtime-analysis.loaded")`), joined into a new 9th
 `:DocBrowse` mode ("loaded"), spanning the whole tree like
@@ -901,7 +901,7 @@ exercised" is a real answer neither side can give alone. Request history
 entry said it would, was the join itself.
 
 **Shipped entirely as new work in
-[docmap.nvim](https://github.com/StefanBartl/docmap.nvim)**
+[docmap.nvim](https://github.com/WKDSteve/docmap.nvim)**
 — a new `docmap.core.endpoint_coverage` module, soft dependency
 (`pcall(require, "runtime-analysis.history")`), joined into the existing
 Endpoints browse mode as a leading `○` badge for a route history never
@@ -989,7 +989,7 @@ The reason two plugins exist, per `docmap.nvim/docs/ECOSYSTEM.md`'s own framing 
 shipped as the design doc specified, cross-repo. This repository's own
 half (`telemetry.load()`, `Data.modules`, `resolved_modules()`) had
 already shipped earlier; what landed today is entirely on
-[docmap.nvim](https://github.com/StefanBartl/docmap.nvim)'s
+[docmap.nvim](https://github.com/WKDSteve/docmap.nvim)'s
 side: a new `docmap.core.telemetry_join` module joining
 `docmap.core.check.used_keys(ir)` (extracted from
 `check_dead_functions`'s own body, so the check and the mode can never
@@ -1030,7 +1030,7 @@ lib.nvim-side design is fully done.
 
 `NEW_PROJECT.md` §4's last unchecked box: adopt docmap.nvim's own
 module map generator, per its
-[`docs/REUSE.md`](https://github.com/StefanBartl/docmap.nvim/blob/main/docs/REUSE.md)
+[`docs/REUSE.md`](https://github.com/WKDSteve/docmap.nvim/blob/main/docs/REUSE.md)
 — copy two files, edit five lines. `scripts/gen_map.lua` copied verbatim
 except the options table at the bottom (`source = "lua/runtime-analysis"`,
 `title`, `repo_url`); `layers` and the self-rendered `docs/BINDINGS.md`

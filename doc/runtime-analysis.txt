@@ -17,7 +17,7 @@ CONTENTS                                          *runtime-analysis-contents*
 1. INTRODUCTION                                       *runtime-analysis-intro*
 
 runtime-analysis.nvim answers what docmap.nvim
-(https://github.com/StefanBartl/docmap.nvim) cannot: not what a
+(https://github.com/WKDSteve/docmap.nvim) cannot: not what a
 codebase *declares*, but what actually happens when it runs. See that
 plugin's docs/ECOSYSTEM.md for the architecture this pairing is part of.
 
@@ -43,7 +43,7 @@ Plus |:RA-provenance|, |:RA-inspect|, |:RA-usage| and `runtime-analysis.bench`
 2. REQUIREMENTS                                *runtime-analysis-requirements*
 
   - Neovim 0.10 or later (`vim.system`)
-  - lib.nvim (https://github.com/StefanBartl/lib.nvim) — hard dependency:
+  - lib.nvim (https://github.com/WKDSteve/lib.nvim) — hard dependency:
     `net.curl`'s `fetch_raw`/`fetch_raw_blocking` for the request runner,
     `usercmd.composer` for |:RA|, `progress` for the sending/cancel
     indicator and telemetry's own reports, `fs.project_key` + `cache.disk`
@@ -54,7 +54,7 @@ Plus |:RA-provenance|, |:RA-inspect|, |:RA-usage| and `runtime-analysis.bench`
 
 Optional:
 
-  - mdview.nvim (https://github.com/StefanBartl/mdview.nvim) — renders a
+  - mdview.nvim (https://github.com/WKDSteve/mdview.nvim) — renders a
     telemetry report as a live browser tab (`report_style = "mdview"`).
     Soft dependency throughout, `pcall`-guarded.
 
@@ -66,8 +66,8 @@ Run |:checkhealth-runtime-analysis| to verify all of the above.
 lazy.nvim: >lua
 
   {
-    "StefanBartl/runtime-analysis.nvim",
-    dependencies = { "StefanBartl/lib.nvim" },
+    "WKDSteve/runtime-analysis.nvim",
+    dependencies = { "WKDSteve/lib.nvim" },
     cmd = { "RARequest", "RASend", "RATelemetry" },
     opts = {
       -- split = "vsplit",
@@ -628,7 +628,7 @@ loads any of them, so it is early enough, and it disappears with the spec
 if you ever remove the plugin: >lua
 
   {
-    "StefanBartl/runtime-analysis.nvim",
+    "WKDSteve/runtime-analysis.nvim",
     init = function()
       require("runtime-analysis.telemetry.startup").autostart()
     end,

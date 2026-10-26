@@ -356,7 +356,7 @@
 ---@alias RA.Telemetry.ExtraWrapAt "VimEnter"|"setup"|"manual"
 
 ---@class RA.Telemetry.LazyOpts
----@field plugins? table<string, RA.Telemetry.LazyPluginOpts>       # keyed by repo, e.g. "StefanBartl/markdown.nvim"
+---@field plugins? table<string, RA.Telemetry.LazyPluginOpts>       # keyed by repo, e.g. "WKDSteve/markdown.nvim"
 ---@field lib_nvim? { profile_args?: boolean, timing?: boolean, persist?: boolean, dir?: string }|false
 ---@field extra? RA.Telemetry.ExtraTarget[]                         # non-plugin targets, chiefly the reader's own config
 
@@ -374,7 +374,7 @@
 ---existing reader of this type keeps working unchanged, and `mains` is the
 ---additive field a multi-prefix target needs.
 ---@class RA.Telemetry.SetupAllCandidate
----@field repo string?                         # e.g. "StefanBartl/markdown.nvim"; nil for an `extra` target, which has no repo
+---@field repo string?                         # e.g. "WKDSteve/markdown.nvim"; nil for an `extra` target, which has no repo
 ---@field namespace string                     # the telemetry namespace -- same as RATelemetry.LazyPluginOpts.namespace
 ---@field main string                          # root Lua module, resolved via lazy.core.loader.get_main; for an `extra` target, its FIRST prefix
 ---@field mains string[]?                      # every root prefix, when the target has more than one (`extra` only). Readers should prefer `mains or { main }`.

@@ -1,7 +1,7 @@
 # Contributing to runtime-analysis.nvim
 
 Thank you for your interest! Bugs, ideas and questions are welcome in the
-[issue tracker](https://github.com/StefanBartl/runtime-analysis.nvim/issues);
+[issue tracker](https://github.com/WKDSteve/runtime-analysis.nvim/issues);
 pull requests very welcome.
 
 Read [`IDEAS.md`](IDEAS.md) before proposing a feature. Its "deliberately not"
@@ -19,7 +19,7 @@ vim.opt.rtp:prepend("/path/to/runtime-analysis.nvim")
 require("runtime-analysis").setup({})
 ```
 
-[lib.nvim](https://github.com/StefanBartl/lib.nvim) has to be on the runtime
+[lib.nvim](https://github.com/WKDSteve/lib.nvim) has to be on the runtime
 path too, and `curl` on `PATH` if you are touching the request runner.
 
 If you are working on the telemetry, load the checkout eagerly — instrumentation
@@ -105,7 +105,7 @@ bash scripts/test.sh --file config    # only spec files whose name contains "con
 bash scripts/test.sh --json ir.json   # also write the machine-readable result
 ```
 
-The specs run on [testing.nvim](https://github.com/StefanBartl/testing.nvim)
+The specs run on [testing.nvim](https://github.com/WKDSteve/testing.nvim)
 (configured in `.testing.lua`), using `TESTS/harness.lua` as their helper API.
 The script finds testing.nvim and lib.nvim via `$TESTING_NVIM_DIR` /
 `$LIB_NVIM_DIR`, `.deps/<name>`, a sibling checkout or the plugin manager's

@@ -18,7 +18,7 @@ open_request(lines)
 
 `M.open_request(lines)` is this plugin's **one** public integration point,
 written against a small named interface from the start — per
-[`docmap.nvim/docs/ECOSYSTEM.md`](https://github.com/StefanBartl/docmap.nvim/blob/main/docs/ECOSYSTEM.md)
+[`docmap.nvim/docs/ECOSYSTEM.md`](https://github.com/WKDSteve/docmap.nvim/blob/main/docs/ECOSYSTEM.md)
 §7's own stated rule, rather than another plugin reaching into this one's
 internal files.
 

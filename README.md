@@ -14,10 +14,10 @@
 [![Neovim](https://img.shields.io/badge/Neovim-0.10%2B-57A143?logo=neovim&logoColor=white)](https://neovim.io)
 [![Lua](https://img.shields.io/badge/Lua-5.1%2FLuaJIT-2C2D72?logo=lua&logoColor=white)](https://www.lua.org)
 ![Status](https://img.shields.io/badge/status-beta-orange)
-[![CI](https://github.com/StefanBartl/runtime-analysis.nvim/actions/workflows/ci.yml/badge.svg)](https://github.com/StefanBartl/runtime-analysis.nvim/actions/workflows/ci.yml)
-[![wkd](https://img.shields.io/badge/wkd-family-c6ff3d)](https://stefanbartl.github.io/wkd/p/runtime-analysis/)
+[![CI](https://github.com/WKDSteve/runtime-analysis.nvim/actions/workflows/ci.yml/badge.svg)](https://github.com/WKDSteve/runtime-analysis.nvim/actions/workflows/ci.yml)
+[![wkd](https://img.shields.io/badge/wkd-family-c6ff3d)](https://wkdsteve.github.io/wkd/p/runtime-analysis/)
 
-> Part of the [wkd](https://stefanbartl.github.io/wkd/) family — see this plugin's [page](https://stefanbartl.github.io/wkd/p/runtime-analysis/) on the site.
+> Part of the [wkd](https://wkdsteve.github.io/wkd/) family — see this plugin's [page](https://wkdsteve.github.io/wkd/p/runtime-analysis/) on the site.
 
 Runtime truth for a Neovim project: what actually ran, not what the source says.
 An in-editor HTTP request runner, opt-in call counting for any Lua plugin, a
@@ -30,26 +30,26 @@ enough times for its numbers to survive being read.
 
 ## Around it
 
-> **[docmap.nvim](https://github.com/StefanBartl/docmap.nvim)** —
+> **[docmap.nvim](https://github.com/WKDSteve/docmap.nvim)** —
 > it knows what exists and is documented; this plugin knows what actually
 > happens when the code runs. The same project, from the two sides that can
 > contradict each other — see [the join](docs/FEATURES/README.md#the-static--runtime-join).
 >
-> **[insights.nvim](https://github.com/StefanBartl/insights.nvim)** — reads the
+> **[insights.nvim](https://github.com/WKDSteve/insights.nvim)** — reads the
 > source text for what looks unused: imports, symbols, metrics. This measures
 > whether it was ever really called. A parser cannot see a callback, and a
 > counter cannot see dead text.
 >
-> **[recommender.nvim](https://github.com/StefanBartl/recommender.nvim)** —
+> **[recommender.nvim](https://github.com/WKDSteve/recommender.nvim)** —
 > where a suggestion about performance gets made; the benchmark that decides
 > whether it is worth making belongs here.
 >
-> **[ui.nvim](https://github.com/StefanBartl/ui.nvim)** — reduces this
+> **[ui.nvim](https://github.com/WKDSteve/ui.nvim)** — reduces this
 > plugin's telemetry to a single traffic light in the statusline: whether
 > anything instrumented errored or ran slow today.
 >
 > All of the above are soft: without them everything else works unchanged.
-> [lib.nvim](https://github.com/StefanBartl/lib.nvim) is the one real plugin
+> [lib.nvim](https://github.com/WKDSteve/lib.nvim) is the one real plugin
 > dependency — see [Requirements](docs/installation.md#requirements).
 
 ---
@@ -80,7 +80,7 @@ question each page answers.
 - [Feature log](docs/FEATURE_LOG.md) — the decision record: what shipped and the trade-off behind it.
 - [Ideas](docs/IDEAS.md) — why an idea is cut the way it is, and what argues against it. Explicitly not a queue.
 - [Contributing](docs/CONTRIBUTING.md) — ground rules, project layout, and how to add a command or an instrumentation.
-- [Feedback](https://github.com/StefanBartl/runtime-analysis.nvim/issues) — bugs, feature requests and usage questions; broader discussion in [Discussions](https://github.com/StefanBartl/runtime-analysis.nvim/discussions).
+- [Feedback](https://github.com/WKDSteve/runtime-analysis.nvim/issues) — bugs, feature requests and usage questions; broader discussion in [Discussions](https://github.com/WKDSteve/runtime-analysis.nvim/discussions).
 
 `:help runtime-analysis` is the same reference inside the editor. There is no
 troubleshooting page, on purpose: every symptom already has an address that

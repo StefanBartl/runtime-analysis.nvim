@@ -73,7 +73,7 @@ otherwise-attractive ideas are ranked low below on exactly that ground.
 ## 0. The map — who owns what
 
 Four repositories, one sentence of job each
-([`docmap.nvim/docs/ECOSYSTEM.md`](https://github.com/StefanBartl/docmap.nvim/blob/main/docs/ECOSYSTEM.md)
+([`docmap.nvim/docs/ECOSYSTEM.md`](https://github.com/WKDSteve/docmap.nvim/blob/main/docs/ECOSYSTEM.md)
 §4 argued this boundary; nothing since has revised it):
 
 | Repository | Owns | Cannot see |

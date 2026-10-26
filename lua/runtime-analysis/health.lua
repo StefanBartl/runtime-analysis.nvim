@@ -110,8 +110,8 @@ function M.check()
   else
     h_error(("%d of %d lib.nvim modules failed to load"):format(#missing, #DEPS), {
       "Missing: " .. table.concat(missing, ", "),
-      "lib.nvim is a hard dependency: https://github.com/StefanBartl/lib.nvim",
-      'Add it to this plugin\'s spec: dependencies = { "StefanBartl/lib.nvim" }',
+      "lib.nvim is a hard dependency: https://github.com/WKDSteve/lib.nvim",
+      'Add it to this plugin\'s spec: dependencies = { "WKDSteve/lib.nvim" }',
     })
   end
 
@@ -271,7 +271,7 @@ function M.check()
   else
     h_info("pdfport.nvim not installed", {
       "Only :RATelemetry export report.pdf needs it; .md and .json export",
-      "work without it. https://github.com/StefanBartl/pdfport.nvim",
+      "work without it. https://github.com/WKDSteve/pdfport.nvim",
     })
   end
 

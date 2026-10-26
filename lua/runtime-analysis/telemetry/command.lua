@@ -471,7 +471,7 @@ local function compare_lines(namespace, days)
   return out
 end
 
----@internal Soft dependency on pdfport.nvim (github.com/StefanBartl/
+---@internal Soft dependency on pdfport.nvim (github.com/WKDSteve/
 ---pdfport.nvim), same content export()'s `.md` branch writes, handed to
 ---pdfport as text instead of read back from a written .md file.
 ---@param target string

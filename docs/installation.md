@@ -9,11 +9,11 @@ lives here.
 | | |
 | --- | --- |
 | Neovim | **0.10+** — `vim.system` for the request runner, `vim.uv.hrtime` for telemetry timing |
-| [lib.nvim](https://github.com/StefanBartl/lib.nvim) | required, hard dependency |
+| [lib.nvim](https://github.com/WKDSteve/lib.nvim) | required, hard dependency |
 | `curl` on `PATH` | required for `:RA send` only — every other feature works without it |
-| [mdview.nvim](https://github.com/StefanBartl/mdview.nvim) | optional, soft: renders a telemetry report as a live browser tab |
-| [pdfport.nvim](https://github.com/StefanBartl/pdfport.nvim) | optional, soft: `.pdf` export of a telemetry report |
-| [ui.nvim](https://github.com/StefanBartl/ui.nvim) | optional, soft: `ui.kit`'s `viewer`/`input` back every report float and a couple of prompts, falling back to `:messages`/`vim.ui.input` when absent |
+| [mdview.nvim](https://github.com/WKDSteve/mdview.nvim) | optional, soft: renders a telemetry report as a live browser tab |
+| [pdfport.nvim](https://github.com/WKDSteve/pdfport.nvim) | optional, soft: `.pdf` export of a telemetry report |
+| [ui.nvim](https://github.com/WKDSteve/ui.nvim) | optional, soft: `ui.kit`'s `viewer`/`input` back every report float and a couple of prompts, falling back to `:messages`/`vim.ui.input` when absent |
 
 `:checkhealth runtime-analysis` verifies all of it on your own system.
 
@@ -23,13 +23,13 @@ lives here.
 
 ```lua
 {
-  "StefanBartl/runtime-analysis.nvim",
+  "WKDSteve/runtime-analysis.nvim",
   lazy = false,  -- telemetry auto-instrumentation (opts.telemetry) needs to
                  -- be live before sibling plugins load, to catch their own
                  -- lazy-load moment. Request-runner-only usage works just as
                  -- well cmd-lazy-loaded instead:
                  -- cmd = { "RARequest", "RASend" },
-  dependencies = { "StefanBartl/lib.nvim" },
+  dependencies = { "WKDSteve/lib.nvim" },
   opts = {},
 }
 ```
@@ -44,8 +44,8 @@ the request runner, a `cmd` trigger costs nothing.
 
 ```lua
 vim.pack.add({
-  { src = "https://github.com/StefanBartl/lib.nvim" },
-  { src = "https://github.com/StefanBartl/runtime-analysis.nvim" },
+  { src = "https://github.com/WKDSteve/lib.nvim" },
+  { src = "https://github.com/WKDSteve/runtime-analysis.nvim" },
 })
 
 require("runtime-analysis").setup({})
@@ -56,8 +56,8 @@ require("runtime-analysis").setup({})
 ```lua
 local add, now = MiniDeps.add, MiniDeps.now
 add({
-  source = "StefanBartl/runtime-analysis.nvim",
-  depends = { "StefanBartl/lib.nvim" },
+  source = "WKDSteve/runtime-analysis.nvim",
+  depends = { "WKDSteve/lib.nvim" },
 })
 -- `now`, not `later`: telemetry auto-instrumentation needs to be live
 -- before sibling plugins load, the same reason the lazy.nvim block above
@@ -71,8 +71,8 @@ end)
 
 ```lua
 use({
-  "StefanBartl/runtime-analysis.nvim",
-  requires = { "StefanBartl/lib.nvim" },
+  "WKDSteve/runtime-analysis.nvim",
+  requires = { "WKDSteve/lib.nvim" },
   config = function()
     require("runtime-analysis").setup({})
   end,
@@ -83,8 +83,8 @@ use({
 
 ```lua
 require("paq")({
-  "StefanBartl/lib.nvim",
-  "StefanBartl/runtime-analysis.nvim",
+  "WKDSteve/lib.nvim",
+  "WKDSteve/runtime-analysis.nvim",
 })
 
 -- paq does no lazy-loading and runs no config hooks:
@@ -105,7 +105,7 @@ Not a convenience import — this plugin is the reason several of these exist:
 | `git`, `usercmd`, `notify`, `autocmd` | the ordinary plumbing |
 
 `ui.kit` moved out of `lib.nvim` into the separate
-[ui.nvim](https://github.com/StefanBartl/ui.nvim) in 2026-09 — see the
+[ui.nvim](https://github.com/WKDSteve/ui.nvim) in 2026-09 — see the
 Requirements table above; it backs every report float but is optional,
 degrading to `:messages`/`vim.ui.input`.
 
@@ -113,7 +113,7 @@ degrading to `:messages`/`vim.ui.input`.
 
 `curl` is declared machine-readably in [`install.json`](install.json), parsed
 by lib.nvim's
-[`deps` module](https://github.com/StefanBartl/lib.nvim/blob/main/lua/lib/nvim/deps/README.md).
+[`deps` module](https://github.com/WKDSteve/lib.nvim/blob/main/lua/lib/nvim/deps/README.md).
 The first `setup()` after installing this plugin shows a one-time popup if it
 is missing — and says that only `:RA send` needs it. `:Lib deps show
 runtime-analysis.nvim` repeats it any time.
@@ -128,10 +128,10 @@ vim.g.lib_nvim_deps_disable_first_run = true                -- every plugin
 
 ## Dev-only: the module map
 
-[docmap.nvim](https://github.com/StefanBartl/docmap.nvim)
+[docmap.nvim](https://github.com/WKDSteve/docmap.nvim)
 generates [`map/`](map/overview.md), this repository's own module map, adopted
 per that project's
-[`docs/REUSE.md`](https://github.com/StefanBartl/docmap.nvim/blob/main/docs/REUSE.md).
+[`docs/REUSE.md`](https://github.com/WKDSteve/docmap.nvim/blob/main/docs/REUSE.md).
 **It is not a runtime dependency** — nothing here needs it installed as a
 plugin.
 
@@ -146,7 +146,7 @@ loudly on a stale map rather than letting one rot on `main`.
 pre-commit hook.
 
 This repository's map is published at
-<https://stefanbartl.github.io/runtime-analysis.nvim/>;
+<https://wkdsteve.github.io/runtime-analysis.nvim/>;
 [`map/overview.md`](map/overview.md) is the same tree as Markdown, rendered on
 GitHub. History, Telemetry and Loaded need a local server and say so on the
 published copy — every other tab works there in full.

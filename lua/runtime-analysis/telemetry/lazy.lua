@@ -10,7 +10,7 @@
 ---
 ---   require("runtime-analysis.telemetry.lazy").setup({
 ---     plugins = {
----       ["StefanBartl/markdown.nvim"] = { namespace = "markdown.nvim", deep = true },
+---       ["WKDSteve/markdown.nvim"] = { namespace = "markdown.nvim", deep = true },
 ---       -- ... one entry per plugin worth instrumenting, keyed by repo ...
 ---     },
 ---     lib_nvim = { profile_args = false },  -- false/nil to skip entirely

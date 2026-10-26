@@ -1,7 +1,7 @@
 ---@module 'scripts.gen_map'
 --- CLI entry point for this repository's own module map, adopted per
 --- docmap.nvim's own reuse guide
---- (https://github.com/StefanBartl/docmap.nvim/blob/main/docs/REUSE.md)
+--- (https://github.com/WKDSteve/docmap.nvim/blob/main/docs/REUSE.md)
 --- — the housekeeping section, `scripts/gen_map.lua` +
 --- docmap.nvim as a dev dependency.
 ---
@@ -81,22 +81,22 @@ ensure("docmap.core.cli", "docmap.nvim")
 -- docmap.nvim.
 local siblings = {
   ["lib.nvim"] = {
-    repo = "StefanBartl/lib.nvim",
+    repo = "WKDSteve/lib.nvim",
     name = "lib.nvim",
     local_path = "../lib.nvim",
   },
   docmap = {
-    repo = "StefanBartl/docmap.nvim",
+    repo = "WKDSteve/docmap.nvim",
     name = "docmap.nvim",
     local_path = "../docmap.nvim",
   },
   mdview = {
-    repo = "StefanBartl/mdview.nvim",
+    repo = "WKDSteve/mdview.nvim",
     name = "mdview.nvim",
     local_path = "../mdview.nvim",
   },
   ["docmap-desktop"] = {
-    repo = "StefanBartl/docmap-desktop",
+    repo = "WKDSteve/docmap-desktop",
     name = "docmap-desktop",
     local_path = "../docmap-desktop",
   },
@@ -106,7 +106,7 @@ local opts = require("docmap.config").build(root, {
   source = "lua/runtime-analysis",
   title = "runtime-analysis.nvim",
   out_dir = "docs/map",
-  repo_url = "https://github.com/StefanBartl/runtime-analysis.nvim",
+  repo_url = "https://github.com/WKDSteve/runtime-analysis.nvim",
   branch = "main",
   external_repos = siblings,
 })

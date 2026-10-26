@@ -3,7 +3,7 @@
 Hand-maintained, not generated — this small a surface (one compound verb,
 two flat aliases, one second compound command, no keymaps, a handful of
 opt-in autocommands) is small enough that a generator (the way
-[docmap.nvim's own `docs/BINDINGS.md`](https://github.com/StefanBartl/docmap.nvim/blob/main/docs/BINDINGS.md)
+[docmap.nvim's own `docs/BINDINGS.md`](https://github.com/WKDSteve/docmap.nvim/blob/main/docs/BINDINGS.md)
 is built from its live keymap table) would cost more than it saves. Update
 this file by hand whenever a command's shape changes.
 
@@ -38,7 +38,7 @@ opt-in the way telemetry's own auto-instrumentation (`opts.telemetry`) is.
 | `:RASend` | none | Flat alias for `:RA send`. |
 | `:RATelemetry [args]` | see below | Opt-in call counting and usage statistics for any plugin. Full reference: [`lua/runtime-analysis/telemetry/README.md`](../lua/runtime-analysis/telemetry/README.md). |
 
-Built via [`lib.nvim.bindings.usercmd.composer`](https://github.com/StefanBartl/lib.nvim/blob/main/lua/lib/nvim/bindings/usercmd/composer/README.md)
+Built via [`lib.nvim.bindings.usercmd.composer`](https://github.com/WKDSteve/lib.nvim/blob/main/lua/lib/nvim/bindings/usercmd/composer/README.md)
 — the same verb-first shape `:DocMap`, `:MDView` and `:Replace` already use
 (`<Tab>` after `:RA ` completes `request`/`send`/`yank`/`cancel`/`history`/
 `env`/`import`/`export`/`provenance`/`inspect`/`usage`/`loaded`; `:RA

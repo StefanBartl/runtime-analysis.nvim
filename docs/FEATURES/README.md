@@ -37,14 +37,14 @@ internals. The one *call* between the two plugins is `M.open_request`, which
 named surface, a soft dependency, described in [../api.md](../api.md).
 
 The same join also answers outside Neovim entirely:
-[docmap-desktop](https://github.com/StefanBartl/docmap-desktop) runs
+[docmap-desktop](https://github.com/WKDSteve/docmap-desktop) runs
 docmap.nvim's standalone binary as a subprocess and serves its
 `/api/telemetry` and `/api/loaded` routes over a real HTTP origin, so a project
 opened in that app shows the same Telemetry and Loaded panels a live Neovim
 session would.
 
 The architecture behind all of it —
-[docmap.nvim/docs/ECOSYSTEM.md](https://github.com/StefanBartl/docmap.nvim/blob/main/docs/ECOSYSTEM.md)
+[docmap.nvim/docs/ECOSYSTEM.md](https://github.com/WKDSteve/docmap.nvim/blob/main/docs/ECOSYSTEM.md)
 — **is not in this repository.** One document describes all four pieces
 (`lib.nvim`, docmap.nvim, this plugin, `mdview.nvim`), so the other
 three link to it rather than keeping a copy. The same is true of the queue:
@@ -53,7 +53,7 @@ the author's working notes outside the repositories.
 
 ## The catalog
 
-A [`docmap.nvim/docs/FEATURES_FORMAT.md`](https://github.com/StefanBartl/docmap.nvim/blob/main/docs/FEATURES_FORMAT.md)-shaped
+A [`docmap.nvim/docs/FEATURES_FORMAT.md`](https://github.com/WKDSteve/docmap.nvim/blob/main/docs/FEATURES_FORMAT.md)-shaped
 catalog of this plugin's own signature features — for
 `docmap.nvim`'s own Features tab to render, when this repo's own
 generated map is opened, the same way it renders that plugin's own

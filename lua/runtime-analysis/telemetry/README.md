@@ -26,7 +26,7 @@ shipped functions *are* the original functions — the same objects, not a
 "nearly-free branch" — and `stop()` puts them back. That is why there is no
 `if enabled then count() end` scattered through ~250 files, and why
 `debug.sethook` (which fires on every Lua call in the process) was never an
-option. Same pattern [`lib.nvim.system.proc_trace`](https://github.com/StefanBartl/lib.nvim/blob/main/lua/lib/nvim/system/README.md)
+option. Same pattern [`lib.nvim.system.proc_trace`](https://github.com/WKDSteve/lib.nvim/blob/main/lua/lib/nvim/system/README.md)
 already uses for `vim.fn.system`.
 
 When it *is* on:
@@ -257,8 +257,8 @@ module to you. If lazy.nvim is your plugin manager, this module does both:
 require("runtime-analysis.telemetry.lazy").setup({
   plugins = {
     -- keyed by repo, as declared in the lazy.nvim spec's first element
-    ["StefanBartl/markdown.nvim"] = { namespace = "markdown.nvim", deep = true, profile_args = true },
-    ["StefanBartl/lib.nvim"] = nil, -- see lib_nvim below instead
+    ["WKDSteve/markdown.nvim"] = { namespace = "markdown.nvim", deep = true, profile_args = true },
+    ["WKDSteve/lib.nvim"] = nil, -- see lib_nvim below instead
   },
   lib_nvim = { profile_args = false }, -- false/omit to skip entirely
 })
@@ -269,9 +269,9 @@ config file or a call before `lazy.setup()`:
 
 ```lua
 {
-  "StefanBartl/runtime-analysis.nvim",
+  "WKDSteve/runtime-analysis.nvim",
   lazy = false,
-  dependencies = { "StefanBartl/lib.nvim" },
+  dependencies = { "WKDSteve/lib.nvim" },
   opts = { telemetry = { plugins = {...}, lib_nvim = {...} } },
   config = function(_, opts) require("runtime-analysis").setup(opts) end,
 },
@@ -372,7 +372,7 @@ silently invisible all session joins the wrap the next time either runs.
 local lazy = require("runtime-analysis.telemetry.lazy")
 lazy.candidates()
 -- {
---   { repo = "StefanBartl/markdown.nvim", namespace = "markdown.nvim",
+--   { repo = "WKDSteve/markdown.nvim", namespace = "markdown.nvim",
 --     main = "markdown", settings = { namespace = "markdown.nvim", deep = true, profile_args = true } },
 --   ...
 -- }
@@ -761,7 +761,7 @@ may have to start the recording again — but you never have to start the
 than a separate flag — this command's argument parsing stays positional
 throughout. `:RATelemetry export report.md` writes the same document
 `telemetry.markdown_all()` would; `:RATelemetry export report.pdf` hands
-that exact document to [pdfport.nvim](https://github.com/StefanBartl/pdfport.nvim)
+that exact document to [pdfport.nvim](https://github.com/WKDSteve/pdfport.nvim)
 (optional dependency, `pcall`-guarded — needs pandoc + a PDF engine,
 `pdfport.can_create("markdown")`) as text instead of writing a `.md` file
 first; anything else (including the default auto-named path) writes the
@@ -793,7 +793,7 @@ local written, failed = telemetry.export_all("~/telemetry-export")
 
 Two separable things: rendering a report as **Markdown** (useful on its own —
 paste into an issue, commit a snapshot, diff two weeks), and handing that
-Markdown to a **browser** via [mdview.nvim](https://github.com/StefanBartl/mdview.nvim)'s
+Markdown to a **browser** via [mdview.nvim](https://github.com/WKDSteve/mdview.nvim)'s
 own `:MDView standalone`, which already does exactly the right thing for
 this: it hands a file path to the relay binary's own `--watch` mode and steps
 out of the chain entirely — the relay watches the file on disk and
@@ -1084,7 +1084,7 @@ per-plugin totals, so the value here is specifically the level below that.
 -- In this plugin's own lazy.nvim spec. `init` is the right hook, not a
 -- line in init.lua — see "Why `init`, and not init.lua" below.
 {
-  "StefanBartl/runtime-analysis.nvim",
+  "WKDSteve/runtime-analysis.nvim",
   init = function()
     require("runtime-analysis.telemetry.startup").autostart()
   end,

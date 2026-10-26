@@ -194,7 +194,7 @@ automatically, the same key shape docmap.nvim's own IR uses.
 - **Module:** `telemetry/init.lua` (`inst.wrap_loaded`,
   `inst.resolved_modules`)
 - **Docs:** [`docs/api.md`](../api.md), docmap.nvim's own
-  [`docs/PIPELINE.md`](https://github.com/StefanBartl/docmap.nvim/blob/main/docs/PIPELINE.md)
+  [`docs/PIPELINE.md`](https://github.com/WKDSteve/docmap.nvim/blob/main/docs/PIPELINE.md)
   "Telemetry" section for the consumer side of the same join.
 
 ## Instrumenting your own Neovim config, not just plugins

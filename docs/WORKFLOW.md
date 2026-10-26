@@ -27,7 +27,7 @@ committed `.http` file permanently rather than writing a separate test for
 
 The response split shows the body as the server sent it — often one long,
 unindented line for a JSON API. If you have
-[`data.nvim`](https://github.com/StefanBartl/data.nvim) installed, `:JSON
+[`data.nvim`](https://github.com/WKDSteve/data.nvim) installed, `:JSON
 pretty` in that split reformats it in place, and `:JSON lines`/`:JSON
 filter` flatten a large payload down to the one or two fields you're
 actually checking.
@@ -137,7 +137,7 @@ repo entirely, looks identical to genuinely dead code from a pure static
 read. That is the entire reason this plugin exists next to it: telemetry
 answers "was it *actually* called," the one question a static scan
 structurally cannot. Read docmap.nvim's own
-[`docs/WORKFLOW.md`](https://github.com/StefanBartl/docmap.nvim/blob/main/docs/WORKFLOW.md)
+[`docs/WORKFLOW.md`](https://github.com/WKDSteve/docmap.nvim/blob/main/docs/WORKFLOW.md)
 ("If runtime-analysis.nvim is installed…") for the full badge vocabulary
 (`✕`/`!`/`○`/blank) that join renders with — not repeated here, since it
 is that plugin's own rendering, not this one's data.

@@ -61,7 +61,7 @@ The one key with structure of its own. Three sub-keys, all optional:
 
 | Sub-key | Shape | For |
 | --- | --- | --- |
-| `plugins` | `table<repo, opts>`, keyed by repo (`"StefanBartl/markdown.nvim"`) | plugins a plugin manager resolves. Only the lazy.nvim adapter is shipped |
+| `plugins` | `table<repo, opts>`, keyed by repo (`"WKDSteve/markdown.nvim"`) | plugins a plugin manager resolves. Only the lazy.nvim adapter is shipped |
 | `extra` | a list of targets | anything a plugin manager does *not* resolve — chiefly your own config |
 | `lib_nvim` | `{ profile_args?, timing?, persist?, dir? }` or `false` | lib.nvim's own aggregate, which wraps through `lib.strategies.telemetry_wrap` rather than `wrap_loaded()` |
 
