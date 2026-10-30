@@ -216,7 +216,7 @@ end
 
 --- How many closures deep `references` follows upvalues. A replacement
 --- wrapping a replacement wrapping our wrapper is already exotic; the cap
---- keeps the scan cheap and immune to cycles beyond the visited set.
+--- keeps the scan cheap and bounds it on cyclic closure graphs.
 local MAX_UPVALUE_DEPTH = 4
 
 ---True when `fn` reaches `target` through its upvalues (directly or via
@@ -225,15 +225,20 @@ local MAX_UPVALUE_DEPTH = 4
 ---@param fn function
 ---@param target function
 ---@param depth integer|nil
----@param seen table<function, boolean>|nil
+---@param seen table<function, integer>|nil  # closure -> shallowest depth it was scanned at
 ---@return boolean
 local function references(fn, target, depth, seen)
   depth = depth or 1
   seen = seen or {}
-  if seen[fn] then
+  -- Skip a closure only when it was already scanned at this depth or
+  -- shallower. A plain visited flag is not enough: the depth-first walk can
+  -- first meet a closure through a long chain, right at the cap where its
+  -- own upvalues are not followed, and would then skip it on a shorter path
+  -- that still has the depth left to reach the target.
+  if seen[fn] and seen[fn] <= depth then
     return false
   end
-  seen[fn] = true
+  seen[fn] = depth
   local i = 1
   while true do
     local name, value = debug.getupvalue(fn, i)

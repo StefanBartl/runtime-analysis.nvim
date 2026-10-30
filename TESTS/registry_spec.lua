@@ -65,6 +65,54 @@ return function(H)
   end
 
   -- -------------------------------------------------------------------------
+  -- the upvalue scan finds the wrapper within its depth cap even when the
+  -- depth-first walk first meets an intermediate closure AT the cap
+  -- -------------------------------------------------------------------------
+  do
+    local M = {}
+    function M.f()
+      return "orig"
+    end
+    local inst = fake_inst("spec.registry.deep")
+    registry.attach(M, "f", "M.f", inst, {})
+
+    -- The real path is replacement -> outer -> inner -> wrapper (depth 3).
+    -- `first`, captured before `outer`, leads to `outer` via a longer chain
+    -- (replacement -> first -> second -> outer, depth 4): a plain visited
+    -- flag marks `outer` there without following its upvalues and then
+    -- skips it on the short path.
+    local wrapper = M.f
+    local function inner(...)
+      return wrapper(...)
+    end
+    local function outer(...)
+      return inner(...)
+    end
+    local function second()
+      return outer
+    end
+    local function first()
+      return second
+    end
+    local calls = 0
+    M.f = function(...)
+      calls = calls + 1
+      if calls > 50 then
+        error("endless wrapper <-> replacement loop", 0)
+      end
+      local _ = first
+      return outer(...)
+    end
+
+    registry.attach(M, "f", "M.f", inst, {})
+    local ok, r = pcall(M.f)
+    H.ok(ok, "a wrapper three closures deep is detected: " .. tostring(r))
+    H.eq(r, "orig", "...and the call reaches the original")
+    H.eq(calls, 1, "...through the replacement once")
+    registry.detach(M, "f", inst)
+  end
+
+  -- -------------------------------------------------------------------------
   -- a genuine replacement (no reference to the wrapper) is still adopted
   -- -------------------------------------------------------------------------
   do
