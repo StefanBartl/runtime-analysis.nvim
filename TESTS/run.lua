@@ -60,6 +60,7 @@ local specs = {
   "curl_spec.lua",
   "assertions_spec.lua",
   "telemetry_spec.lua",
+  "registry_spec.lua",
   "startup_spec.lua",
   "startup_stall_spec.lua",
   "startup_profile_spec.lua",

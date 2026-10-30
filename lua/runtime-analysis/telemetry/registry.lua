@@ -214,6 +214,46 @@ end
 -- Attach / detach
 -- ---------------------------------------------------------------------------
 
+--- How many closures deep `references` follows upvalues. A replacement
+--- wrapping a replacement wrapping our wrapper is already exotic; the cap
+--- keeps the scan cheap and immune to cycles beyond the visited set.
+local MAX_UPVALUE_DEPTH = 4
+
+---True when `fn` reaches `target` through its upvalues (directly or via
+---closures it captured, up to MAX_UPVALUE_DEPTH levels).
+---@internal
+---@param fn function
+---@param target function
+---@param depth integer|nil
+---@param seen table<function, boolean>|nil
+---@return boolean
+local function references(fn, target, depth, seen)
+  depth = depth or 1
+  seen = seen or {}
+  if seen[fn] then
+    return false
+  end
+  seen[fn] = true
+  local i = 1
+  while true do
+    local name, value = debug.getupvalue(fn, i)
+    if name == nil then
+      return false
+    end
+    if value == target then
+      return true
+    end
+    if
+      type(value) == "function"
+      and depth < MAX_UPVALUE_DEPTH
+      and references(value, target, depth + 1, seen)
+    then
+      return true
+    end
+    i = i + 1
+  end
+end
+
 ---Subscribe `inst` to calls of `container[field]`, installing the wrapper if
 ---this is the first subscriber.
 ---@param container table
@@ -241,12 +281,22 @@ function M.attach(container, field, key, inst, wants)
     by_field[field] = site
     container[field] = site.wrapper
   elseif container[field] ~= site.wrapper then
+    local current = container[field]
     -- Someone replaced the field after we wrapped it (hot reload, a plugin
     -- monkey-patching the same function). Their value is the one callers
     -- should reach, so adopt it as the new original instead of silently
     -- shadowing it — and re-install so we still see the calls.
-    site.original = container[field]
-    container[field] = site.wrapper
+    --
+    -- Except when the replacement wraps OUR wrapper (`local orig = M.f;
+    -- M.f = function(...) return orig(...) end`): adopting it would close
+    -- the loop wrapper -> replacement -> wrapper -> ... as an endless tail
+    -- call (no stack overflow, just 100% CPU). Every call of such a
+    -- replacement already passes through the wrapper and is counted there,
+    -- so the field is left alone.
+    if not (type(current) == "function" and references(current, site.wrapper)) then
+      site.original = current
+      container[field] = site.wrapper
+    end
   end
 
   for i = 1, #site.subs do
