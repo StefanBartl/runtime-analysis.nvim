@@ -113,6 +113,73 @@ return function(H)
   end
 
   -- -------------------------------------------------------------------------
+  -- a re-wrap that parks the old wrapper in a table (`saved.f`) is detected
+  -- just like a plain upvalue: setup/attach/setup/attach terminates
+  -- -------------------------------------------------------------------------
+  do
+    local original_calls = 0
+    local M = {}
+    function M.f(x)
+      original_calls = original_calls + 1
+      return x
+    end
+    local inst = fake_inst("spec.registry.table")
+
+    local replacement_calls = 0
+    local function setup()
+      local saved = { f = M.f }
+      M.f = function(...)
+        replacement_calls = replacement_calls + 1
+        if replacement_calls > 50 then
+          error("endless wrapper <-> replacement loop", 0)
+        end
+        return saved.f(...)
+      end
+    end
+
+    setup()
+    H.ok(registry.attach(M, "f", "M.f", inst, {}), "first attach wraps the first replacement")
+    setup()
+    H.ok(registry.attach(M, "f", "M.f", inst, {}), "second attach after the table re-wrap")
+
+    local ok, r = pcall(M.f, 5)
+    H.ok(ok, "a wrapper held in a captured table is detected: " .. tostring(r))
+    H.eq(r, 5, "...and the call returns the original's value")
+    H.eq(original_calls, 1, "...after running the original exactly once")
+    H.eq(inst.calls, 1, "...counted once, through the wrapper")
+    registry.detach(M, "f", inst)
+  end
+
+  -- -------------------------------------------------------------------------
+  -- a genuine replacement that merely captures a table of unrelated
+  -- functions is still adopted (no false positive from the table scan)
+  -- -------------------------------------------------------------------------
+  do
+    local M = {}
+    function M.f()
+      return "orig"
+    end
+    local inst = fake_inst("spec.registry.table_unrelated")
+    registry.attach(M, "f", "M.f", inst, {})
+
+    local helpers = {
+      g = function()
+        return "new"
+      end,
+      nested = { f = M.f },
+    }
+    M.f = function()
+      return helpers.g()
+    end
+
+    registry.attach(M, "f", "M.f", inst, {})
+    H.ok(registry.is_wrapped(M, "f"), "the genuine replacement is re-wrapped")
+    H.eq(M.f(), "new", "...and the call reaches the replacement")
+    H.eq(inst.calls, 1, "...counted once")
+    registry.detach(M, "f", inst)
+  end
+
+  -- -------------------------------------------------------------------------
   -- a genuine replacement (no reference to the wrapper) is still adopted
   -- -------------------------------------------------------------------------
   do

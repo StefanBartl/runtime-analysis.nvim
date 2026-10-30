@@ -219,13 +219,14 @@ end
 --- keeps the scan cheap and bounds it on cyclic closure graphs.
 local MAX_UPVALUE_DEPTH = 4
 
----True when `fn` reaches `target` through its upvalues (directly or via
----closures it captured, up to MAX_UPVALUE_DEPTH levels).
+---True when `fn` reaches `target` through its upvalues (directly, as a
+---function value of a captured table one level deep, or via closures it
+---captured, up to MAX_UPVALUE_DEPTH levels).
 ---@internal
 ---@param fn function
 ---@param target function
 ---@param depth integer|nil
----@param seen table<function, integer>|nil  # closure -> shallowest depth it was scanned at
+---@param seen table<function|table, integer>|nil  # closure -> shallowest depth it was scanned at; captured tables are scanned once
 ---@return boolean
 local function references(fn, target, depth, seen)
   depth = depth or 1
@@ -247,6 +248,20 @@ local function references(fn, target, depth, seen)
     end
     if value == target then
       return true
+    end
+    -- A replacement may park the old wrapper in a table instead of a plain
+    -- upvalue (`local saved = { f = M.f }`). Look one level into captured
+    -- tables, comparing function values only: no recursion into nested
+    -- tables or into the functions found there, so capturing a big table
+    -- (a module table, `package.loaded`) costs one shallow pass and never
+    -- walks a whole object graph. `next` is raw, so no metamethod runs.
+    if type(value) == "table" and not seen[value] then
+      seen[value] = depth
+      for _, v in next, value do
+        if v == target then
+          return true
+        end
+      end
     end
     if
       type(value) == "function"
